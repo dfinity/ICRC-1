@@ -1,6 +1,6 @@
 # ICRC-1 Token Standard
 
-The ICRC-1 is a standard for Fungible Tokens on the [Internet Computer](internetcomputer.org).
+The ICRC-1 is a standard for Fungible Tokens on the [Internet Computer](https://internetcomputer.org).
 
 ## Methods
 
