@@ -1,0 +1,19 @@
+type SubAccount = blob;
+
+type TransferArgs = record {
+    from_subaccount: opt SubAccount;
+    to_principal: principal;
+    to_subaccount: opt SubAccount;
+    amount: nat64;
+};
+
+type TransferError = variant {};
+
+service : {
+    name: () -> (text) query;
+    symbol: () -> (text) query;
+    decimals: () -> (nat32) query;
+    totalSupply: () -> (nat32) query;
+    balanceOf: (record { principal; SubAccount; }) -> (nat64) query;
+    transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
+}
