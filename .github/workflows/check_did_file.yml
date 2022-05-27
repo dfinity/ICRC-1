@@ -21,5 +21,8 @@ jobs:
           url: "https://github.com/dfinity/candid/releases/download/2022-03-30/didc-linux64"
           target: public/
 
-      - name: Run a one-line script
+      - name: chmod +x didc
+        run: chmod +x public/didc-linux64
+
+      - name: Run didc check
         run: public/didc-linux64 check ICRC-1.did
