@@ -9,7 +9,37 @@ type TransferArgs = record {
 
 type TransferError = variant {
     // TODO
-    GenericError: text;
+    GenericError: text; // custom errors
+};
+
+type ApproveArgs = record {
+    from_subaccount: opt SubAccount;
+    spender: principal;
+    amount: nat64;
+};
+
+type ApproveError = variant {
+    // TODO
+    GenericError: text; // custom errors
+};
+
+type TransferFromArgs = record {
+    from_principal: principal;
+    from_subaccount: opt SubAccount;
+    to_principal: principal;
+    to_subaccount: opt SubAccount;
+    amount: nat64;
+};
+
+type TransferFromError = variant {
+    // TODO
+    GenericError: text; // custom errors
+};
+
+type AllowanceArgs = record {
+    owner: principal;
+    owner_subaccount: opt SubAccount;
+    spender: principal;
 };
 
 service : {
@@ -19,4 +49,7 @@ service : {
     totalSupply: () -> (nat32) query;
     balanceOf: (record { principal; SubAccount; }) -> (nat64) query;
     transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
+    approve: (ApproveArgs) -> (variant { Ok: nat64; Err: ApproveError; });
+    transferFrom: (TransferFromArgs) -> (variant { Ok: nat64; Err: TransferFromError; });
+    allowance: (AllowanceArgs) -> (nat64) query;
 }

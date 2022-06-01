@@ -59,11 +59,52 @@ type TransferArgs = record {
 transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
 ```
 
-The result is either the block index of the transfer or an error. The list of errors is:
+The result is either the block index of the transfer or an error.
+
+### approve
+
+Allows `spender` to withdraw from the account `(caller, from_subaccount)` multiple times, up to the `amount`. If this function is called again it overwrites the current allowance with `amount`.
 
 ```
-type TransferError = variant {
-    // TODO
-    GenericError: text,
+type ApproveArgs = record {
+    from_subaccount: opt SubAccount;
+    spender: principal;
+    amount: nat64;
 };
+
+approve: (ApproveArgs) -> (variant { Ok: nat64; Err: ApproveError; });
+```
+
+The result is either the block index of the approve or an error.
+
+### transferFrom
+
+Transfers `amount` of tokens from the account `(from_principal, from_subaccount)` to the account `(to_principal, to_subaccount)`.
+
+```
+type TransferFromArgs = record {
+    from_principal: principal;
+    from_subaccount: opt SubAcccount;
+    to_principal: principal;
+    to_subaccount: opt SubAccount;
+    amount: nat64;
+};
+
+transferFrom: (TransferFrom) -> (variant { Ok: nat64; Err: TransferFromError; });
+```
+
+The result is either the block index of the approve or an error.
+
+### allowance
+
+Returns the `amount` which `spender` is still allowed to withdraw from the account `(owner, owner_subaccount)`.
+
+```
+type AllowanceArgs = record {
+    owner: principal;
+    owner_subaccount: opt SubAcccount;
+    spender: principal;
+};
+
+allowance: (AllowanceArgs) -> (nat64) query;
 ```
