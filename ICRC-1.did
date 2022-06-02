@@ -12,6 +12,18 @@ type TransferError = variant {
     GenericError: text;
 };
 
+type NotifyArgs = record {
+    block_index: nat64;
+    from_subaccount: opt SubAccount;
+    to_principal: principal;
+    to_subaccount: opt SubAccount;
+};
+
+type NotifyError = variant {
+    // TODO
+    GenericError: text;
+};
+
 service : {
     name: () -> (text) query;
     symbol: () -> (text) query;
@@ -19,4 +31,5 @@ service : {
     totalSupply: () -> (nat32) query;
     balanceOf: (record { principal; SubAccount; }) -> (nat64) query;
     transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
+    notify: (NotifyArgs) -> (variant { Ok; Err: NotifyError; });
 }

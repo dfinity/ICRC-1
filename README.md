@@ -67,3 +67,32 @@ type TransferError = variant {
     GenericError: text,
 };
 ```
+
+### notify
+
+Notifies `to_principal` of the transaction at `block_index`. The transaction must be from the account `(caller, from_subaccount)` to the account `(to_principal, to_subaccount)`.
+
+```
+type NotifyArgs = record {
+    block_index: nat64;
+    from_subaccount: opt SubAccount;
+    to_principal: principal;
+    to_subaccount: opt SubAccount;
+};
+
+notify: (NotifyArgs) -> (variant { Ok; Err: NotifyError; });
+```
+
+The notification is a one-shot `update` call to the method `transaction_notification` of `to_principal` with the following signature:
+
+```
+type TransactionNotificationArgs = reccord {
+    block_index: nat64;
+    from_principal: principal;
+    from_subaccount: opt SubAccount;
+    to_subaccount: opt SubAccount;
+    amount: nat64;
+};
+
+transaction_notification: (TransactionNotificationArgs) -> ();
+```
