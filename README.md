@@ -2,6 +2,14 @@
 
 The ICRC-1 is a standard for Fungible Tokens on the [Internet Computer](https://internetcomputer.org).
 
+## Data
+
+### account
+
+A `principal` can have multiple accounts. Each account of a `principal` is identified by a 32-byte string called `subaccount`. Therefore an account corresponds to a pair `(principal, subaccount)`.
+
+The account identified by the subaccount with all bytes set to 0 is the _default account_ of the `principal`.
+
 ## Methods
 
 ### name
