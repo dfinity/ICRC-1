@@ -110,3 +110,6 @@ approve_and_notify: (record {
     value: Nat,
 }) -> (variant { Ok: nat64; Err: TransferError; })
 ```
+
+### Notify Reference
+See this branch for an implementation of notify methods https://github.com/infinity-swap/IS20/blob/max/notify_improvements/src/token/src/canister/is20_notify.rs
