@@ -33,7 +33,7 @@ symbol: () -> (text) query;
 Returns the number of decimals the token uses, e.g. `8`, means to divide the token amount by `100000000` to get its user representation.
 
 ```
-decimals: () -> (nat32) query;
+decimals: () -> (nat8) query;
 ```
 
 ### totalSupply
@@ -41,7 +41,7 @@ decimals: () -> (nat32) query;
 Returns the total token supply.
 
 ```
-totalSupply: () -> (nat32) query;
+totalSupply: () -> (nat) query;
 ```
 
 ### balanceOf
@@ -49,22 +49,21 @@ totalSupply: () -> (nat32) query;
 Returns the balance of the account given as argument.
 
 ```
-balanceOf: (record { Principal; SubAccount; }) -> (nat64) query;
+balanceOf: (text) -> (nat) query;
 ```
 
 ### transfer
 
-Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the account `(to_principal, to_subaccount)`.
+Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the account `principal/account_id`.
 
 ```
 type TransferArgs = record {
     from_subaccount: opt SubAccount;
-    to_principal: Principal;
-    to_subaccount: opt SubAccount;
-    amount: nat64;
+    to: text;
+    amount: nat;
 };
 
-transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
+transfer: (TransferArgs) -> (variant { Ok: nat; Err: TransferError; });
 ```
 
 The result is either the block index of the transfer or an error. The list of errors is:
