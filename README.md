@@ -12,47 +12,47 @@ The account identified by the subaccount with all bytes set to 0 is the _default
 
 ## Methods
 
-### name
+### icrc1_name
 
 Returns the name of the token, e.g. `MyToken`.
 
 ```
-name: () -> (text) query;
+icrc1_name: () -> (text) query;
 ```
 
-### symbol
+### icrc1_symbol
 
 Returns the symbol of the token, e.g. `ICP`.
 
 ```
-symbol: () -> (text) query;
+icrc1_symbol: () -> (text) query;
 ```
 
-### decimals
+### icrc1_decimals
 
 Returns the number of decimals the token uses, e.g. `8`, means to divide the token amount by `100000000` to get its user representation.
 
 ```
-decimals: () -> (nat32) query;
+icrc1_decimals: () -> (nat32) query;
 ```
 
-### totalSupply
+### icrc1_totalSupply
 
 Returns the total token supply.
 
 ```
-totalSupply: () -> (nat32) query;
+icrc1_totalSupply: () -> (nat32) query;
 ```
 
-### balanceOf
+### icrc1_balanceOf
 
 Returns the balance of the account given as argument.
 
 ```
-balanceOf: (record { Principal; SubAccount; }) -> (nat64) query;
+icrc1_balanceOf: (record { Principal; SubAccount; }) -> (nat64) query;
 ```
 
-### transfer
+### icrc1_transfer
 
 Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the account `(to_principal, to_subaccount)`.
 
@@ -64,7 +64,7 @@ type TransferArgs = record {
     amount: nat64;
 };
 
-transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
+icrc1_transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
 ```
 
 The result is either the block index of the transfer or an error. The list of errors is:
