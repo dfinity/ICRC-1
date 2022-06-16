@@ -49,7 +49,7 @@ icrc1_totalSupply: () -> (nat32) query;
 Returns the balance of the account given as argument.
 
 ```
-icrc1_balanceOf: (record { of: Principal; subaccount: opt SubAccount; }) -> (nat64) query;
+icrc1_balanceOf: (record { of: principal; subaccount: opt SubAccount; }) -> (nat64) query;
 ```
 
 ### icrc1_transfer

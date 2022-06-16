@@ -13,10 +13,10 @@ type TransferError = variant {
 };
 
 service : {
-    name: () -> (text) query;
-    symbol: () -> (text) query;
-    decimals: () -> (nat32) query;
-    totalSupply: () -> (nat32) query;
-    balanceOf: (record { of: Principal; subaccount: opt SubAccount; }) -> (nat64) query;
-    transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
+    icrc1_name: () -> (text) query;
+    icrc1_symbol: () -> (text) query;
+    icrc1_decimals: () -> (nat32) query;
+    icrc1_totalSupply: () -> (nat32) query;
+    icrc1_balanceOf: (record { of: principal; subaccount: opt SubAccount; }) -> (nat64) query;
+    icrc1_transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
 }
