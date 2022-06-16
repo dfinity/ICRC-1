@@ -17,6 +17,6 @@ service : {
     symbol: () -> (text) query;
     decimals: () -> (nat32) query;
     totalSupply: () -> (nat32) query;
-    balanceOf: (record { principal; SubAccount; }) -> (nat64) query;
+    balanceOf: (record { of: principal; subaccount: opt SubAccount; }) -> (nat64) query;
     transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
 }

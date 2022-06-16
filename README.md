@@ -49,7 +49,7 @@ totalSupply: () -> (nat32) query;
 Returns the balance of the account given as argument.
 
 ```
-balanceOf: (record { Principal; SubAccount; }) -> (nat64) query;
+balanceOf: (record { of: principal; subaccount: opt SubAccount; }) -> (nat64) query;
 ```
 
 ### transfer
