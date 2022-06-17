@@ -21,10 +21,19 @@ See the "Metadata" section below.
 metadata: () -> (vec { record { text; text } }) query;
 ```
 
+### metadataKeys
+
+Returns all the metadata keys.
+Equivalient to fetching the metadata and extracting the keys.
+
+```
+metadataKeys: () -> (vec text) query;
+```
+
 ### metadataByKey
 
 Returns a single value from the `metadata` map.
-Equivalent of fetching the metadata entries and looking up the value by the key.
+Equivalent to fetching the metadata entries and looking up the value by the key.
 
 ```
 metadataByKey: (text) -> (opt text) query;
