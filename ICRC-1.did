@@ -13,9 +13,8 @@ type TransferError = variant {
 };
 
 service : {
-    name: () -> (text) query;
-    symbol: () -> (text) query;
-    decimals: () -> (nat32) query;
+    metadata: () -> (vec { record { text; text }}) query;
+    metadataByKey : (text) -> (opt text) query;
     totalSupply: () -> (nat32) query;
     balanceOf: (record { of: principal; subaccount: opt SubAccount; }) -> (nat64) query;
     transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });

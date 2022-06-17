@@ -12,28 +12,22 @@ The account identified by the subaccount with all bytes set to 0 is the _default
 
 ## Methods
 
-### name
+### metadata
 
-Returns the name of the token, e.g. `MyToken`.
-
-```
-name: () -> (text) query;
-```
-
-### symbol
-
-Returns the symbol of the token, e.g. `ICP`.
+Returns the list of metadata entries for this ledger.
+See the "Metadata" section below.
 
 ```
-symbol: () -> (text) query;
+metadata: () -> (vec { record { text; text } }) query;
 ```
 
-### decimals
+### metadataByKey
 
-Returns the number of decimals the token uses, e.g. `8`, means to divide the token amount by `100000000` to get its user representation.
+Returns a single value from the `metadata` map.
+Equivalent of fetching the metadata entries and looking up the value by the key.
 
 ```
-decimals: () -> (nat32) query;
+metadataByKey: (text) -> (opt text) query;
 ```
 
 ### totalSupply
@@ -75,3 +69,23 @@ type TransferError = variant {
     GenericError: text,
 };
 ```
+
+## Metadata
+
+A ledger can expose metadata to simplify integration with wallets and improve user experience.
+The client can use `metadata` and `metadataByKey` methods to fetch the metadata. 
+All the metadata entries are optional.
+
+### Key format
+
+The metadata keys can be arbitrary unicode strings and must follow the pattern `<namespace>:<key>`, where `<namespace>` is a string that does not contain colons.
+Namespace `icrc1` is reserved for keys defined in this standard.
+
+### Standard metadata entries
+
+| Key | Example value | Semantics |
+| --- | ------------- | --------- |
+| `icrc1:symbol` | `XTKN` | The token currency code (see [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)). |
+| `icrc1:name` | `Test Token` | The name of the token. |
+| `icrc1:decimals` | `8` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. |
+
