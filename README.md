@@ -12,31 +12,39 @@ The account identified by the subaccount with all bytes set to 0 is the _default
 
 ## Methods
 
+### name
+
+Returns the name of the token (e.g., `MyToken`).
+
+```
+name : () -> (text) query;
+```
+
+### symbol
+
+Returns the symbol of the token (e.g., `ICP`).
+
+```
+symbol : () -> (text) query;
+```
+
+### decimals
+
+Returns the number of decimals the token uses (e.g., `8` means to divide the token amount by `100000000` to get its user representation).
+
+```
+decimals : () -> (nat32) query;
+```
+
 ### metadata
 
 Returns the list of metadata entries for this ledger.
 See the "Metadata" section below.
 
 ```
-metadata: () -> (vec { record { text; text } }) query;
-```
+type Value = variant { Nat : nat; Int : int; Text : text; Blob : blob };
 
-### metadataKeys
-
-Returns all the metadata keys.
-Equivalient to fetching the metadata and extracting the keys.
-
-```
-metadataKeys: () -> (vec text) query;
-```
-
-### metadataByKey
-
-Returns a single value from the `metadata` map.
-Equivalent to fetching the metadata entries and looking up the value by the key.
-
-```
-metadataByKey: (text) -> (opt text) query;
+metadata : () -> (vec { record { text; Value } }) query;
 ```
 
 ### totalSupply
@@ -82,19 +90,19 @@ type TransferError = variant {
 ## Metadata
 
 A ledger can expose metadata to simplify integration with wallets and improve user experience.
-The client can use `metadata` and `metadataByKey` methods to fetch the metadata. 
+The client can use the `metadata` method to fetch the metadata entries. 
 All the metadata entries are optional.
 
 ### Key format
 
-The metadata keys can be arbitrary unicode strings and must follow the pattern `<namespace>:<key>`, where `<namespace>` is a string that does not contain colons.
+The metadata keys are arbitrary unicode strings and must follow the pattern `<namespace>:<key>`, where `<namespace>` is a string not containing colons.
 Namespace `icrc1` is reserved for keys defined in this standard.
 
 ### Standard metadata entries
 
 | Key | Example value | Semantics |
 | --- | ------------- | --------- |
-| `icrc1:symbol` | `XTKN` | The token currency code (see [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)). |
-| `icrc1:name` | `Test Token` | The name of the token. |
-| `icrc1:decimals` | `8` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. |
+| `icrc1:symbol` | `variant { Text = "XTKN" }` | The token currency code (see [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)). When present, should be the same as the result of the `symbol` query call. |
+| `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the `name` query call. |
+| `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the `decimals` query call. |
 
