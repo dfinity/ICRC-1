@@ -75,3 +75,23 @@ type TransferError = variant {
     GenericError: text,
 };
 ```
+
+### extensions
+
+Returns the list of extensions this ledger supports.
+See the ["Extensions"](#extensions) section below.
+
+```
+extensions : () -> (text) query;
+```
+
+## Extensions <span id="extensions"></span>
+
+The core standard intentionally excludes some ledger functions that are essential for building an extensive DeFi ecosystem, for example:
+
+  - Reliable transaction notifications for smart contracts.
+  - The block structure and the interface to fetch blocks.
+  - Pre-signed transactions.
+
+To accommodate these and other future extensions, the standard defines the `extensions` endpoint.
+This endpoint returns will return names of other ICRC specifications (e.g., `"ICRC-42"`) supported by the ledger.
