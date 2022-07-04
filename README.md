@@ -82,7 +82,7 @@ Returns the list of extensions this ledger supports.
 See the ["Extensions"](#extensions) section below.
 
 ```
-extensions : () -> (text) query;
+extensions : () -> (vec text) query;
 ```
 
 ## Extensions <span id="extensions"></span>
