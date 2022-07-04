@@ -93,5 +93,5 @@ The core standard intentionally excludes some ledger functions that are essentia
   - The block structure and the interface to fetch blocks.
   - Pre-signed transactions.
 
-To accommodate these and other future extensions, the standard defines the `extensions` endpoint.
-This endpoint returns will return names of other ICRC specifications (e.g., `"ICRC-42"`) supported by the ledger.
+The standard defines the `extensions` endpoint to accommodate these and other future extensions.
+This endpoint returns names of other ICRC specifications (e.g., `"ICRC-42"`) supported by the ledger.
