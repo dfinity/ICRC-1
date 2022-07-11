@@ -52,7 +52,7 @@ metadata : () -> (vec { record { text; Value } }) query;
 Returns the total token supply.
 
 ```
-totalSupply: () -> (nat32) query;
+totalSupply: () -> (nat64) query;
 ```
 
 ### balanceOf
