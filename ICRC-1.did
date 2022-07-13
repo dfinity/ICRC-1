@@ -27,5 +27,5 @@ service : {
     totalSupply: () -> (nat64) query;
     balanceOf: (record { of: principal; subaccount: opt SubAccount; }) -> (nat64) query;
     transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
-    extensions : () -> (vec text) query;
+    supportedStandards : () -> (vec record { name : text; url : text }) query;
 }
