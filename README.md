@@ -76,22 +76,28 @@ type TransferError = variant {
 };
 ```
 
-### extensions
+### supportedStandards
 
-Returns the list of extensions this ledger supports.
+Returns the list of standards this ledger implements.
 See the ["Extensions"](#extensions) section below.
 
 ```
-extensions : () -> (vec text) query;
+supportedStandards : () -> (vec record { name : text; url : text }) query;
+```
+
+The result of the call should always have at least one entry,
+
+```candid
+record { name = "ICRC-1"; url = "https://github.com/dfinity/ICRC-1" }
 ```
 
 ## Extensions <span id="extensions"></span>
 
-The core standard intentionally excludes some ledger functions that are essential for building an extensive DeFi ecosystem, for example:
+The base standard intentionally excludes some ledger functions essential for building a rich DeFi ecosystem, for example:
 
   - Reliable transaction notifications for smart contracts.
-  - The block structure and the interface to fetch blocks.
+  - The block structure and the interface for fetching blocks.
   - Pre-signed transactions.
 
-The standard defines the `extensions` endpoint to accommodate these and other future extensions.
-This endpoint returns names of other ICRC specifications (e.g., `"ICRC-42"`) supported by the ledger.
+The standard defines the `supportedStandards` endpoint to accommodate these and other future extensions.
+This endpoint returns names of all specifications (e.g., `"ICRC-42"` or `"DIP-20"`) implemented by the ledger.
