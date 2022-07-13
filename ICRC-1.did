@@ -12,11 +12,19 @@ type TransferError = variant {
     GenericError: text;
 };
 
+type Value = variant {
+    Nat : nat;
+    Int : int;
+    Text : text;
+    Blob : blob;
+};
+
 service : {
-    name: () -> (text) query;
-    symbol: () -> (text) query;
-    decimals: () -> (nat32) query;
-    totalSupply: () -> (nat32) query;
+    metadata : () -> (vec record { text; Value; }) query;
+    name : () -> (text) query;
+    symbol : () -> (text) query;
+    decimals : () -> (nat32) query;
+    totalSupply: () -> (nat64) query;
     balanceOf: (record { of: principal; subaccount: opt SubAccount; }) -> (nat64) query;
     transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
     extensions : () -> (vec text) query;
