@@ -14,7 +14,7 @@ The account identified by the subaccount with all bytes set to 0 is the _default
 
 ### icrc1_name
 
-Returns the name of the token, e.g. `MyToken`.
+Returns the name of the token (e.g., `MyToken`).
 
 ```
 icrc1_name: () -> (text) query;
@@ -22,7 +22,7 @@ icrc1_name: () -> (text) query;
 
 ### icrc1_symbol
 
-Returns the symbol of the token, e.g. `ICP`.
+Returns the symbol of the token (e.g., `ICP`).
 
 ```
 icrc1_symbol: () -> (text) query;
@@ -30,10 +30,21 @@ icrc1_symbol: () -> (text) query;
 
 ### icrc1_decimals
 
-Returns the number of decimals the token uses, e.g. `8`, means to divide the token amount by `100000000` to get its user representation.
+Returns the number of decimals the token uses (e.g., `8` means to divide the token amount by `100000000` to get its user representation).
 
 ```
 icrc1_decimals: () -> (nat32) query;
+```
+
+### icrc1_metadata
+
+Returns the list of metadata entries for this ledger.
+See the "Metadata" section below.
+
+```
+type Value = variant { Nat : nat; Int : int; Text : text; Blob : blob };
+
+icrc1_metadata : () -> (vec { record { text; Value } }) query;
 ```
 
 ### icrc1_totalSupply
@@ -41,7 +52,7 @@ icrc1_decimals: () -> (nat32) query;
 Returns the total token supply.
 
 ```
-icrc1_totalSupply: () -> (nat32) query;
+icrc1_totalSupply: () -> (nat64) query;
 ```
 
 ### icrc1_balanceOf
@@ -75,3 +86,49 @@ type TransferError = variant {
     GenericError: text,
 };
 ```
+
+### icrc1_supportedStandards
+
+Returns the list of standards this ledger implements.
+See the ["Extensions"](#extensions) section below.
+
+```
+icrc1_supportedStandards : () -> (vec record { name : text; url : text }) query;
+```
+
+The result of the call should always have at least one entry,
+
+```candid
+record { name = "ICRC-1"; url = "https://github.com/dfinity/ICRC-1" }
+```
+
+## Extensions <span id="extensions"></span>
+
+The base standard intentionally excludes some ledger functions essential for building a rich DeFi ecosystem, for example:
+
+  - Reliable transaction notifications for smart contracts.
+  - The block structure and the interface for fetching blocks.
+  - Pre-signed transactions.
+
+The standard defines the `supportedStandards` endpoint to accommodate these and other future extensions.
+This endpoint returns names of all specifications (e.g., `"ICRC-42"` or `"DIP-20"`) implemented by the ledger.
+
+## icrc1_metadata
+
+A ledger can expose metadata to simplify integration with wallets and improve user experience.
+The client can use the `icrc1_metadata` method to fetch the metadata entries. 
+All the metadata entries are optional.
+
+### Key format
+
+The metadata keys are arbitrary unicode strings and must follow the pattern `<namespace>:<key>`, where `<namespace>` is a string not containing colons.
+Namespace `icrc1` is reserved for keys defined in this standard.
+
+### Standard metadata entries
+
+| Key | Example value | Semantics |
+| --- | ------------- | --------- |
+| `icrc1:symbol` | `variant { Text = "XTKN" }` | The token currency code (see [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)). When present, should be the same as the result of the `symbol` query call. |
+| `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the `name` query call. |
+| `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the `decimals` query call. |
+
