@@ -12,31 +12,31 @@ The account identified by the subaccount with all bytes set to 0 is the _default
 
 ## Methods
 
-### name
+### icrc1_name
 
 Returns the name of the token (e.g., `MyToken`).
 
 ```
-name : () -> (text) query;
+icrc1_name : () -> (text) query;
 ```
 
-### symbol
+### icrc1_symbol
 
 Returns the symbol of the token (e.g., `ICP`).
 
 ```
-symbol : () -> (text) query;
+icrc1_symbol : () -> (text) query;
 ```
 
-### decimals
+### icrc1_decimals
 
 Returns the number of decimals the token uses (e.g., `8` means to divide the token amount by `100000000` to get its user representation).
 
 ```
-decimals : () -> (nat32) query;
+icrc1_decimals : () -> (nat32) query;
 ```
 
-### metadata
+### icrc1_metadata
 
 Returns the list of metadata entries for this ledger.
 See the "Metadata" section below.
@@ -44,26 +44,26 @@ See the "Metadata" section below.
 ```
 type Value = variant { Nat : nat; Int : int; Text : text; Blob : blob };
 
-metadata : () -> (vec { record { text; Value } }) query;
+icrc1_metadata : () -> (vec { record { text; Value } }) query;
 ```
 
-### totalSupply
+### icrc1_totalSupply
 
 Returns the total token supply.
 
 ```
-totalSupply: () -> (nat64) query;
+icrc1_totalSupply : () -> (nat64) query;
 ```
 
-### balanceOf
+### icrc1_balanceOf
 
 Returns the balance of the account given as argument.
 
 ```
-balanceOf: (record { of: principal; subaccount: opt SubAccount; }) -> (nat64) query;
+icrc1_balanceOf : (record { of: principal; subaccount: opt SubAccount; }) -> (nat64) query;
 ```
 
-### transfer
+### icrc1_transfer
 
 Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the account `(to_principal, to_subaccount)`.
 
@@ -75,7 +75,7 @@ type TransferArgs = record {
     amount: nat64;
 };
 
-transfer: (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
+icrc1_transfer : (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
 ```
 
 The result is either the block index of the transfer or an error. The list of errors is:
@@ -87,13 +87,13 @@ type TransferError = variant {
 };
 ```
 
-### supportedStandards
+### icrc1_supportedStandards
 
 Returns the list of standards this ledger implements.
 See the ["Extensions"](#extensions) section below.
 
 ```
-supportedStandards : () -> (vec record { name : text; url : text }) query;
+icrc1_supportedStandards : () -> (vec record { name : text; url : text }) query;
 ```
 
 The result of the call should always have at least one entry,
@@ -116,7 +116,7 @@ This endpoint returns names of all specifications (e.g., `"ICRC-42"` or `"DIP-20
 ## Metadata
 
 A ledger can expose metadata to simplify integration with wallets and improve user experience.
-The client can use the `metadata` method to fetch the metadata entries. 
+The client can use the `icrc1_metadata` method to fetch the metadata entries. 
 All the metadata entries are optional.
 
 ### Key format
