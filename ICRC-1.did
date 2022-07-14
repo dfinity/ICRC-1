@@ -4,7 +4,7 @@ type TransferArgs = record {
     from_subaccount: opt SubAccount;
     to_principal: principal;
     to_subaccount: opt SubAccount;
-    amount: nat64;
+    amount: nat;
 };
 
 type TransferError = variant {
@@ -24,8 +24,8 @@ service : {
     icrc1_name : () -> (text) query;
     icrc1_symbol : () -> (text) query;
     icrc1_decimals : () -> (nat8) query;
-    icrc1_totalSupply : () -> (nat64) query;
-    icrc1_balanceOf : (record { of: principal; subaccount: opt SubAccount; }) -> (nat64) query;
-    icrc1_transfer : (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
+    icrc1_totalSupply : () -> (nat) query;
+    icrc1_balanceOf : (record { of: principal; subaccount: opt SubAccount; }) -> (nat) query;
+    icrc1_transfer : (TransferArgs) -> (variant { Ok: nat; Err: TransferError; });
     icrc1_supportedStandards : () -> (vec record { name : text; url : text }) query;
 }

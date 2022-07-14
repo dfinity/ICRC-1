@@ -52,7 +52,7 @@ icrc1_metadata : () -> (vec { record { text; Value } }) query;
 Returns the total token supply.
 
 ```
-icrc1_totalSupply : () -> (nat64) query;
+icrc1_totalSupply : () -> (nat) query;
 ```
 
 ### icrc1_balanceOf
@@ -60,7 +60,7 @@ icrc1_totalSupply : () -> (nat64) query;
 Returns the balance of the account given as argument.
 
 ```
-icrc1_balanceOf : (record { of: principal; subaccount: opt SubAccount; }) -> (nat64) query;
+icrc1_balanceOf : (record { of: principal; subaccount: opt SubAccount; }) -> (nat) query;
 ```
 
 ### icrc1_transfer
@@ -72,10 +72,10 @@ type TransferArgs = record {
     from_subaccount: opt SubAccount;
     to_principal: Principal;
     to_subaccount: opt SubAccount;
-    amount: nat64;
+    amount: nat;
 };
 
-icrc1_transfer : (TransferArgs) -> (variant { Ok: nat64; Err: TransferError; });
+icrc1_transfer : (TransferArgs) -> (variant { Ok: nat; Err: TransferError; });
 ```
 
 The result is either the block index of the transfer or an error. The list of errors is:
