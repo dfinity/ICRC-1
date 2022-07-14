@@ -113,7 +113,7 @@ The base standard intentionally excludes some ledger functions essential for bui
 The standard defines the `supportedStandards` endpoint to accommodate these and other future extensions.
 This endpoint returns names of all specifications (e.g., `"ICRC-42"` or `"DIP-20"`) implemented by the ledger.
 
-## icrc1_metadata
+## Metadata
 
 A ledger can expose metadata to simplify integration with wallets and improve user experience.
 The client can use the `icrc1_metadata` method to fetch the metadata entries. 
