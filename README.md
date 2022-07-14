@@ -33,7 +33,7 @@ icrc1_symbol : () -> (text) query;
 Returns the number of decimals the token uses (e.g., `8` means to divide the token amount by `100000000` to get its user representation).
 
 ```
-icrc1_decimals : () -> (nat32) query;
+icrc1_decimals : () -> (nat8) query;
 ```
 
 ### icrc1_metadata
