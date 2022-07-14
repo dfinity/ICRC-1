@@ -47,20 +47,20 @@ type Value = variant { Nat : nat; Int : int; Text : text; Blob : blob };
 icrc1_metadata : () -> (vec { record { text; Value } }) query;
 ```
 
-### icrc1_totalSupply
+### icrc1_total_supply
 
 Returns the total token supply.
 
 ```
-icrc1_totalSupply : () -> (nat) query;
+icrc1_total_supply : () -> (nat) query;
 ```
 
-### icrc1_balanceOf
+### icrc1_balance_of
 
 Returns the balance of the account given as argument.
 
 ```
-icrc1_balanceOf : (record { of: principal; subaccount: opt SubAccount; }) -> (nat) query;
+icrc1_balance_of : (record { of: principal; subaccount: opt SubAccount; }) -> (nat) query;
 ```
 
 ### icrc1_transfer
@@ -87,13 +87,13 @@ type TransferError = variant {
 };
 ```
 
-### icrc1_supportedStandards
+### icrc1_supported_standards
 
 Returns the list of standards this ledger implements.
 See the ["Extensions"](#extensions) section below.
 
 ```
-icrc1_supportedStandards : () -> (vec record { name : text; url : text }) query;
+icrc1_supported_standards : () -> (vec record { name : text; url : text }) query;
 ```
 
 The result of the call should always have at least one entry,
