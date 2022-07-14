@@ -73,19 +73,15 @@ type TransferArgs = record {
     to_principal: Principal;
     to_subaccount: opt SubAccount;
     amount: nat;
+    fee: opt nat;
+    memo: opt blob;
+    created_at_time: opt Timestamp;
 };
 
 icrc1_transfer : (TransferArgs) -> (variant { Ok: nat; Err: TransferError; });
 ```
 
-The result is either the block index of the transfer or an error. The list of errors is:
-
-```
-type TransferError = variant {
-    // TODO
-    GenericError: text,
-};
-```
+The result is either the block index of the transfer or an error.
 
 ### icrc1_supported_standards
 

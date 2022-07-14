@@ -1,3 +1,9 @@
+// Number of nanoseconds since the UNIX epoch in UTC timezone.
+type Timestamp = nat64;
+
+// Number of nanoseconds between two [Timestamp]service
+type Duration = nat64;
+
 type SubAccount = blob;
 
 type TransferArgs = record {
@@ -5,10 +11,18 @@ type TransferArgs = record {
     to_principal: principal;
     to_subaccount: opt SubAccount;
     amount: nat;
+    fee: opt nat;
+    memo: opt blob;
+    created_at_time: opt Timestamp;
 };
 
 type TransferError = variant {
-    // TODO
+    BadFee : record { expected_fee : nat };
+    BadBurn : record { min_burn_amount : nat };
+    InsufficientFunds : record { balance : nat };
+    TooOld : record { allowed_window_nanos : Duration };
+    CreatedInFuture;
+    Duplicate : record { duplicate_of : nat };
     GenericError: text;
 };
 
