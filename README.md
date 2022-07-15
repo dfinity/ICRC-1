@@ -106,7 +106,7 @@ The base standard intentionally excludes some ledger functions essential for bui
   - The block structure and the interface for fetching blocks.
   - Pre-signed transactions.
 
-The standard defines the `supportedStandards` endpoint to accommodate these and other future extensions.
+The standard defines the `icrc1_supported_standards` endpoint to accommodate these and other future extensions.
 This endpoint returns names of all specifications (e.g., `"ICRC-42"` or `"DIP-20"`) implemented by the ledger.
 
 ## Metadata
