@@ -65,7 +65,7 @@ icrc1_balance_of : (record { of: principal; subaccount: opt SubAccount; }) -> (n
 
 ### icrc1_transfer
 
-Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the account `(to_principal, to_subaccount)`.
+Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the account `(to_principal, to_subaccount)`. The `fee` is paid by the `caller`.
 
 ```
 type TransferArgs = record {
