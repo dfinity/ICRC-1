@@ -10,6 +10,11 @@ A `principal` can have multiple accounts. Each account of a `principal` is ident
 
 The account identified by the subaccount with all bytes set to 0 is the _default account_ of the `principal`.
 
+```
+type Subaccount = blob;
+type Account = record { of: principal; subaccount: opt Subaccount; };
+```
+
 ## Methods
 
 ### icrc1_name
@@ -60,18 +65,17 @@ icrc1_total_supply : () -> (nat) query;
 Returns the balance of the account given as argument.
 
 ```
-icrc1_balance_of : (record { of: principal; subaccount: opt SubAccount; }) -> (nat) query;
+icrc1_balance_of : (Account) -> (nat) query;
 ```
 
 ### icrc1_transfer
 
-Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the account `(to_principal, to_subaccount)`. The `fee` is paid by the `caller`.
+Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the `Account`. The `fee` is paid by the `caller`.
 
 ```
 type TransferArgs = record {
-    from_subaccount: opt SubAccount;
-    to_principal: Principal;
-    to_subaccount: opt SubAccount;
+    from_subaccount: opt Subaccount;
+    to: Account;
     amount: nat;
     fee: opt nat;
     memo: opt nat64;
