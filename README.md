@@ -70,7 +70,7 @@ icrc1_balance_of : (Account) -> (nat) query;
 
 ### icrc1_transfer
 
-Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the account `(to_principal, to_subaccount)`. The `fee` is paid by the `caller`.
+Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the `Account`. The `fee` is paid by the `caller`.
 
 ```
 type TransferArgs = record {
