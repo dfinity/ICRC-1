@@ -1,0 +1,12 @@
+load("@rules_motoko//motoko:defs.bzl", "motoko_binary", "motoko_library")
+
+motoko_library(
+    name = "base",
+    srcs = ["@motoko_base//:sources"],
+)
+
+motoko_binary(
+    name = "icrc1-ref",
+    entry = "ICRC1.mo",
+    deps = [":base"],
+)
