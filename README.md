@@ -74,7 +74,7 @@ Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the
 
 ```
 type TransferArgs = record {
-    from_subaccount: opt SubAccount;
+    from_subaccount: opt Subaccount;
     to: Account;
     amount: nat;
     fee: opt nat;
