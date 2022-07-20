@@ -13,10 +13,11 @@ import Nat64         "mo:base/Nat64";
 
 actor class Ledger(init : {
                      initial_mints : [ { account : { of : Principal; subaccount : ?Blob }; amount : Nat } ];
-                     minting_account : ?{ of : Principal; subaccount : ?Blob };
+                     minting_account : { of : Principal; subaccount : ?Blob };
                      token_name : Text;
                      token_symbol : Text;
                      decimals : Nat8;
+                     transfer_fee : Nat;
                   }) = this {
 
   public type Account = { of : Principal; subaccount : ?Subaccount };
@@ -25,8 +26,8 @@ actor class Ledger(init : {
   public type Memo = Nat64;
   public type Timestamp = Nat64;
   public type Duration = Nat64;
-  public type BlockIndex = Nat;
-  public type Blockchain = List.List<Block>;
+  public type TxIndex = Nat;
+  public type TxLog = List.List<Transaction>;
 
   public type Value = { #Nat : Nat; #Int : Int; #Blob : Blob; #Text : Text; };
 
@@ -35,23 +36,24 @@ actor class Ledger(init : {
   let transactionWindowNanos : Duration = 24 * 60 * 60 * 1_000_000_000;
   let defaultSubaccount : Subaccount = Blob.fromArrayMut(Array.init(32, 0 : Nat8));
 
-  public type Operation = {
-    #Burn : { from : Account; amount : Tokens; };
-    #Mint : { to : Account; amount : Tokens; };
-    #Transfer : { from : Account; to : Account; amount : Tokens; fee : Tokens; };
-  };
-  
-  public type Transaction = {
-    operation : Operation;
+  public type TxKind = { #Burn; #Mint; #Transfer };
+
+  public type Transfer = {
+    to : Account;
+    from : Account;
     memo : ?Memo;
+    amount : Tokens;
+    fee : ?Tokens;
     created_at_time : ?Timestamp;
   };
-  
-  public type Block = {
-    transaction : Transaction;
+
+  public type Transaction = {
+    args : Transfer;
+    kind : TxKind;
+    // Effective fee for this transaction.
+    fee : Tokens;
     timestamp : Timestamp;
   };
-
 
   public type TransferError = {
     #BadFee : { expected_fee : Tokens };
@@ -59,22 +61,16 @@ actor class Ledger(init : {
     #InsufficientFunds : { balance : Tokens };
     #TooOld : { allowed_window_nanos : Duration };
     #CreatedInFuture;
-    #Duplicate : { duplicate_of : BlockIndex };
+    #Duplicate : { duplicate_of : TxIndex };
     #Generic : { error_code : Nat; message : Text };
   };
-  
+
   public type TransferResult = {
-    #Ok  : BlockIndex;
+    #Ok  : TxIndex;
     #Err : TransferError;
   };
 
-  func mintingAccount() : Account {
-    switch (init.minting_account) {
-      case (?acc) { acc };
-      case null { { of = Principal.fromActor(this); subaccount = null } };
-    }
-  };
-
+  // Checks whether two accounts are semantically equal.
   func accountsEqual(lhs : Account, rhs : Account) : Bool {
     let lhsSubaccount = Option.get(lhs.subaccount, defaultSubaccount);
     let rhsSubaccount = Option.get(rhs.subaccount, defaultSubaccount);
@@ -82,83 +78,67 @@ actor class Ledger(init : {
     Principal.equal(lhs.of, rhs.of) and Blob.equal(lhsSubaccount, rhsSubaccount)
   };
 
-  func transactionsEqual(lhs : Transaction, rhs : Transaction) : Bool {
-    if (lhs.memo != rhs.memo) return false;
-    if (lhs.created_at_time != rhs.created_at_time) return false;
-    
-    switch ((lhs.operation, rhs.operation)) {
-      case (#Burn { from = lhsFrom; amount = lhsAmount; }, #Burn { from = rhsFrom; amount = rhsAmount}) {
-        accountsEqual(lhsFrom, rhsFrom) and lhsAmount == rhsAmount
-      };
-      case (#Mint { to = lhsTo; amount = lhsAmount; }, #Mint { to = rhsTo; amount = rhsAmount }) {
-        accountsEqual(lhsTo, rhsTo) and lhsAmount == rhsAmount
-      };
-      case (#Transfer { from = lhsFrom; to = lhsTo; amount = lhsAmount; fee = lhsFee; }, #Transfer { from = rhsFrom; to = rhsTo; amount = rhsAmount; fee = rhsFee}) {
-        accountsEqual(lhsFrom, rhsFrom) and accountsEqual(lhsTo, rhsTo) and lhsAmount == rhsAmount and lhsFee == rhsFee
-      };
-      case _ { false };
-    }
-  };
-
-  func balance(account : Account, blocks : Blockchain) : Nat {
-    List.foldLeft(blocks, 0 : Nat, func(sum : Nat, block : Block) : Nat {
-      switch (block.transaction.operation) {
-        case (#Burn { from; amount; }) {
-          if (accountsEqual(from, account)) { sum - amount } else { sum }
+  func balance(account : Account, log : TxLog) : Nat {
+    List.foldLeft(log, 0 : Nat, func(sum : Nat, tx : Transaction) : Nat {
+      switch (tx.kind) {
+        case (#Burn) {
+          if (accountsEqual(tx.args.from, account)) { sum - tx.args.amount } else { sum }
         };
-        case (#Mint { to; amount; }) {
-          if (accountsEqual(to, account)) { sum + amount } else { sum }
+        case (#Mint) {
+          if (accountsEqual(tx.args.to, account)) { sum + tx.args.amount } else { sum }
         };
-        case (#Transfer { from; to; amount; fee; }) {
-          if (accountsEqual(from, account)) { sum - amount - fee }
-          else if (accountsEqual(to, account)) { sum + amount }
+        case (#Transfer) {
+          if (accountsEqual(tx.args.from, account)) { sum - tx.args.amount - tx.fee }
+          else if (accountsEqual(tx.args.to, account)) { sum + tx.args.amount }
           else { sum }
         }
       }
     })
   };
 
-  func findTransaction(t : Transaction, blocks : Blockchain, now : Timestamp) : ?BlockIndex {
-    func go(h : BlockIndex, rest : Blockchain) : ?BlockIndex {
+  func findTransfer(transfer : Transfer, log : TxLog, now : Timestamp) : ?TxIndex {
+    func go(i : TxIndex, rest : TxLog) : ?TxIndex {
       switch rest {
         case null { null };
-        case (?(block, tail)) {
-          if (transactionsEqual(t, block.transaction)
-              and (block.timestamp < now)
-              and (now - block.timestamp) > transactionWindowNanos) { ?h }
-          else { go(h + 1, tail) }
+        case (?(tx, tail)) {
+          if (tx.args == transfer
+              and (tx.timestamp < now)
+              and (now - tx.timestamp) > transactionWindowNanos) { ?i }
+          else { go(i + 1, tail) }
         };
       }
     };
-    go(0, blocks)
+    go(0, log)
   };
 
   func isAnonymous(p : Principal) : Bool {
     Blob.equal(Principal.toBlob(p), Blob.fromArray([0x04]))
   };
 
-  func makeGenesisChain() : Blockchain {
-    switch (init.minting_account) {
-      case (null) {};
-      case (?account) { validateSubaccount(account.subaccount) };
-    };
+  func makeGenesisChain() : TxLog {
+    validateSubaccount(init.minting_account.subaccount);
 
     let now = Nat64.fromNat(Int.abs(Time.now()));
 
-    Array.foldLeft<{ account : Account; amount : Tokens }, Blockchain>(
+    Array.foldLeft<{ account : Account; amount : Tokens }, TxLog>(
         init.initial_mints,
         null,
-        func(chain : Blockchain, { account: Account; amount : Tokens }) : Blockchain {
+        func(log : TxLog, { account: Account; amount : Tokens }) : TxLog {
       validateSubaccount(account.subaccount);
-      let block : Block = {
-        transaction = {
-          operation = #Mint({ to = account; amount = amount; });
+      let tx : Transaction = {
+        args = {
+          from = init.minting_account;
+          to = account;
+          amount = amount;
+          fee = null;
           memo = null;
           created_at_time = ?now;
         };
+        kind = #Mint;
+        fee = 0;
         timestamp = now;
       };
-      List.push(block, chain)
+      List.push(tx, log)
     })
   };
 
@@ -167,12 +147,11 @@ actor class Ledger(init : {
     assert (subaccount.size() == 32);
   };
 
-  stable var blocks : Blockchain = makeGenesisChain();
+  stable var log : TxLog = makeGenesisChain();
 
   public shared({ caller }) func icrc1_transfer({
       from_subaccount : ?Subaccount;
-      to_principal : Principal;
-      to_subaccount : ?Subaccount;
+      to : Account;
       amount : Tokens;
       fee : ?Tokens;
       memo : ?Memo;
@@ -184,10 +163,7 @@ actor class Ledger(init : {
 
     let now = Nat64.fromNat(Int.abs(Time.now()));
 
-    let txTime : Timestamp = switch (created_at_time) {
-      case (null) { now };
-      case (?ts) { ts };
-    };
+    let txTime : Timestamp = Option.get(created_at_time, now);
 
     if ((txTime > now) and (txTime - now > permittedDriftNanos)) {
       return #Err(#CreatedInFuture);
@@ -198,77 +174,74 @@ actor class Ledger(init : {
     };
 
     validateSubaccount(from_subaccount);
-    validateSubaccount(to_subaccount);
+    validateSubaccount(to.subaccount);
 
-    let debitAccount = { of = caller; subaccount = from_subaccount };
-    let creditAccount = { of = to_principal; subaccount = to_subaccount };
+    let from = { of = caller; subaccount = from_subaccount };
 
-    let minter = mintingAccount();
+    let args : Transfer = {
+      from = from;
+      to = to;
+      amount = amount;
+      memo = memo;
+      fee = fee;
+      created_at_time = created_at_time;
+    };
 
-    let operation = if (accountsEqual(debitAccount, minter)) {
-      #Mint {
-        to = creditAccount;
-        amount = amount;
-      }
-    } else if (accountsEqual(creditAccount, minter)) {
+    switch (findTransfer(args, log, now)) {
+      case (?height) { return #Err(#Duplicate { duplicate_of = height }) };
+      case null { };
+    };
+
+    let minter = init.minting_account;
+
+    let (kind, effectiveFee) = if (accountsEqual(from, minter)) {
+      if (Option.get(fee, 0) != 0) {
+        return #Err(#BadFee { expected_fee = 0 });
+      };
+      (#Mint, 0)
+    } else if (accountsEqual(to, minter)) {
       if (Option.get(fee, 0) != 0) {
         return #Err(#BadFee { expected_fee = 0 });
       };
 
       if (amount < transferFee) {
-        throw Error.reject("Cannot BURN less than " # debug_show(transferFee));
+        return #Err(#BadBurn { min_burn_amount = transferFee });
       };
 
-      let debitBalance = balance(debitAccount, blocks);
+      let debitBalance = balance(from, log);
       if (debitBalance < amount) {
         return #Err(#InsufficientFunds { balance = debitBalance });
       };
 
-      #Burn {
-        from = debitAccount;
-        amount = amount;
-      }
+      (#Burn, 0)
     } else {
-      if (Option.get(fee, transferFee) != transferFee) {
+      let effectiveFee = init.transfer_fee;
+      if (Option.get(fee, effectiveFee) != effectiveFee) {
         return #Err(#BadFee { expected_fee = transferFee });
       };
 
-      let debitBalance = balance(debitAccount, blocks);
-      if (debitBalance < amount + transferFee) {
+      let debitBalance = balance(from, log);
+      if (debitBalance < amount + effectiveFee) {
         return #Err(#InsufficientFunds { balance = debitBalance });
       };
 
-      #Transfer {
-        from = debitAccount;
-        to = creditAccount;
-        amount = amount;
-        fee = transferFee;
-      }
+      (#Transfer, effectiveFee)
     };
 
-    let transaction : Transaction = {
-      operation = operation;
-      memo = memo;
-      created_at_time = created_at_time;
-    };
-
-    switch (findTransaction(transaction, blocks, now)) {
-      case (?height) { return #Err(#Duplicate { duplicate_of = height }) };
-      case null { };
-    };
-
-    let newBlock : Block = {
-      transaction = transaction;
+    let tx : Transaction = {
+      args = args;
+      kind = kind;
+      fee = effectiveFee;
       timestamp = now;
     };
 
-    let blockIndex = List.size(blocks);
-    blocks := List.push(newBlock, blocks);
-    #Ok(blockIndex)
+    let txIndex = List.size(log);
+    log := List.push(tx, log);
+    #Ok(txIndex)
   };
 
   public query func icrc1_balance_of(account : Account) : async Tokens {
-    balance(account, blocks)
+    balance(account, log)
   };
 
   public query func icrc1_name() : async Text {
