@@ -11,8 +11,8 @@ A `principal` can have multiple accounts. Each account of a `principal` is ident
 The account identified by the subaccount with all bytes set to 0 is the _default account_ of the `principal`.
 
 ```
-type SubAccount = nat;
-type Account = record { principal; opt SubAccount; };
+type Subaccount = blob;
+type Account = record { of: principal; subaccount: opt Subaccount; };
 ```
 
 ## Methods
