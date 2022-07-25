@@ -54,10 +54,18 @@ icrc1_metadata : () -> (vec { record { text; Value } }) query;
 
 ### icrc1_total_supply
 
-Returns the total token supply.
+Returns the total number of tokens on all accounts except for the minting account.
 
 ```
 icrc1_total_supply : () -> (nat) query;
+```
+
+### icrc1_minting_account
+
+Returns the [minting account](#minting_account) for this ledger.
+
+```
+icrc1_minting_account : () -> (Account) query;
 ```
 
 ### icrc1_balance_of
@@ -132,3 +140,19 @@ Namespace `icrc1` is reserved for keys defined in this standard.
 | `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the `name` query call. |
 | `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the `decimals` query call. |
 
+## Minting account <span id="minting_account"></span>
+
+The minting account is a unique account that can create new tokens and acts as the receiver of burnt tokens.
+
+Transfers _from_ the minting account act as _mint_ transactions depositing fresh tokens on the destination account.
+Mint transactions have no fee.
+
+Transfers _to_ the minting account act as burn transactions, removing tokens from the token supply.
+Burn transactions have no fee but might have minimal burn amount requirements.
+If the client tries to burn an amount that is too small, the ledger SHOULD reply with
+
+```
+variant { Err = variant { BadBurn = record { min_burn_amount = ... } } }
+```
+
+The minting account is also the receiver of the fees burnt in regular transfers.
