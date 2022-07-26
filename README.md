@@ -12,7 +12,7 @@ The account identified by the subaccount with all bytes set to 0 is the _default
 
 ```
 type Subaccount = blob;
-type Account = record { of: principal; subaccount: opt Subaccount; };
+type Account = record { principal: principal; subaccount: opt Subaccount; };
 ```
 
 ## Methods
