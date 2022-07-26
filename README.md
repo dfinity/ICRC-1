@@ -68,9 +68,11 @@ Returns the balance of the account given as argument.
 icrc1_balance_of : (Account) -> (nat) query;
 ```
 
-### icrc1_transfer
+### icrc1_transfer <span id="transfer_method"></span>
 
-Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the `Account`. The `fee` is paid by the `caller`.
+Transfers `amount` of tokens from account `record { of = caller; subaccount = from_subaccount }` to the `to` account.
+The caller pays `fee` tokens for the transfer.
+The result is either the transaction index or an error.
 
 ```
 type TransferArgs = record {
@@ -85,7 +87,7 @@ type TransferArgs = record {
 icrc1_transfer : (TransferArgs) -> (variant { Ok: nat; Err: TransferError; });
 ```
 
-The result is either the block index of the transfer or an error.
+Transfers are subject to [transaction deduplication](#transaction_deduplication).
 
 ### icrc1_supported_standards
 
@@ -132,3 +134,23 @@ Namespace `icrc1` is reserved for keys defined in this standard.
 | `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the `name` query call. |
 | `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the `decimals` query call. |
 
+## Transaction deduplication <span id="transfer_deduplication"></span>
+
+Consider the following scenario:
+
+  1. An agent sends a transaction to an ICRC-1 ledger hosted on the IC.
+  2. The ledger accepts the transaction.
+  3. The agent loses the network connection for several minutes and cannot learn about the outcome of the transaction.
+
+An ICRC-1 ledger SHOULD implement transfer deduplication to simplify the error recovery for agents.
+The deduplication covers all transactions submitted within a pre-configured time window `TX_WINDOW` (for example, last 24 hours).
+
+The client can control the deduplication algorithm using `created_at_time` and `memo` fields of the [`transfer`](#transfer_method) call argument:
+  * The `created_at_time` field sets the transaction construction time as the number of nanoseconds from the UNIX epoch in the UTC timezone.
+  * The `memo` field does not have any meaning to the ledger, except that the ledger will not deduplicate transfers with different values of the `memo` field.
+
+The ledger SHOULD use the following algorithm for transaction deduplication:
+  * If `created_at_time` is set and is _before_ the `time() - TX_WINDOW` as observed by the ledger, the ledger should return `variant { TooOld = record { allowed_window_nanos = TX_WINDOW } }` error.
+  * If `created_at_time` is set and is _after_ the `time()` observed by the ledger, the ledger should return `variant { CreatedInFuture = null }` error.
+  * If the ledger has a structurally equal transfer payload (i.e., all the transfer argument fields have the same values) at index `i`, it should return `variant { Duplicate = record { duplicate_of = i } }`.
+  * Otherwise, the transfer is a new transaction.
