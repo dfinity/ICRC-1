@@ -70,7 +70,7 @@ icrc1_balance_of : (Account) -> (nat) query;
 
 ### icrc1_transfer
 
-Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the `Account`. The `fee` is paid by the `caller`.
+Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the `Account`.
 
 ```
 type TransferArgs = record {
@@ -79,13 +79,33 @@ type TransferArgs = record {
     amount: nat;
     fee: opt nat;
     memo: opt nat64;
-    created_at_time: opt Timestamp;
+    created_at_time: opt nat64;
+};
+
+type TransferError = variant {
+    BadFee : record { expected_fee : nat };
+    BadBurn : record { min_burn_amount : nat };
+    InsufficientFunds : record { balance : nat };
+    TooOld : record { allowed_window_nanos : nat64 };
+    CreatedInFuture;
+    Duplicate : record { duplicate_of : nat };
+    GenericError: record { error_code : nat; message : text };
 };
 
 icrc1_transfer : (TransferArgs) -> (variant { Ok: nat; Err: TransferError; });
 ```
 
-The result is either the block index of the transfer or an error.
+The caller pays the `fee`.
+If the caller does not set the `fee` argument, the ledger applies the default transfer fee.
+If the `fee` argument does not agree with the ledger fee, the ledger MUST return `variant { BadFee = record { expected_fee = ... } }` error.
+
+The `memo` parameter is an arbitrary integer that has no meaning to the ledger.
+The ledger MAY use the `memo` argument for transaction deduplication.
+
+The `created_at_time` parameter indicates the time (as nanoseconds since the UNIX epoch in the UTC timezone) at which the client constructed the transaction.
+The ledger MAY reject transactions that have `created_at_time` argument too far in the past or the future, returning `variant { TooOld = record { allowed_window_nanos = ... } }` and `variant { CreatedInFuture }` errors correspondingly.
+
+The result is either the transaction index of the transfer or an error.
 
 ### icrc1_supported_standards
 
