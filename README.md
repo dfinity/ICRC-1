@@ -147,7 +147,7 @@ The minting account is a unique account that can create new tokens and acts as t
 Transfers _from_ the minting account act as _mint_ transactions depositing fresh tokens on the destination account.
 Mint transactions have no fee.
 
-Transfers _to_ the minting account act as burn transactions, removing tokens from the token supply.
+Transfers _to_ the minting account act as _burn_ transactions, removing tokens from the token supply.
 Burn transactions have no fee but might have minimal burn amount requirements.
 If the client tries to burn an amount that is too small, the ledger SHOULD reply with
 
