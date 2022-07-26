@@ -68,9 +68,11 @@ Returns the balance of the account given as argument.
 icrc1_balance_of : (Account) -> (nat) query;
 ```
 
-### icrc1_transfer
+### icrc1_transfer <span id="transfer_method"></span>
 
-Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the `Account`. The `fee` is paid by the `caller`.
+Transfers `amount` of tokens from account `record { of = caller; subaccount = from_subaccount }` to the `to` account.
+The caller pays `fee` tokens for the transfer.
+The result is either the transaction index or an error.
 
 ```
 type TransferArgs = record {
@@ -85,7 +87,7 @@ type TransferArgs = record {
 icrc1_transfer : (TransferArgs) -> (variant { Ok: nat; Err: TransferError; });
 ```
 
-The result is either the block index of the transfer or an error.
+Transfers are subject to [transaction deduplication](#transaction_deduplication).
 
 ### icrc1_supported_standards
 
@@ -132,7 +134,7 @@ Namespace `icrc1` is reserved for keys defined in this standard.
 | `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the `name` query call. |
 | `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the `decimals` query call. |
 
-## Transfer deduplication
+## Transaction deduplication <span id="transfer_deduplication"></span>
 
 Consider the following scenario:
 
@@ -143,34 +145,12 @@ Consider the following scenario:
 An ICRC-1 ledger SHOULD implement transfer deduplication to simplify the error recovery for agents.
 The deduplication covers all transactions submitted within a pre-configured time window `TX_WINDOW` (for example, last 24 hours).
 
-The client can control the deduplication algorithm using `created_at_time` and `memo` fields of the `transfer` call argument:
-  * The `created_at_time` field sets transfer construction time as the number of nanoseconds from the UNIX epoch in UTC timezone.
+The client can control the deduplication algorithm using `created_at_time` and `memo` fields of the [`transfer`](#transfer_method) call argument:
+  * The `created_at_time` field sets the transaction construction time as the number of nanoseconds from the UNIX epoch in the UTC timezone.
   * The `memo` field does not have any meaning to the ledger, except that the ledger will not deduplicate transfers with different values of the `memo` field.
 
 The ledger SHOULD use the following algorithm for transaction deduplication:
-  * If `created_at_time` is set and is _before_ the `time() - TX_WINDOW` as observed by the ledger, the ledger should return `#TooOld { allowed_window_nanos = TX_WINDOW }` error.
-  * If `created_at_time` is set and is _after_ the `time()` observed by the ledger, the ledger should return `#CreatedInFuture` error.
-  * If the ledger has already observed a structurally equal transfer payload within the deduplication window in the transaction with index `i`, it should return `#Duplicate { duplicate_of = i }`.
+  * If `created_at_time` is set and is _before_ the `time() - TX_WINDOW` as observed by the ledger, the ledger should return `variant { TooOld = record { allowed_window_nanos = TX_WINDOW } }` error.
+  * If `created_at_time` is set and is _after_ the `time()` observed by the ledger, the ledger should return `variant { CreatedInFuture = null }` error.
+  * If the ledger has a structurally equal transfer payload (i.e., all the transfer argument fields have the same values) at index `i`, it should return `variant { Duplicate = record { duplicate_of = i } }`.
   * Otherwise, the transfer is a new transaction.
-
-```
-accept_transfer(
-  context = { caller, tx_window, current_time },
-  args = { from_subaccount, to_principal, to_subaccount, fee, memo, created_at_time },
-  ledger_transactions
-) =
-  if created_at_time.is_set() and created_at_time < current_time - tx_window
-  then #Err(#TooOld { allowed_window_nanos = tx_window })
-  else if created_at_time.is_set() and created_at_time > current_time
-       then #Err(#CreatedInFuture)
-       else if ∃i: ledger_transactions[i] = { from_principal = caller
-                                            , from_subaccount
-                                            , to_principal
-                                            , to_subaccount
-                                            , fee
-                                            , memo
-                                            , created_at_time
-                                            }
-            then #Err(#Duplicate { duplicate_of = i })
-            else #Ok
-```
