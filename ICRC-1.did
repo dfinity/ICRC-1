@@ -7,7 +7,7 @@ type Duration = nat64;
 type Subaccount = blob;
 
 type Account = record {
-    principal: principal;
+    "principal": principal;
     subaccount: opt Subaccount;
 };
 
