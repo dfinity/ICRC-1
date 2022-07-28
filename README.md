@@ -10,7 +10,7 @@ A `principal` can have multiple accounts. Each account of a `principal` is ident
 
 The account identified by the subaccount with all bytes set to 0 is the _default account_ of the `principal`.
 
-```
+```candid "Type definitions" +=
 type Subaccount = blob;
 type Account = record { "principal": principal; subaccount: opt Subaccount; };
 ```
@@ -21,7 +21,7 @@ type Account = record { "principal": principal; subaccount: opt Subaccount; };
 
 Returns the name of the token (e.g., `MyToken`).
 
-```
+```candid "Methods" +=
 icrc1_name : () -> (text) query;
 ```
 
@@ -29,7 +29,7 @@ icrc1_name : () -> (text) query;
 
 Returns the symbol of the token (e.g., `ICP`).
 
-```
+```candid "Methods" +=
 icrc1_symbol : () -> (text) query;
 ```
 
@@ -37,7 +37,7 @@ icrc1_symbol : () -> (text) query;
 
 Returns the number of decimals the token uses (e.g., `8` means to divide the token amount by `100000000` to get its user representation).
 
-```
+```candid "Methods" +=
 icrc1_decimals : () -> (nat8) query;
 ```
 
@@ -46,17 +46,19 @@ icrc1_decimals : () -> (nat8) query;
 Returns the list of metadata entries for this ledger.
 See the "Metadata" section below.
 
-```
+```candid "Type definitions" +=
 type Value = variant { Nat : nat; Int : int; Text : text; Blob : blob };
+```
 
-icrc1_metadata : () -> (vec { record { text; Value } }) query;
+```candid "Methods" +=
+icrc1_metadata : () -> (vec record { text; Value }) query;
 ```
 
 ### icrc1_total_supply
 
 Returns the total token supply.
 
-```
+```candid "Methods" +=
 icrc1_total_supply : () -> (nat) query;
 ```
 
@@ -64,7 +66,7 @@ icrc1_total_supply : () -> (nat) query;
 
 Returns the balance of the account given as argument.
 
-```
+```candid "Methods" +=
 icrc1_balance_of : (Account) -> (nat) query;
 ```
 
@@ -72,7 +74,7 @@ icrc1_balance_of : (Account) -> (nat) query;
 
 Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the `Account`.
 
-```
+```candid "Type definitions" +=
 type TransferArgs = record {
     from_subaccount: opt Subaccount;
     to: Account;
@@ -91,7 +93,9 @@ type TransferError = variant {
     Duplicate : record { duplicate_of : nat };
     GenericError: record { error_code : nat; message : text };
 };
+```
 
+```candid "Methods" +=
 icrc1_transfer : (TransferArgs) -> (variant { Ok: nat; Err: TransferError; });
 ```
 
@@ -112,7 +116,7 @@ The result is either the transaction index of the transfer or an error.
 Returns the list of standards this ledger implements.
 See the ["Extensions"](#extensions) section below.
 
-```
+```candid "Methods" +=
 icrc1_supported_standards : () -> (vec record { name : text; url : text }) query;
 ```
 
@@ -152,3 +156,12 @@ Namespace `icrc1` is reserved for keys defined in this standard.
 | `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the `name` query call. |
 | `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the `decimals` query call. |
 
+<!--
+```candid ICRC-1.did +=
+<<<Type definitions>>>
+
+service : {
+  <<<Methods>>>
+}
+```
+-->

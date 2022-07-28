@@ -1,0 +1,33 @@
+load("//bazel:didc_test.bzl", "didc_check_test", "didc_subtype_test")
+
+package(default_visibility = ["//visibility:public"])
+
+genrule(
+    name = "candid",
+    srcs = [":README.md"],
+    outs = ["ICRC-1-generated.did"],
+    cmd_bash = "$(location @lmt) $(SRCS); mv ICRC-1.did $@",
+    exec_tools = ["@lmt"],
+)
+
+didc_check_test(
+    name = "extracted_candid_check",
+    srcs = [":ICRC-1-generated.did"],
+)
+
+didc_check_test(
+    name = "committed_candid_check",
+    srcs = ["ICRC-1.did"],
+)
+
+didc_subtype_test(
+    name = "check_generated_subtype",
+    did = ":ICRC-1-generated.did",
+    previous = "ICRC-1.did",
+)
+
+didc_subtype_test(
+    name = "check_source_subtype",
+    did = "ICRC-1.did",
+    previous = ":ICRC-1-generated.did",
+)
