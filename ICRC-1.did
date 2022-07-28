@@ -4,12 +4,16 @@ type Timestamp = nat64;
 // Number of nanoseconds between two [Timestamp]service
 type Duration = nat64;
 
-type SubAccount = blob;
+type Subaccount = blob;
+
+type Account = record {
+    "principal": principal;
+    subaccount: opt Subaccount;
+};
 
 type TransferArgs = record {
-    from_subaccount: opt SubAccount;
-    to_principal: principal;
-    to_subaccount: opt SubAccount;
+    from_subaccount: opt Subaccount;
+    to: Account;
     amount: nat;
     fee: opt nat;
     memo: opt nat64;
@@ -23,7 +27,7 @@ type TransferError = variant {
     TooOld : record { allowed_window_nanos : Duration };
     CreatedInFuture;
     Duplicate : record { duplicate_of : nat };
-    GenericError: text;
+    GenericError : record { error_code : nat; message : text };
 };
 
 type Value = variant {
@@ -39,7 +43,7 @@ service : {
     icrc1_symbol : () -> (text) query;
     icrc1_decimals : () -> (nat8) query;
     icrc1_total_supply : () -> (nat) query;
-    icrc1_balance_of : (record { of: principal; subaccount: opt SubAccount; }) -> (nat) query;
+    icrc1_balance_of : (Account) -> (nat) query;
     icrc1_transfer : (TransferArgs) -> (variant { Ok: nat; Err: TransferError; });
     icrc1_supported_standards : () -> (vec record { name : text; url : text }) query;
 }
