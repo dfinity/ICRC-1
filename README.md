@@ -45,7 +45,7 @@ icrc1_decimals : () -> (nat8) query;
 
 Returns the default transfer fee.
 
-```
+```candid "Methods" +=
 icrc1_fee : () -> (nat) query;
 ```
 
