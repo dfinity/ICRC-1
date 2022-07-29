@@ -1,3 +1,5 @@
+load("@rules_motoko//motoko:defs.bzl", "MotokoActorInfo")
+
 def _didc_check_impl(ctx):
     didc = ctx.executable._didc
     script = "\n".join(
@@ -50,4 +52,15 @@ didc_subtype_test = rule(
         "_didc": DIDC_ATTR,
     },
     test = True,
+)
+
+def _mo_actor_did_impl(ctx):
+    did_file = ctx.attr.actor[MotokoActorInfo].didl
+    return [DefaultInfo(files = depset([did_file]))]
+
+motoko_actor_did_file = rule(
+    implementation = _mo_actor_did_impl,
+    attrs = {
+        "actor": attr.label(providers = [MotokoActorInfo]),
+    },
 )
