@@ -1,4 +1,5 @@
 load("@rules_motoko//motoko:defs.bzl", "motoko_binary", "motoko_library")
+load("//bazel:didc_test.bzl", "didc_subtype_test", "motoko_actor_did_file")
 
 motoko_library(
     name = "base",
@@ -6,7 +7,18 @@ motoko_library(
 )
 
 motoko_binary(
-    name = "icrc1-ref",
+    name = "icrc1_ref",
     entry = "ICRC1.mo",
     deps = [":base"],
+)
+
+motoko_actor_did_file(
+    name = "icrc1_ref_did",
+    actor = ":icrc1_ref",
+)
+
+didc_subtype_test(
+    name = "ref_candid_check",
+    did = ":icrc1_ref_did",
+    previous = "//:ICRC-1.did",
 )

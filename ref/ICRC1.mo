@@ -1,10 +1,9 @@
 import Array         "mo:base/Array";
-import List          "mo:base/List";
 import Blob          "mo:base/Blob";
+import Buffer        "mo:base/Buffer";
 import Principal     "mo:base/Principal";
 import Option        "mo:base/Option";
 import Error         "mo:base/Error";
-import Text          "mo:base/Text";
 import Time          "mo:base/Time";
 import Int           "mo:base/Int";
 import Nat8          "mo:base/Nat8";
@@ -12,27 +11,26 @@ import Nat64         "mo:base/Nat64";
 
 
 actor class Ledger(init : {
-                     initial_mints : [ { account : { of : Principal; subaccount : ?Blob }; amount : Nat } ];
-                     minting_account : { of : Principal; subaccount : ?Blob };
+                     initial_mints : [ { account : { principal : Principal; subaccount : ?Blob }; amount : Nat } ];
+                     minting_account : { principal : Principal; subaccount : ?Blob };
                      token_name : Text;
                      token_symbol : Text;
                      decimals : Nat8;
                      transfer_fee : Nat;
                   }) = this {
 
-  public type Account = { of : Principal; subaccount : ?Subaccount };
+  public type Account = { principal : Principal; subaccount : ?Subaccount };
   public type Subaccount = Blob;
   public type Tokens = Nat;
   public type Memo = Nat64;
   public type Timestamp = Nat64;
   public type Duration = Nat64;
   public type TxIndex = Nat;
-  public type TxLog = List.List<Transaction>;
+  public type TxLog = Buffer.Buffer<Transaction>;
 
   public type Value = { #Nat : Nat; #Int : Int; #Blob : Blob; #Text : Text; };
 
   let permittedDriftNanos : Duration = 60_000_000_000;
-  let transferFee : Tokens = 10_000;
   let transactionWindowNanos : Duration = 24 * 60 * 60 * 1_000_000_000;
   let defaultSubaccount : Subaccount = Blob.fromArrayMut(Array.init(32, 0 : Nat8));
 
@@ -62,7 +60,7 @@ actor class Ledger(init : {
     #TooOld : { allowed_window_nanos : Duration };
     #CreatedInFuture;
     #Duplicate : { duplicate_of : TxIndex };
-    #Generic : { error_code : Nat; message : Text };
+    #GenericError : { error_code : Nat; message : Text };
   };
 
   public type TransferResult = {
@@ -75,56 +73,67 @@ actor class Ledger(init : {
     let lhsSubaccount = Option.get(lhs.subaccount, defaultSubaccount);
     let rhsSubaccount = Option.get(rhs.subaccount, defaultSubaccount);
 
-    Principal.equal(lhs.of, rhs.of) and Blob.equal(lhsSubaccount, rhsSubaccount)
+    Principal.equal(lhs.principal, rhs.principal) and Blob.equal(lhsSubaccount, rhsSubaccount)
   };
 
+  // Computes the balance of the specified account.
   func balance(account : Account, log : TxLog) : Nat {
-    List.foldLeft(log, 0 : Nat, func(sum : Nat, tx : Transaction) : Nat {
+    var sum = 0;
+    for (tx in log.vals()) {
       switch (tx.kind) {
         case (#Burn) {
-          if (accountsEqual(tx.args.from, account)) { sum - tx.args.amount } else { sum }
+          if (accountsEqual(tx.args.from, account)) { sum -= tx.args.amount };
         };
         case (#Mint) {
-          if (accountsEqual(tx.args.to, account)) { sum + tx.args.amount } else { sum }
+          if (accountsEqual(tx.args.to, account)) { sum += tx.args.amount };
         };
         case (#Transfer) {
-          if (accountsEqual(tx.args.from, account)) { sum - tx.args.amount - tx.fee }
-          else if (accountsEqual(tx.args.to, account)) { sum + tx.args.amount }
-          else { sum }
-        }
-      }
-    })
-  };
-
-  func findTransfer(transfer : Transfer, log : TxLog, now : Timestamp) : ?TxIndex {
-    func go(i : TxIndex, rest : TxLog) : ?TxIndex {
-      switch rest {
-        case null { null };
-        case (?(tx, tail)) {
-          if (tx.args == transfer
-              and (tx.timestamp < now)
-              and (now - tx.timestamp) > transactionWindowNanos) { ?i }
-          else { go(i + 1, tail) }
+          if (accountsEqual(tx.args.from, account)) { sum -= tx.args.amount + tx.fee };
+          if (accountsEqual(tx.args.to, account)) { sum += tx.args.amount };
         };
       }
     };
-    go(0, log)
+    sum
   };
 
+  // Computes the total token supply.
+  func totalSupply(log: TxLog) : Tokens {
+    var total = 0;
+    for (tx in log.vals()) {
+      switch (tx.kind) {
+        case (#Burn) { total -= tx.args.amount };
+        case (#Mint) { total += tx.args.amount };
+        case (#Transfer) { total -= tx.fee };
+      }
+    };
+    total
+  };
+
+  // Finds a transaction in the transaction log within the (now - tx_window) time frame.
+  func findTransfer(transfer : Transfer, log : TxLog, now : Timestamp) : ?TxIndex {
+    var i = 0;
+    for (tx in log.vals()) {
+      if (tx.args == transfer
+          and (tx.timestamp < now + permittedDriftNanos)
+          and (now - tx.timestamp) < transactionWindowNanos + permittedDriftNanos) { return ?i; };
+      i += 1;
+    };
+    null
+  };
+
+  // Checks if the principal is anonymous.
   func isAnonymous(p : Principal) : Bool {
     Blob.equal(Principal.toBlob(p), Blob.fromArray([0x04]))
   };
 
+  // Constructs the transaction log corresponding to the init argument.
   func makeGenesisChain() : TxLog {
     validateSubaccount(init.minting_account.subaccount);
 
     let now = Nat64.fromNat(Int.abs(Time.now()));
-
-    Array.foldLeft<{ account : Account; amount : Tokens }, TxLog>(
-        init.initial_mints,
-        null,
-        func(log : TxLog, { account: Account; amount : Tokens }) : TxLog {
-      validateSubaccount(account.subaccount);
+    let log = Buffer.Buffer<Transaction>(100);
+    for ({account; amount} in Array.vals(init.initial_mints)) {
+      validateSubaccount(account.subaccount);    
       let tx : Transaction = {
         args = {
           from = init.minting_account;
@@ -138,16 +147,34 @@ actor class Ledger(init : {
         fee = 0;
         timestamp = now;
       };
-      List.push(tx, log)
-    })
+      log.add(tx);
+    };
+    log
   };
 
+  // Traps if the specified blob is not a valid subaccount.
   func validateSubaccount(s : ?Subaccount) {
     let subaccount = Option.get(s, defaultSubaccount);
     assert (subaccount.size() == 32);
   };
 
-  stable var log : TxLog = makeGenesisChain();
+  // The list of all transactions.
+  var log : TxLog = makeGenesisChain();
+
+  // The stable representation of the transaction log.
+  // Used only during upgrades.
+  stable var persistedLog : [Transaction] = [];
+
+  system func preupgrade() {
+    persistedLog := log.toArray();
+  };
+
+  system func postupgrade() {
+    log := Buffer.Buffer(persistedLog.size());
+    for (tx in Array.vals(persistedLog)) {
+      log.add(tx);
+    };
+  };
 
   public shared({ caller }) func icrc1_transfer({
       from_subaccount : ?Subaccount;
@@ -176,7 +203,7 @@ actor class Ledger(init : {
     validateSubaccount(from_subaccount);
     validateSubaccount(to.subaccount);
 
-    let from = { of = caller; subaccount = from_subaccount };
+    let from = { principal = caller; subaccount = from_subaccount };
 
     let args : Transfer = {
       from = from;
@@ -204,8 +231,8 @@ actor class Ledger(init : {
         return #Err(#BadFee { expected_fee = 0 });
       };
 
-      if (amount < transferFee) {
-        return #Err(#BadBurn { min_burn_amount = transferFee });
+      if (amount < init.transfer_fee) {
+        return #Err(#BadBurn { min_burn_amount = init.transfer_fee });
       };
 
       let debitBalance = balance(from, log);
@@ -217,7 +244,7 @@ actor class Ledger(init : {
     } else {
       let effectiveFee = init.transfer_fee;
       if (Option.get(fee, effectiveFee) != effectiveFee) {
-        return #Err(#BadFee { expected_fee = transferFee });
+        return #Err(#BadFee { expected_fee = init.transfer_fee });
       };
 
       let debitBalance = balance(from, log);
@@ -235,13 +262,17 @@ actor class Ledger(init : {
       timestamp = now;
     };
 
-    let txIndex = List.size(log);
-    log := List.push(tx, log);
+    let txIndex = log.size();
+    log.add(tx);
     #Ok(txIndex)
   };
 
   public query func icrc1_balance_of(account : Account) : async Tokens {
     balance(account, log)
+  };
+
+  public query func icrc1_total_supply() : async Tokens {
+    totalSupply(log)
   };
 
   public query func icrc1_name() : async Text {
