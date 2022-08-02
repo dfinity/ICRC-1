@@ -1,3 +1,5 @@
+load("@rules_motoko//motoko:defs.bzl", "MotokoActorInfo")
+
 def _didc_check_impl(ctx):
     didc = ctx.executable._didc
     script = "\n".join(
@@ -32,7 +34,11 @@ didc_check_test = rule(
 def _didc_subtype_check_impl(ctx):
     didc = ctx.executable._didc
     script = """
-{didc} check {did} {previous}
+{didc} check {did} {previous} 2>didc_errors.log
+if [ -s didc_errors.log ]; then
+    cat didc_errors.log
+    exit 1
+fi
     """.format(didc = didc.path, did = ctx.file.did.short_path, previous = ctx.file.previous.short_path)
 
     ctx.actions.write(output = ctx.outputs.executable, content = script)
@@ -50,4 +56,15 @@ didc_subtype_test = rule(
         "_didc": DIDC_ATTR,
     },
     test = True,
+)
+
+def _mo_actor_did_impl(ctx):
+    did_file = ctx.attr.actor[MotokoActorInfo].didl
+    return [DefaultInfo(files = depset([did_file]))]
+
+motoko_actor_did_file = rule(
+    implementation = _mo_actor_did_impl,
+    attrs = {
+        "actor": attr.label(providers = [MotokoActorInfo]),
+    },
 )
