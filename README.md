@@ -107,7 +107,7 @@ type TransferError = variant {
     TooOld : record { allowed_window_nanos : nat64 };
     CreatedInFuture;
     Duplicate : record { duplicate_of : nat };
-    MaximumLoad;
+    TemporarilyUnavailable;
     GenericError: record { error_code : nat; message : text };
 };
 ```
