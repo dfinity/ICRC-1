@@ -17,7 +17,7 @@ type Account = record { "principal": principal; subaccount: opt Subaccount; };
 
 ## Methods
 
-### icrc1_name
+### icrc1_name <span id="name_method"></span>
 
 Returns the name of the token (e.g., `MyToken`).
 
@@ -25,7 +25,7 @@ Returns the name of the token (e.g., `MyToken`).
 icrc1_name : () -> (text) query;
 ```
 
-### icrc1_symbol
+### icrc1_symbol <span id="symbol_method"></span>
 
 Returns the symbol of the token (e.g., `ICP`).
 
@@ -33,7 +33,7 @@ Returns the symbol of the token (e.g., `ICP`).
 icrc1_symbol : () -> (text) query;
 ```
 
-### icrc1_decimals
+### icrc1_decimals <span id="decimals_method"></span>
 
 Returns the number of decimals the token uses (e.g., `8` means to divide the token amount by `100000000` to get its user representation).
 
@@ -41,7 +41,15 @@ Returns the number of decimals the token uses (e.g., `8` means to divide the tok
 icrc1_decimals : () -> (nat8) query;
 ```
 
-### icrc1_metadata
+### icrc1_fee <span id="fee_method"></span>
+
+Returns the default transfer fee.
+
+```candid "Methods" +=
+icrc1_fee : () -> (nat) query;
+```
+
+### icrc1_metadata <span id="metadata_method"></span>
 
 Returns the list of metadata entries for this ledger.
 See the "Metadata" section below.
@@ -140,7 +148,7 @@ This endpoint returns names of all specifications (e.g., `"ICRC-42"` or `"DIP-20
 ## Metadata
 
 A ledger can expose metadata to simplify integration with wallets and improve user experience.
-The client can use the `icrc1_metadata` method to fetch the metadata entries. 
+The client can use the [`icrc1_metadata`](#metadata_method) method to fetch the metadata entries. 
 All the metadata entries are optional.
 
 ### Key format
@@ -152,9 +160,10 @@ Namespace `icrc1` is reserved for keys defined in this standard.
 
 | Key | Example value | Semantics |
 | --- | ------------- | --------- |
-| `icrc1:symbol` | `variant { Text = "XTKN" }` | The token currency code (see [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)). When present, should be the same as the result of the `symbol` query call. |
-| `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the `name` query call. |
-| `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the `decimals` query call. |
+| `icrc1:symbol` | `variant { Text = "XTKN" }` | The token currency code (see [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)). When present, should be the same as the result of the [`icrc1_symbol`](#symbol_method) query call. |
+| `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the [`icrc1_name`](#name_method) query call. |
+| `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the [`icrc1_decimals`](#decimals_method) query call. |
+| `icrc1:fee` | `variant { Nat = 10_000 }` | The default transfer fee. When present, should be the same as the result of the [`icrc1_fee`](#fee_method) query call. |
 
 <!--
 ```candid ICRC-1.did +=
