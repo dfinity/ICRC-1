@@ -16,7 +16,7 @@ type TransferArgs = record {
     to: Account;
     amount: nat;
     fee: opt nat;
-    memo: opt nat64;
+    memo: opt blob;
     created_at_time: opt Timestamp;
 };
 
