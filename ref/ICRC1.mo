@@ -287,6 +287,10 @@ actor class Ledger(init : {
     init.decimals
   };
 
+  public query func icrc1_fee() : async Nat {
+    init.transfer_fee
+  };
+
   public query func icrc1_metadata() : async [(Text, Value)] {
     [
       ("icrc1:name", #Text(init.token_name)),
