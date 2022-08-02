@@ -17,7 +17,7 @@ type Account = record { "principal": principal; subaccount: opt Subaccount; };
 
 ## Methods
 
-### icrc1_name
+### icrc1_name <span id="name_method"></span>
 
 Returns the name of the token (e.g., `MyToken`).
 
@@ -25,7 +25,7 @@ Returns the name of the token (e.g., `MyToken`).
 icrc1_name : () -> (text) query;
 ```
 
-### icrc1_symbol
+### icrc1_symbol <span id="symbol_method"></span>
 
 Returns the symbol of the token (e.g., `ICP`).
 
@@ -33,7 +33,7 @@ Returns the symbol of the token (e.g., `ICP`).
 icrc1_symbol : () -> (text) query;
 ```
 
-### icrc1_decimals
+### icrc1_decimals <span id="decimals_method"></span>
 
 Returns the number of decimals the token uses (e.g., `8` means to divide the token amount by `100000000` to get its user representation).
 
@@ -41,7 +41,15 @@ Returns the number of decimals the token uses (e.g., `8` means to divide the tok
 icrc1_decimals : () -> (nat8) query;
 ```
 
-### icrc1_metadata
+### icrc1_fee <span id="fee_method"></span>
+
+Returns the default transfer fee.
+
+```candid "Methods" +=
+icrc1_fee : () -> (nat) query;
+```
+
+### icrc1_metadata <span id="metadata_method"></span>
 
 Returns the list of metadata entries for this ledger.
 See the "Metadata" section below.
@@ -56,10 +64,18 @@ icrc1_metadata : () -> (vec record { text; Value }) query;
 
 ### icrc1_total_supply
 
-Returns the total token supply.
+Returns the total number of tokens on all accounts except for the [minting account](#minting_account).
 
 ```candid "Methods" +=
 icrc1_total_supply : () -> (nat) query;
+```
+
+### icrc1_minting_account
+
+Returns the [minting account](#minting_account) if this ledger supports minting and burning tokens.
+
+```candid "Methods" +=
+icrc1_minting_account : () -> (opt Account) query;
 ```
 
 ### icrc1_balance_of
@@ -80,7 +96,7 @@ type TransferArgs = record {
     to: Account;
     amount: nat;
     fee: opt nat;
-    memo: opt nat64;
+    memo: opt blob;
     created_at_time: opt nat64;
 };
 
@@ -104,7 +120,8 @@ The caller pays the `fee`.
 If the caller does not set the `fee` argument, the ledger applies the default transfer fee.
 If the `fee` argument does not agree with the ledger fee, the ledger MUST return `variant { BadFee = record { expected_fee = ... } }` error.
 
-The `memo` parameter is an arbitrary integer that has no meaning to the ledger.
+The `memo` parameter is an arbitrary blob has no meaning to the ledger.
+The ledger MUST allow memos of at least 32 bytes in length.
 The ledger MAY use the `memo` argument for transaction deduplication.
 
 The `created_at_time` parameter indicates the time (as nanoseconds since the UNIX epoch in the UTC timezone) at which the client constructed the transaction.
@@ -141,7 +158,7 @@ This endpoint returns names of all specifications (e.g., `"ICRC-42"` or `"DIP-20
 ## Metadata
 
 A ledger can expose metadata to simplify integration with wallets and improve user experience.
-The client can use the `icrc1_metadata` method to fetch the metadata entries. 
+The client can use the [`icrc1_metadata`](#metadata_method) method to fetch the metadata entries. 
 All the metadata entries are optional.
 
 ### Key format
@@ -153,9 +170,27 @@ Namespace `icrc1` is reserved for keys defined in this standard.
 
 | Key | Example value | Semantics |
 | --- | ------------- | --------- |
-| `icrc1:symbol` | `variant { Text = "XTKN" }` | The token currency code (see [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)). When present, should be the same as the result of the `symbol` query call. |
-| `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the `name` query call. |
-| `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the `decimals` query call. |
+| `icrc1:symbol` | `variant { Text = "XTKN" }` | The token currency code (see [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)). When present, should be the same as the result of the [`icrc1_symbol`](#symbol_method) query call. |
+| `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the [`icrc1_name`](#name_method) query call. |
+| `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the [`icrc1_decimals`](#decimals_method) query call. |
+| `icrc1:fee` | `variant { Nat = 10_000 }` | The default transfer fee. When present, should be the same as the result of the [`icrc1_fee`](#fee_method) query call. |
+
+## Minting account <span id="minting_account"></span>
+
+The minting account is a unique account that can create new tokens and acts as the receiver of burnt tokens.
+
+Transfers _from_ the minting account act as _mint_ transactions depositing fresh tokens on the destination account.
+Mint transactions have no fee.
+
+Transfers _to_ the minting account act as _burn_ transactions, removing tokens from the token supply.
+Burn transactions have no fee but might have minimal burn amount requirements.
+If the client tries to burn an amount that is too small, the ledger SHOULD reply with
+
+```
+variant { Err = variant { BadBurn = record { min_burn_amount = ... } } }
+```
+
+The minting account is also the receiver of the fees burnt in regular transfers.
 
 <!--
 ```candid ICRC-1.did +=

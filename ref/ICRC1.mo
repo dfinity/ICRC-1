@@ -22,7 +22,7 @@ actor class Ledger(init : {
   public type Account = { principal : Principal; subaccount : ?Subaccount };
   public type Subaccount = Blob;
   public type Tokens = Nat;
-  public type Memo = Nat64;
+  public type Memo = Blob;
   public type Timestamp = Nat64;
   public type Duration = Nat64;
   public type TxIndex = Nat;
@@ -158,6 +158,13 @@ actor class Ledger(init : {
     assert (subaccount.size() == 32);
   };
 
+  func validateMemo(m : ?Memo) {
+    switch (m) {
+      case (null) {};
+      case (?memo) { assert (memo.size() <= 32); };
+    }
+  };
+
   // The list of all transactions.
   var log : TxLog = makeGenesisChain();
 
@@ -202,6 +209,7 @@ actor class Ledger(init : {
 
     validateSubaccount(from_subaccount);
     validateSubaccount(to.subaccount);
+    validateMemo(memo);
 
     let from = { principal = caller; subaccount = from_subaccount };
 
@@ -275,6 +283,10 @@ actor class Ledger(init : {
     totalSupply(log)
   };
 
+  public query func icrc1_minting_account() : async ?Account {
+    ?init.minting_account
+  };
+
   public query func icrc1_name() : async Text {
     init.token_name
   };
@@ -287,11 +299,16 @@ actor class Ledger(init : {
     init.decimals
   };
 
+  public query func icrc1_fee() : async Nat {
+    init.transfer_fee
+  };
+
   public query func icrc1_metadata() : async [(Text, Value)] {
     [
       ("icrc1:name", #Text(init.token_name)),
       ("icrc1:symbol", #Text(init.token_symbol)),
       ("icrc1:decimals", #Nat(Nat8.toNat(init.decimals))),
+      ("icrc1:fee", #Nat(init.transfer_fee)),
     ]
   };
 
