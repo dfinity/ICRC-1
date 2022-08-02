@@ -34,7 +34,11 @@ didc_check_test = rule(
 def _didc_subtype_check_impl(ctx):
     didc = ctx.executable._didc
     script = """
-{didc} check {did} {previous}
+{didc} check {did} {previous} 2>didc_errors.log
+if [ -s didc_errors.log ]; then
+    cat didc_errors.log
+    exit 1
+fi
     """.format(didc = didc.path, did = ctx.file.did.short_path, previous = ctx.file.previous.short_path)
 
     ctx.actions.write(output = ctx.outputs.executable, content = script)
