@@ -88,7 +88,7 @@ type TransferArgs = record {
     to: Account;
     amount: nat;
     fee: opt nat;
-    memo: opt nat64;
+    memo: opt blob;
     created_at_time: opt nat64;
 };
 
@@ -111,7 +111,8 @@ The caller pays the `fee`.
 If the caller does not set the `fee` argument, the ledger applies the default transfer fee.
 If the `fee` argument does not agree with the ledger fee, the ledger MUST return `variant { BadFee = record { expected_fee = ... } }` error.
 
-The `memo` parameter is an arbitrary integer that has no meaning to the ledger.
+The `memo` parameter is an arbitrary blob has no meaning to the ledger.
+The ledger MUST allow memos of at least 32 bytes in length.
 The ledger MAY use the `memo` argument for transaction deduplication.
 
 The `created_at_time` parameter indicates the time (as nanoseconds since the UNIX epoch in the UTC timezone) at which the client constructed the transaction.

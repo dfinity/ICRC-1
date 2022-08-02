@@ -22,7 +22,7 @@ actor class Ledger(init : {
   public type Account = { principal : Principal; subaccount : ?Subaccount };
   public type Subaccount = Blob;
   public type Tokens = Nat;
-  public type Memo = Nat64;
+  public type Memo = Blob;
   public type Timestamp = Nat64;
   public type Duration = Nat64;
   public type TxIndex = Nat;
@@ -158,6 +158,13 @@ actor class Ledger(init : {
     assert (subaccount.size() == 32);
   };
 
+  func validateMemo(m : ?Memo) {
+    switch (m) {
+      case (null) {};
+      case (?memo) { assert (memo.size() <= 32); };
+    }
+  };
+
   // The list of all transactions.
   var log : TxLog = makeGenesisChain();
 
@@ -202,6 +209,7 @@ actor class Ledger(init : {
 
     validateSubaccount(from_subaccount);
     validateSubaccount(to.subaccount);
+    validateMemo(memo);
 
     let from = { principal = caller; subaccount = from_subaccount };
 
