@@ -1,0 +1,57 @@
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
+load("//bazel:didc_repo.bzl", "didc_repository")
+
+http_archive(
+    name = "rules_motoko",
+    sha256 = "9b677fc5d3b42749d13b7734b3a87d4d40135499a189e843ae3f183965e255b7",
+    strip_prefix = "rules_motoko-0.1.0",
+    urls = ["https://github.com/dfinity/rules_motoko/archive/refs/tags/v0.1.0.zip"],
+)
+
+http_archive(
+    name = "motoko_base",
+    build_file_content = """
+filegroup(name = "sources", srcs = glob(["*.mo"]), visibility = ["//visibility:public"])
+      """,
+    sha256 = "582d1c90faa65047354ae7530f09160dd7e04882991287ced7ea7a72bd89d06e",
+    strip_prefix = "motoko-base-moc-0.6.24/src",
+    urls = ["https://github.com/dfinity/motoko-base/archive/refs/tags/moc-0.6.24.zip"],
+)
+
+load("@rules_motoko//motoko:repositories.bzl", "rules_motoko_dependencies")
+
+rules_motoko_dependencies()
+
+http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "16e9fca53ed6bd4ff4ad76facc9b7b651a89db1689a2877d6fd7b82aa824e366",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.34.0/rules_go-v0.34.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.34.0/rules_go-v0.34.0.zip",
+    ],
+)
+
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+
+go_rules_dependencies()
+
+go_register_toolchains(version = "1.18.4")
+
+new_git_repository(
+    name = "lmt",
+    build_file_content = """
+load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+
+go_binary(
+    name = "lmt",
+    srcs = ["main.go"],
+    visibility = ["//visibility:public"],
+)
+    """,
+    commit = "62fe18f2f6a6e11c158ff2b2209e1082a4fcd59c",
+    remote = "https://github.com/driusan/lmt",
+    shallow_since = "1619009341 -0400",
+)
+
+didc_repository(name = "didc")

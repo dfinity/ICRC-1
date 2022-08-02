@@ -10,9 +10,9 @@ A `principal` can have multiple accounts. Each account of a `principal` is ident
 
 The account identified by the subaccount with all bytes set to 0 is the _default account_ of the `principal`.
 
-```
+```candid "Type definitions" +=
 type Subaccount = blob;
-type Account = record { of: principal; subaccount: opt Subaccount; };
+type Account = record { "principal": principal; subaccount: opt Subaccount; };
 ```
 
 ## Methods
@@ -21,7 +21,7 @@ type Account = record { of: principal; subaccount: opt Subaccount; };
 
 Returns the name of the token (e.g., `MyToken`).
 
-```
+```candid "Methods" +=
 icrc1_name : () -> (text) query;
 ```
 
@@ -29,7 +29,7 @@ icrc1_name : () -> (text) query;
 
 Returns the symbol of the token (e.g., `ICP`).
 
-```
+```candid "Methods" +=
 icrc1_symbol : () -> (text) query;
 ```
 
@@ -37,7 +37,7 @@ icrc1_symbol : () -> (text) query;
 
 Returns the number of decimals the token uses (e.g., `8` means to divide the token amount by `100000000` to get its user representation).
 
-```
+```candid "Methods" +=
 icrc1_decimals : () -> (nat8) query;
 ```
 
@@ -46,61 +46,85 @@ icrc1_decimals : () -> (nat8) query;
 Returns the list of metadata entries for this ledger.
 See the "Metadata" section below.
 
-```
+```candid "Type definitions" +=
 type Value = variant { Nat : nat; Int : int; Text : text; Blob : blob };
+```
 
-icrc1_metadata : () -> (vec { record { text; Value } }) query;
+```candid "Methods" +=
+icrc1_metadata : () -> (vec record { text; Value }) query;
 ```
 
 ### icrc1_total_supply
 
-Returns the total number of tokens on all accounts except for the minting account.
+Returns the total number of tokens on all accounts except for the [minting account](#minting_account).
 
-```
+```candid "Methods" +=
 icrc1_total_supply : () -> (nat) query;
 ```
 
 ### icrc1_minting_account
 
-Returns the [minting account](#minting_account) for this ledger.
+Returns the [minting account](#minting_account) if this ledger supports minting and burning tokens.
 
-```
-icrc1_minting_account : () -> (Account) query;
+```candid "Methods" +=
+icrc1_minting_account : () -> (opt Account) query;
 ```
 
 ### icrc1_balance_of
 
 Returns the balance of the account given as argument.
 
-```
+```candid "Methods" +=
 icrc1_balance_of : (Account) -> (nat) query;
 ```
 
 ### icrc1_transfer
 
-Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the `Account`. The `fee` is paid by the `caller`.
+Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the `Account`.
 
-```
+```candid "Type definitions" +=
 type TransferArgs = record {
     from_subaccount: opt Subaccount;
     to: Account;
     amount: nat;
     fee: opt nat;
     memo: opt nat64;
-    created_at_time: opt Timestamp;
+    created_at_time: opt nat64;
 };
 
+type TransferError = variant {
+    BadFee : record { expected_fee : nat };
+    BadBurn : record { min_burn_amount : nat };
+    InsufficientFunds : record { balance : nat };
+    TooOld : record { allowed_window_nanos : nat64 };
+    CreatedInFuture;
+    Duplicate : record { duplicate_of : nat };
+    GenericError: record { error_code : nat; message : text };
+};
+```
+
+```candid "Methods" +=
 icrc1_transfer : (TransferArgs) -> (variant { Ok: nat; Err: TransferError; });
 ```
 
-The result is either the block index of the transfer or an error.
+The caller pays the `fee`.
+If the caller does not set the `fee` argument, the ledger applies the default transfer fee.
+If the `fee` argument does not agree with the ledger fee, the ledger MUST return `variant { BadFee = record { expected_fee = ... } }` error.
+
+The `memo` parameter is an arbitrary integer that has no meaning to the ledger.
+The ledger MAY use the `memo` argument for transaction deduplication.
+
+The `created_at_time` parameter indicates the time (as nanoseconds since the UNIX epoch in the UTC timezone) at which the client constructed the transaction.
+The ledger MAY reject transactions that have `created_at_time` argument too far in the past or the future, returning `variant { TooOld = record { allowed_window_nanos = ... } }` and `variant { CreatedInFuture }` errors correspondingly.
+
+The result is either the transaction index of the transfer or an error.
 
 ### icrc1_supported_standards
 
 Returns the list of standards this ledger implements.
 See the ["Extensions"](#extensions) section below.
 
-```
+```candid "Methods" +=
 icrc1_supported_standards : () -> (vec record { name : text; url : text }) query;
 ```
 
@@ -156,3 +180,13 @@ variant { Err = variant { BadBurn = record { min_burn_amount = ... } } }
 ```
 
 The minting account is also the receiver of the fees burnt in regular transfers.
+
+<!--
+```candid ICRC-1.did +=
+<<<Type definitions>>>
+
+service : {
+  <<<Methods>>>
+}
+```
+-->
