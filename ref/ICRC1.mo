@@ -283,6 +283,10 @@ actor class Ledger(init : {
     totalSupply(log)
   };
 
+  public query func icrc1_minting_account() : async ?Account {
+    ?init.minting_account
+  };
+
   public query func icrc1_name() : async Text {
     init.token_name
   };
