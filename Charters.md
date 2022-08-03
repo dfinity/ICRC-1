@@ -20,7 +20,7 @@ Decisions made:
 
   * Larger memos (suggested in https://github.com/dfinity/ICRC-1/issues/30, proposed in https://github.com/dfinity/ICRC-1/pull/38): accepted
 
-  * TransferError type (questioned in https://github.com/dfinity/ICRC-1/issues/30):
+  * TransferError type (questioned in https://github.com/dfinity/ICRC-1/issues/30, proposed in https://github.com/dfinity/ICRC-1/pull/43):
 
     - Add another variant like `Overloaded` or `Throttled` to cover a recoverable error indicating that the ledger is overloaded.
 
