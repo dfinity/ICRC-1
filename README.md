@@ -107,7 +107,7 @@ type TransferError = variant {
     TooOld;
     CreatedInFuture: record { ledger_time: nat64 };
     Duplicate : record { duplicate_of : nat };
-    Throttled;
+    TemporarilyUnavailable;
     GenericError : record { error_code : nat; message : text };
 };
 ```

@@ -60,7 +60,7 @@ actor class Ledger(init : {
     #TooOld;
     #CreatedInFuture : { ledger_time: Timestamp };
     #Duplicate : { duplicate_of : TxIndex };
-    #Throttled;
+    #TemporarilyUnavailable;
     #GenericError : { error_code : Nat; message : Text };
   };
 
