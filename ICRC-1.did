@@ -24,9 +24,10 @@ type TransferError = variant {
     BadFee : record { expected_fee : nat };
     BadBurn : record { min_burn_amount : nat };
     InsufficientFunds : record { balance : nat };
-    TooOld : record { allowed_window_nanos : Duration };
-    CreatedInFuture;
+    TooOld;
+    CreatedInFuture: record { ledger_time: Timestamp };
     Duplicate : record { duplicate_of : nat };
+    Throttled;
     GenericError : record { error_code : nat; message : text };
 };
 
