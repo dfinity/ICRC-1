@@ -7,8 +7,8 @@ type Duration = nat64;
 type Subaccount = blob;
 
 type Account = record {
-    "principal": principal;
-    subaccount: opt Subaccount;
+    owner : principal;
+    subaccount : opt Subaccount;
 };
 
 type TransferArgs = record {
@@ -27,6 +27,7 @@ type TransferError = variant {
     TooOld : record { allowed_window_nanos : Duration };
     CreatedInFuture;
     Duplicate : record { duplicate_of : nat };
+    TemporarilyUnavailable;
     GenericError : record { error_code : nat; message : text };
 };
 
