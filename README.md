@@ -86,9 +86,10 @@ Returns the balance of the account given as argument.
 icrc1_balance_of : (Account) -> (nat) query;
 ```
 
-### icrc1_transfer
+### icrc1_transfer <span id="transfer_method"></span>
 
-Transfers `amount` of tokens from the account `(caller, from_subaccount)` to the `Account`.
+Transfers `amount` of tokens from account `record { of = caller; subaccount = from_subaccount }` to the `to` account.
+The caller pays `fee` tokens for the transfer.
 
 ```candid "Type definitions" +=
 type TransferArgs = record {
@@ -121,8 +122,8 @@ If the caller does not set the `fee` argument, the ledger applies the default tr
 If the `fee` argument does not agree with the ledger fee, the ledger MUST return `variant { BadFee = record { expected_fee = ... } }` error.
 
 The `memo` parameter is an arbitrary blob has no meaning to the ledger.
-The ledger MUST allow memos of at least 32 bytes in length.
-The ledger MAY use the `memo` argument for transaction deduplication.
+The ledger SHOULD allow memos of at least 32 bytes in length.
+The ledger SHOULD use the `memo` argument for [transaction deduplication](#transaction_deduplication).
 
 The `created_at_time` parameter indicates the time (as nanoseconds since the UNIX epoch in the UTC timezone) at which the client constructed the transaction.
 The ledger MAY reject transactions that have `created_at_time` argument too far in the past or the future, returning `variant { TooOld = record { allowed_window_nanos = ... } }` and `variant { CreatedInFuture }` errors correspondingly.
@@ -174,6 +175,28 @@ Namespace `icrc1` is reserved for keys defined in this standard.
 | `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the [`icrc1_name`](#name_method) query call. |
 | `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the [`icrc1_decimals`](#decimals_method) query call. |
 | `icrc1:fee` | `variant { Nat = 10_000 }` | The default transfer fee. When present, should be the same as the result of the [`icrc1_fee`](#fee_method) query call. |
+
+## Transaction deduplication <span id="transfer_deduplication"></span>
+
+Consider the following scenario:
+
+  1. An agent sends a transaction to an ICRC-1 ledger hosted on the IC.
+  2. The ledger accepts the transaction.
+  3. The agent loses the network connection for several minutes and cannot learn about the outcome of the transaction.
+
+An ICRC-1 ledger SHOULD implement transfer deduplication to simplify the error recovery for agents.
+The deduplication covers all transactions submitted within a pre-configured time window `TX_WINDOW` (for example, last 24 hours).
+The ledger MAY extend the deduplication window into the future by PERMITTED_DRIFT parameter (for example, 2 minutes) to account for the time drift between the client and the Internet Computer.
+
+The client can control the deduplication algorithm using `created_at_time` and `memo` fields of the [`transfer`](#transfer_method) call argument:
+  * The `created_at_time` field sets the transaction construction time as the number of nanoseconds from the UNIX epoch in the UTC timezone.
+  * The `memo` field does not have any meaning to the ledger, except that the ledger will not deduplicate transfers with different values of the `memo` field.
+
+The ledger SHOULD use the following algorithm for transaction deduplication:
+  * If `created_at_time` is set and is _before_ `time() - TX_WINDOW - PERMITTED_DRIFT` as observed by the ledger, the ledger should return `variant { TooOld }` error.
+  * If `created_at_time` is set and is _after_ `time() + PERMITTED_DRIFT` as observed by the ledger, the ledger should return `variant { CreatedInFuture = record { ledger_time = ... } }` error.
+  * If the ledger observed a structurally equal transfer payload (i.e., all the transfer argument fields and the caller have the same values) at transaction with index `i`, it should return `variant { Duplicate = record { duplicate_of = i } }`.
+  * Otherwise, the transfer is a new transaction.
 
 ## Minting account <span id="minting_account"></span>
 
