@@ -57,9 +57,10 @@ actor class Ledger(init : {
     #BadFee : { expected_fee : Tokens };
     #BadBurn : { min_burn_amount : Tokens };
     #InsufficientFunds : { balance : Tokens };
-    #TooOld : { allowed_window_nanos : Duration };
-    #CreatedInFuture;
+    #TooOld;
+    #CreatedInFuture : { ledger_time: Timestamp };
     #Duplicate : { duplicate_of : TxIndex };
+    #TemporarilyUnavailable;
     #GenericError : { error_code : Nat; message : Text };
   };
 
@@ -200,11 +201,11 @@ actor class Ledger(init : {
     let txTime : Timestamp = Option.get(created_at_time, now);
 
     if ((txTime > now) and (txTime - now > permittedDriftNanos)) {
-      return #Err(#CreatedInFuture);
+      return #Err(#CreatedInFuture { ledger_time = now });
     };
 
     if ((txTime < now) and (now - txTime > transactionWindowNanos + permittedDriftNanos)) {
-      return #Err(#TooOld { allowed_window_nanos = transactionWindowNanos });
+      return #Err(#TooOld);
     };
 
     validateSubaccount(from_subaccount);

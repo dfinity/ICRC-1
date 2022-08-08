@@ -12,7 +12,7 @@ The account identified by the subaccount with all bytes set to 0 is the _default
 
 ```candid "Type definitions" +=
 type Subaccount = blob;
-type Account = record { owner: principal; subaccount: opt Subaccount; };
+type Account = record { owner : principal; subaccount : opt Subaccount; };
 ```
 
 ## Methods
@@ -93,23 +93,23 @@ The caller pays `fee` tokens for the transfer.
 
 ```candid "Type definitions" +=
 type TransferArgs = record {
-    from_subaccount: opt Subaccount;
-    to: Account;
-    amount: nat;
-    fee: opt nat;
-    memo: opt blob;
-    created_at_time: opt nat64;
+    from_subaccount : opt Subaccount;
+    to : Account;
+    amount : nat;
+    fee : opt nat;
+    memo : opt blob;
+    created_at_time : opt nat64;
 };
 
 type TransferError = variant {
     BadFee : record { expected_fee : nat };
     BadBurn : record { min_burn_amount : nat };
     InsufficientFunds : record { balance : nat };
-    TooOld : record { allowed_window_nanos : nat64 };
-    CreatedInFuture;
+    TooOld;
+    CreatedInFuture : record { ledger_time: nat64 };
     Duplicate : record { duplicate_of : nat };
     TemporarilyUnavailable;
-    GenericError: record { error_code : nat; message : text };
+    GenericError : record { error_code : nat; message : text };
 };
 ```
 
