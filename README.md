@@ -122,8 +122,8 @@ If the caller does not set the `fee` argument, the ledger applies the default tr
 If the `fee` argument does not agree with the ledger fee, the ledger MUST return `variant { BadFee = record { expected_fee = ... } }` error.
 
 The `memo` parameter is an arbitrary blob has no meaning to the ledger.
-The ledger MUST allow memos of at least 32 bytes in length.
-The ledger MAY use the `memo` argument for [transaction deduplication](#transaction_deduplication).
+The ledger SHOULD allow memos of at least 32 bytes in length.
+The ledger SHOULD use the `memo` argument for [transaction deduplication](#transaction_deduplication).
 
 The `created_at_time` parameter indicates the time (as nanoseconds since the UNIX epoch in the UTC timezone) at which the client constructed the transaction.
 The ledger MAY reject transactions that have `created_at_time` argument too far in the past or the future, returning `variant { TooOld = record { allowed_window_nanos = ... } }` and `variant { CreatedInFuture }` errors correspondingly.
@@ -186,15 +186,16 @@ Consider the following scenario:
 
 An ICRC-1 ledger SHOULD implement transfer deduplication to simplify the error recovery for agents.
 The deduplication covers all transactions submitted within a pre-configured time window `TX_WINDOW` (for example, last 24 hours).
+The ledger MAY extend the deduplication window into the future by PERMITTED_DRIFT parameter (for example, 2 minutes) to account for the time drift between the client and the Internet Computer.
 
 The client can control the deduplication algorithm using `created_at_time` and `memo` fields of the [`transfer`](#transfer_method) call argument:
   * The `created_at_time` field sets the transaction construction time as the number of nanoseconds from the UNIX epoch in the UTC timezone.
   * The `memo` field does not have any meaning to the ledger, except that the ledger will not deduplicate transfers with different values of the `memo` field.
 
 The ledger SHOULD use the following algorithm for transaction deduplication:
-  * If `created_at_time` is set and is _before_ the `time() - TX_WINDOW` as observed by the ledger, the ledger should return `variant { TooOld = record { allowed_window_nanos = TX_WINDOW } }` error.
-  * If `created_at_time` is set and is _after_ the `time()` observed by the ledger, the ledger should return `variant { CreatedInFuture = null }` error.
-  * If the ledger has a structurally equal transfer payload (i.e., all the transfer argument fields have the same values) at index `i`, it should return `variant { Duplicate = record { duplicate_of = i } }`.
+  * If `created_at_time` is set and is _before_ `time() - TX_WINDOW - PERMITTED_DRIFT` as observed by the ledger, the ledger should return `variant { TooOld }` error.
+  * If `created_at_time` is set and is _after_ `time() + PERMITTED_DRIFT` as observed by the ledger, the ledger should return `variant { CreatedInFuture = record { ledger_time = ... } }` error.
+  * If the ledger observed a structurally equal transfer payload (i.e., all the transfer argument fields and the caller have the same values) at transaction with index `i`, it should return `variant { Duplicate = record { duplicate_of = i } }`.
   * Otherwise, the transfer is a new transaction.
 
 ## Minting account <span id="minting_account"></span>
