@@ -11,15 +11,15 @@ import Nat64         "mo:base/Nat64";
 
 
 actor class Ledger(init : {
-                     initial_mints : [ { account : { principal : Principal; subaccount : ?Blob }; amount : Nat } ];
-                     minting_account : { principal : Principal; subaccount : ?Blob };
+                     initial_mints : [ { account : { owner : Principal; subaccount : ?Blob }; amount : Nat } ];
+                     minting_account : { owner : Principal; subaccount : ?Blob };
                      token_name : Text;
                      token_symbol : Text;
                      decimals : Nat8;
                      transfer_fee : Nat;
                   }) = this {
 
-  public type Account = { principal : Principal; subaccount : ?Subaccount };
+  public type Account = { owner : Principal; subaccount : ?Subaccount };
   public type Subaccount = Blob;
   public type Tokens = Nat;
   public type Memo = Blob;
@@ -74,7 +74,7 @@ actor class Ledger(init : {
     let lhsSubaccount = Option.get(lhs.subaccount, defaultSubaccount);
     let rhsSubaccount = Option.get(rhs.subaccount, defaultSubaccount);
 
-    Principal.equal(lhs.principal, rhs.principal) and Blob.equal(lhsSubaccount, rhsSubaccount)
+    Principal.equal(lhs.owner, rhs.owner) and Blob.equal(lhsSubaccount, rhsSubaccount)
   };
 
   // Computes the balance of the specified account.
@@ -212,7 +212,7 @@ actor class Ledger(init : {
     validateSubaccount(to.subaccount);
     validateMemo(memo);
 
-    let from = { principal = caller; subaccount = from_subaccount };
+    let from = { owner = caller; subaccount = from_subaccount };
 
     let args : Transfer = {
       from = from;
