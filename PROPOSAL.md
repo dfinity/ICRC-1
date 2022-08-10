@@ -2,7 +2,7 @@
 
 ## Introduction
 
-​​The ICRC-1 Fungible Token Standard is the product of the collaborative effort of the [Ledger & Tokenization working group](https://forum.dfinity.org/t/announcing-token-standard-as-topic-of-the-first-meeting-of-the-ledger-tokenization-working-group/11925/1), including members from the DFINITY foundation, InfinitySwap, ICPSwap, and the ORIGYN Foundation.
+​​The ICRC-1 Fungible Token Standard is the product of the collaborative effort of the [Ledger & Tokenization working group](https://forum.dfinity.org/t/announcing-token-standard-as-topic-of-the-first-meeting-of-the-ledger-tokenization-working-group/11925/1), including members from the [DFINITY Foundation](https://dfinity.org/), [InfinitySwap](https://infinityswap.one/), [Demergent Labs](https://github.com/demergent-labs), [ICPSwap](https://app.icpswap.com/swap), [ICDevs](https://icdevs.org/), and the [ORIGYN Foundation](https://www.origyn.com/).
 This proposal describes the core features of the proposed standard, its expected evolution, and arguments for and against the standard to help you make an informed decision.
 
 ## Motivation
@@ -12,7 +12,7 @@ Since then, the DeFi ecosystem has flourished:
 
 * The [Psychedelic Studio](https://psychedelic.ooo/) built a rich ecosystem around the [DIP20](https://github.com/Psychedelic/DIP20) token standard.
 * The [ORIGYN Foundation](https://www.origyn.com/) launched their [OGY](https://www.origyn.com/ogy) token powered by the ICP ledger technology.
-* [InfinitySwap](https://www.blog.infinityswap.one/) developed the [IS20](https://www.blog.infinityswap.one/infinityswap-the-is20-token-standard-decentralized-and-interoperable/) token standard.
+* [InfinitySwap](https://infinityswap.one/) developed the [IS20](https://www.blog.infinityswap.one/infinityswap-the-is20-token-standard-decentralized-and-interoperable/) token standard.
 * [ToniqLabs](https://toniqlabs.com/) developed the [EXT](https://github.com/Toniq-Labs/extendable-token) token standard.
 
 The proliferation of token standards makes it hard for smart contract and tools developers to pick the foundation to build on.
@@ -45,26 +45,26 @@ The main goal of ICRC-1 is to provide a solid common ground for interoperability
 
 The Ledger & Tokenization working group collected feedback from its members and the community. Below are the common arguments against accepting ICRC-1 as a standard and the commentary from the working group.
 
-* **ICRC-1 does not provide a reasonable payment flow.**
+* **&ldquo;ICRC-1 does not provide a reasonable payment flow.&rdquo;**
 
   The standard is intentionally conservative and purposely avoids features that have known security flaws or can compromise the correctness or scalability of implementation with the current state of the core platform.
   Instead of cramming as much functionality as possible into a single API, the working group decided to include only the necessary and universal functionality into ICRC-1 and standardize additional payment flows as future extensions (see the [Modularity](#modularity) subsection).
   Note that the [proposed interface](#the-application-programming-interface) is powerful enough to support a payment flow based on subaccounts.
   All canisters smart contracts interacting with the ICP ledger rely on that flow.
 
-* **ICRC-1 provides no benefits over alternatives.**
+* **&ldquo;ICRC-1 provides no benefits over alternatives.&rdquo;**
 
   ICRC-1 does not seek to replace existing standards but rather complement them, providing a unified interface for token transfers.
   Most token ledgers should be able to become standard-compliant without having to throw away their transaction logs.
 
-* **It is too late to introduce a standard.**
+* **&ldquo;It is too late to introduce a standard.&rdquo;**
 
   The core team is working on many features that can reshape DeFi on the Internet Computer.
   Some working group members think it is too early to agree on a single standard for all purposes!
   ICRC-1's extension mechanism allows the DeFi capabilities to grow as the platform evolves.
   See the [Modularity](#modularity) subsection for more detail.
 
-* **The account addressing scheme involving subaccounts is unnecessarily complicated.**
+* **&ldquo;The account addressing scheme involving subaccounts is unnecessarily complicated.&rdquo;**
 
   Subaccounts are a polarizing feature; however, most working group members found them valuable in practice, and most users have experience with subaccounts from traditional banking systems.
   See the [Two-component account structure](#two-component-account-structure) subsection for more detail.
@@ -142,7 +142,7 @@ This feature allows existing smart contracts to implement ICRC-1 methods without
 
 ICRC-1 _does not_ specify the structure of transactions or provide methods for fetching them.
 That deliberate design choice enables backward compatibility with existing token ledgers, such as the ICP ledger.
-The Ledger & Tokenization working group plans to work on an _optional_ core extension specifying the interface for fetching transactions.
+The Ledger & Tokenization working group plans to work on an _optional_ extension specifying the interface for fetching transactions.
 
 
 ### Metadata access
@@ -157,7 +157,7 @@ Many efficient flows require unique features of the IC platform, such as [Thresh
 The standard defines the [icrc1_supported_standards](https://github.com/dfinity/ICRC-1#icrc1_supported_standards) method listing all standards the token ledger supports.
 This method will allow applications such as wallets and Rosetta API implementations to discover and take advantage of additional features in the future.
 
-The Ledger & Tokenization working group will continue working on a set of _core_ extensions recommended for all ledger implementations.
+The Ledger & Tokenization working group will continue working on a set of extensions recommended (but not required) for all ledger implementations.
 Furthermore, anyone can define new extensions and include them into the supported standards list.
 For example, existing [DIP20](https://github.com/Psychedelic/DIP20)-compatible ledgers can include DIP-20 into the supported standards list, allowing compatible clients to discover and access the corresponding API.
 
@@ -178,4 +178,4 @@ You will have to use the existing ICP ledger interface for such transfers.
 
 The [Ledger & Tokenization working group](https://forum.dfinity.org/t/announcing-token-standard-as-topic-of-the-first-meeting-of-the-ledger-tokenization-working-group/11925/1) proposes to adopt the [ICRC-1](https://github.com/dfinity/ICRC-1) token standard as a common interface for transferring fungible tokens on the Internet Computer.
 The standard does not seek to replace existing token ledgers but rather to serve as a base interface for accessing them.
-The working group agrees to implement, integrate, and promote the standard and work on its core extensions.
+The working group agrees to implement, integrate, and promote the standard and work on its extensions.
