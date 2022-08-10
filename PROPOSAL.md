@@ -61,7 +61,7 @@ The Ledger & Tokenization working group collected feedback from its members and 
 
   The core team is working on many features that can reshape DeFi on the Internet Computer.
   Some working group members think it is too early to agree on a single standard for all purposes!
-  ICRC-1's extension mechanism allows the DeFi capabilities to grow as the platform evolves.
+  ICRC-1&rsquo;s extension mechanism allows the DeFi capabilities to grow as the platform evolves.
   See the [Modularity](#modularity) subsection for more detail.
 
 * **&ldquo;The account addressing scheme involving subaccounts is unnecessarily complicated.&rdquo;**
