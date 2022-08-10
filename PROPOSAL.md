@@ -2,7 +2,7 @@
 
 ## Introduction
 
-​​The ICRC-1 Fungible Token Standard is the product of the collaborative effort of the [Ledger & Tokenization working group](https://forum.dfinity.org/t/announcing-token-standard-as-topic-of-the-first-meeting-of-the-ledger-tokenization-working-group/11925/1), including members from the [DFINITY Foundation](https://dfinity.org/), [InfinitySwap](https://infinityswap.one/), [Demergent Labs](https://github.com/demergent-labs), [ICPSwap](https://app.icpswap.com/swap), [ICDevs](https://icdevs.org/), and the [ORIGYN Foundation](https://www.origyn.com/).
+​​The ICRC-1 Fungible Token Standard is the product of the collaborative effort of the [Ledger & Tokenization working group](https://forum.dfinity.org/t/announcing-token-standard-as-topic-of-the-first-meeting-of-the-ledger-tokenization-working-group/11925/1), including members from the [DFINITY Foundation](https://dfinity.org/), [InfinitySwap](https://infinityswap.one/), [Demergent Labs](https://github.com/demergent-labs), [ICDevs](https://icdevs.org/), [Tomahawk.vc](https://www.tomahawk.vc/), [Enoki](https://enoki.ooo/), [Distrikt](https://distrikt.app), LIFTECHNOLOGY, [Internet Identity Labs](https://nfid.one/), and the [ORIGYN Foundation](https://www.origyn.com/).
 This proposal describes the core features of the proposed standard, its expected evolution, and arguments for and against the standard to help you make an informed decision.
 
 ## Motivation
