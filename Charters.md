@@ -1,5 +1,21 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2022-08-16
+
+[Slide deck](https://docs.google.com/presentation/d/1sggeGP-RsLADfgHdIp6BYqsfGkmD1QRtBkPtLUadxwk/edit?usp=sharing)
+
+Decisions made:
+  * We need to compile the list of helpful extensions, understand which issues they solve, and work on the most useful first.
+    Current candidates are:
+    - Transaction log access & certification.
+    - Pre-signed transactions.
+    - Transfer-notify flow.
+    - Approve/transferFrom flow.
+  * Textual encoding:
+    No clear winner, but using the principal encoding format is the most promising.
+    @roman-kashitsyn to compile a table with main options and their weaknesses/strengths.
+    We will gauge interest on the forum and have a WG vote later.
+
 ## 2022-08-09
 
 [Slide deck](https://docs.google.com/presentation/d/1B4bplkQkFs5e32xnJl4Qr5xe5YhoSYJzsQuQ6BpaTfo/edit?usp=sharing)
