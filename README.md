@@ -126,7 +126,7 @@ The ledger SHOULD allow memos of at least 32 bytes in length.
 The ledger SHOULD use the `memo` argument for [transaction deduplication](#transaction_deduplication).
 
 The `created_at_time` parameter indicates the time (as nanoseconds since the UNIX epoch in the UTC timezone) at which the client constructed the transaction.
-The ledger MAY reject transactions that have `created_at_time` argument too far in the past or the future, returning `variant { TooOld = record { allowed_window_nanos = ... } }` and `variant { CreatedInFuture }` errors correspondingly.
+The ledger MAY reject transactions that have `created_at_time` argument too far in the past or the future, returning `variant { TooOld }` and `variant { CreatedInFuture = record { ledger_time = ... } }` errors correspondingly.
 
 The result is either the transaction index of the transfer or an error.
 
