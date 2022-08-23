@@ -110,13 +110,11 @@ actor class Ledger(init : {
     total
   };
 
-  // Finds a transaction in the transaction log within the (now - tx_window) time frame.
-  func findTransfer(transfer : Transfer, log : TxLog, now : Timestamp) : ?TxIndex {
+  // Finds a transaction in the transaction log.
+  func findTransfer(transfer : Transfer, log : TxLog) : ?TxIndex {
     var i = 0;
     for (tx in log.vals()) {
-      if (tx.args == transfer
-          and (tx.timestamp < now + permittedDriftNanos)
-          and (now - tx.timestamp) < transactionWindowNanos + permittedDriftNanos) { return ?i; };
+      if (tx.args == transfer) { return ?i; };
       i += 1;
     };
     null
@@ -223,9 +221,11 @@ actor class Ledger(init : {
       created_at_time = created_at_time;
     };
 
-    switch (findTransfer(args, log, now)) {
-      case (?height) { return #Err(#Duplicate { duplicate_of = height }) };
-      case null { };
+    if (Option.isSome(created_at_time)) {
+      switch (findTransfer(args, log)) {
+        case (?height) { return #Err(#Duplicate { duplicate_of = height }) };
+        case null { };
+      };
     };
 
     let minter = init.minting_account;
