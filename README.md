@@ -192,11 +192,13 @@ The client can control the deduplication algorithm using `created_at_time` and `
   * The `created_at_time` field sets the transaction construction time as the number of nanoseconds from the UNIX epoch in the UTC timezone.
   * The `memo` field does not have any meaning to the ledger, except that the ledger will not deduplicate transfers with different values of the `memo` field.
 
-The ledger SHOULD use the following algorithm for transaction deduplication:
+The ledger SHOULD use the following algorithm for transaction deduplication if the client set the `created_at_time` field:
   * If `created_at_time` is set and is _before_ `time() - TX_WINDOW - PERMITTED_DRIFT` as observed by the ledger, the ledger should return `variant { TooOld }` error.
   * If `created_at_time` is set and is _after_ `time() + PERMITTED_DRIFT` as observed by the ledger, the ledger should return `variant { CreatedInFuture = record { ledger_time = ... } }` error.
   * If the ledger observed a structurally equal transfer payload (i.e., all the transfer argument fields and the caller have the same values) at transaction with index `i`, it should return `variant { Duplicate = record { duplicate_of = i } }`.
   * Otherwise, the transfer is a new transaction.
+
+If the client did not set the `created_at_time` field, the ledger SHOULD NOT deduplicate the transaction.
 
 ## Minting account <span id="minting_account"></span>
 
