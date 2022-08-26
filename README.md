@@ -80,7 +80,7 @@ icrc1_minting_account : () -> (opt Account) query;
 
 ### icrc1_balance_of
 
-Returns the balance of the account given as argument.
+Returns the balance of the account given as an argument.
 
 ```candid "Methods" +=
 icrc1_balance_of : (Account) -> (nat) query;
@@ -121,12 +121,12 @@ The caller pays the `fee`.
 If the caller does not set the `fee` argument, the ledger applies the default transfer fee.
 If the `fee` argument does not agree with the ledger fee, the ledger MUST return `variant { BadFee = record { expected_fee = ... } }` error.
 
-The `memo` parameter is an arbitrary blob has no meaning to the ledger.
+The `memo` parameter is an arbitrary blob that has no meaning to the ledger.
 The ledger SHOULD allow memos of at least 32 bytes in length.
 The ledger SHOULD use the `memo` argument for [transaction deduplication](#transaction_deduplication).
 
 The `created_at_time` parameter indicates the time (as nanoseconds since the UNIX epoch in the UTC timezone) at which the client constructed the transaction.
-The ledger MAY reject transactions that have `created_at_time` argument too far in the past or the future, returning `variant { TooOld }` and `variant { CreatedInFuture = record { ledger_time = ... } }` errors correspondingly.
+The ledger SHOULD reject transactions that have `created_at_time` argument too far in the past or the future, returning `variant { TooOld }` and `variant { CreatedInFuture = record { ledger_time = ... } }` errors correspondingly.
 
 The result is either the transaction index of the transfer or an error.
 
@@ -164,7 +164,7 @@ All the metadata entries are optional.
 
 ### Key format
 
-The metadata keys are arbitrary unicode strings and must follow the pattern `<namespace>:<key>`, where `<namespace>` is a string not containing colons.
+The metadata keys are arbitrary Unicode strings and must follow the pattern `<namespace>:<key>`, where `<namespace>` is a string not containing colons.
 Namespace `icrc1` is reserved for keys defined in this standard.
 
 ### Standard metadata entries
@@ -186,9 +186,9 @@ Consider the following scenario:
 
 An ICRC-1 ledger SHOULD implement transfer deduplication to simplify the error recovery for agents.
 The deduplication covers all transactions submitted within a pre-configured time window `TX_WINDOW` (for example, last 24 hours).
-The ledger MAY extend the deduplication window into the future by PERMITTED_DRIFT parameter (for example, 2 minutes) to account for the time drift between the client and the Internet Computer.
+The ledger MAY extend the deduplication window into the future by the `PERMITTED_DRIFT` parameter (for example, 2 minutes) to account for the time drift between the client and the Internet Computer.
 
-The client can control the deduplication algorithm using `created_at_time` and `memo` fields of the [`transfer`](#transfer_method) call argument:
+The client can control the deduplication algorithm using the `created_at_time` and `memo` fields of the [`transfer`](#transfer_method) call argument:
   * The `created_at_time` field sets the transaction construction time as the number of nanoseconds from the UNIX epoch in the UTC timezone.
   * The `memo` field does not have any meaning to the ledger, except that the ledger will not deduplicate transfers with different values of the `memo` field.
 
