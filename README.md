@@ -217,6 +217,41 @@ variant { Err = variant { BadBurn = record { min_burn_amount = ... } } }
 
 The minting account is also the receiver of the fees burnt in regular transfers.
 
+## Textual representation of accounts
+
+We specify a _canonical textual format_ that all applications should use to display ICRC-1 accounts.
+This format relies on the textual encoding of principals specified in the [Internet Computer Interface Specification](https://internetcomputer.org/docs/current/references/ic-interface-spec/#textual-ids), referred to as `Principal.toText` and `Principal.fromText` below.
+
+### Encoding
+
+Applications SHOULD encode accounts as follows:
+
+  1. The encoding of accounts that do not have a subaccount, such as `{ owner = principal "aaaaa-aa"; subaccount = null }`, is the encoding of the owner principal.
+  2. The encoding of accounts with a non-empty subaccount is the encoding of the concatenation of the owner principal bytes and the subaccount bytes.
+
+In pseudocode:
+
+```sml
+encodeAccount({ owner; subaccount = null      }) = Principal.toText(owner)
+encodeAccount({ owner; subaccount = opt bytes }) = Principal.toText(owner · bytes)
+```
+
+### Decoding
+
+Applications SHOULD decode textual representation as follows:
+
+  1. Decode the text as if it was a principal into `raw_bytes`, ignoring the principal length check (some decoders allow the principal to be at most 29 bytes long).
+  2. If `raw_bytes` is less than 32 bytes long, return an account with `raw_bytes` as the owner and an empty subaccount.
+  3. If `raw_bytes` is at least 32 bytes long, split out the last 32 bytes and return an account that has the prefix as the owner and the suffix as the subaccount.
+
+In pseudocode:
+
+```sml
+decodeAccount(text) = case Principal.fromText(text) of
+  | (prefix · suffix) and Blob.size(suffix) = 32 ⇒ { owner = Principal.fromBlob(prefix); subaccount = opt suffix }
+  | raw_bytes ⇒ { owner = Principal.fromBlob(raw_bytes); subaccount = null }
+```
+
 <!--
 ```candid ICRC-1.did +=
 <<<Type definitions>>>
