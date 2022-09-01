@@ -1,0 +1,15 @@
+load("@crate_index//:defs.bzl", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["Cargo.toml"])
+
+rust_library(
+    name = "suite",
+    srcs = ["lib.rs"],
+    crate_name = "icrc1_test_suite",
+    deps = all_crate_deps(
+        normal = True,
+    ) + ["//test/env"],
+)

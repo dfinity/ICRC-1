@@ -9,6 +9,7 @@ motoko_library(
 motoko_binary(
     name = "icrc1_ref",
     entry = "ICRC1.mo",
+    visibility = ["//visibility:public"],
     deps = [":base"],
 )
 
