@@ -8,16 +8,6 @@ use std::time::Duration;
 
 const REF_WASM: &[u8] = include_bytes!(env!("REF_WASM_PATH"));
 
-// fn minter_identity() -> BasicIdentity {
-//     BasicIdentity::from_pem(
-//         &b"-----BEGIN PRIVATE KEY-----
-// MFMCAQEwBQYDK2VwBCIEIP2x1siQ1eDh0hZR08Y7mPRWcPfYvsKfwRx4bga04Cs0
-// oSMDIQCX0LSQ7ECXs2U4eCdLHZ3QC7ExbqPfC/35gyfvaPreYw==
-// -----END PRIVATE KEY-----"[..],
-//     )
-//     .unwrap()
-// }
-
 #[derive(CandidType)]
 struct Account {
     owner: Principal,
