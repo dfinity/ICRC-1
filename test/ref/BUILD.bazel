@@ -1,0 +1,42 @@
+load("@crate_index//:defs.bzl", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_test")
+load("//bazel:didc_test.bzl", "motoko_actor_wasm_file")
+
+package(default_visibility = ["//visibility:public"])
+
+motoko_actor_wasm_file(
+    name = "ref_wasm",
+    actor = "//ref:icrc1_ref",
+)
+
+rust_test(
+    name = "ref",
+    srcs = ["test.rs"],
+    args = ["--nocapture"],
+    compile_data = [
+        ":ref_wasm",
+    ],
+    crate_name = "icrc1_test_ref",
+    data = [
+        "@replica_tools//:ic-starter",
+        "@replica_tools//:replica",
+    ],
+    env = {
+        "IC_REPLICA_PATH": "$(rootpath @replica_tools//:replica)",
+        "IC_STARTER_PATH": "$(rootpath @replica_tools//:ic-starter)",
+    },
+    rustc_env = {
+        "REF_WASM_PATH": "$(location :ref_wasm)",
+    },
+    deps = [
+        "//test/env",
+        "//test/replica",
+        "//test/suite",
+        "@crate_index//:candid",
+        "@crate_index//:garcon",
+        "@crate_index//:ic-agent",
+        "@crate_index//:ic-types",
+        "@crate_index//:serde",
+        "@crate_index//:tokio",
+    ],
+)

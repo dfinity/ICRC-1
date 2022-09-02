@@ -1,0 +1,14 @@
+[package]
+name = "icrc1-test-suite"
+edition = "2018"
+version = "0.1.0"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+anyhow = "1.0"
+candid = "0.7.16"
+futures = "0.3.24"
+icrc1-test-env = { path = "../env" }
+ic-types = "0.4.0"
