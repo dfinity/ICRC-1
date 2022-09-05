@@ -68,3 +68,14 @@ motoko_actor_did_file = rule(
         "actor": attr.label(providers = [MotokoActorInfo]),
     },
 )
+
+def _mo_actor_wasm_impl(ctx):
+    wasm_file = ctx.attr.actor[MotokoActorInfo].wasm
+    return [DefaultInfo(files = depset([wasm_file]))]
+
+motoko_actor_wasm_file = rule(
+    implementation = _mo_actor_wasm_impl,
+    attrs = {
+        "actor": attr.label(providers = [MotokoActorInfo]),
+    },
+)

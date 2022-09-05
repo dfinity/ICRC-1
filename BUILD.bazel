@@ -2,7 +2,11 @@ load("//bazel:didc_test.bzl", "didc_check_test", "didc_subtype_test")
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["ICRC-1.did"])
+exports_files([
+    "ICRC-1.did",
+    "Cargo.toml",
+    "rustfmt.toml",
+])
 
 genrule(
     name = "candid",
