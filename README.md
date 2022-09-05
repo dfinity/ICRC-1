@@ -227,13 +227,13 @@ This format relies on the textual encoding of principals specified in the [Inter
 Applications SHOULD encode accounts as follows:
 
   1. The encoding of accounts that do not have a subaccount, such as `{ owner = principal "aaaaa-aa"; subaccount = null }`, is the encoding of the owner principal.
-  2. The encoding of accounts with a non-empty subaccount is the encoding of the concatenation of the owner principal bytes and the subaccount bytes.
+  2. The encoding of accounts with a non-empty subaccount is the encoding of the concatenation of the owner principal bytes, the subaccount bytes, and an extra byte `A0`<sub>`16`</sub> (160 = 128 + 32).
 
 In pseudocode:
 
 ```sml
 encodeAccount({ owner; subaccount = null      }) = Principal.toText(owner)
-encodeAccount({ owner; subaccount = opt bytes }) = Principal.toText(owner · bytes)
+encodeAccount({ owner; subaccount = opt bytes }) = Principal.toText(owner · bytes · [0xa0])
 ```
 
 ### Decoding
@@ -241,14 +241,16 @@ encodeAccount({ owner; subaccount = opt bytes }) = Principal.toText(owner · byt
 Applications SHOULD decode textual representation as follows:
 
   1. Decode the text as if it was a principal into `raw_bytes`, ignoring the principal length check (some decoders allow the principal to be at most 29 bytes long).
-  2. If `raw_bytes` is less than 32 bytes long, return an account with `raw_bytes` as the owner and an empty subaccount.
-  3. If `raw_bytes` is at least 32 bytes long, split out the last 32 bytes and return an account that has the prefix as the owner and the suffix as the subaccount.
+  2. If `raw_bytes` do not end with byte `A0`<sub>`16`</sub>, return an account with `raw_bytes` as the owner and an empty subaccount.
+  3. If `raw_bytes` is at least 33 bytes long and ends with `A0`<sub>`16`</sub>, drop the last `A0`<sub>`16`</sub> byte and return an account that has the last 32 bytes of `raw_bytes` as the subaccount and the rest of the owner.
+  4. Otherwise, the encoder SHOULD raise an error.
 
 In pseudocode:
 
 ```sml
 decodeAccount(text) = case Principal.fromText(text) of
-  | (prefix · suffix) and Blob.size(suffix) = 32 ⇒ { owner = Principal.fromBlob(prefix); subaccount = opt suffix }
+  | (prefix · suffix · [0xa0]) and Blob.size(suffix) = 32 ⇒ { owner = Principal.fromBlob(prefix); subaccount = opt suffix }
+  | (prefix · [0xa0]) and Blob.size(prefix) < 32 ⇒ raise Error
   | raw_bytes ⇒ { owner = Principal.fromBlob(raw_bytes); subaccount = null }
 ```
 
