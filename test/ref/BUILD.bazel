@@ -28,6 +28,7 @@ rust_test(
     rustc_env = {
         "REF_WASM_PATH": "$(location :ref_wasm)",
     },
+    use_libtest_harness = False,
     deps = [
         "//test/env",
         "//test/replica",
