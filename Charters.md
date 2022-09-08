@@ -1,5 +1,23 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2022-09-06
+
+[Slide deck](https://docs.google.com/presentation/d/1Z_QwRkRxDFO1iZl11QzMtBTm82MfkrPgfkUc9PX7Nj8/edit#slide=id.g125c3b1bfa8_0_0)
+
+Highlights:
+
+  * Textual encoding spec is up for review: [#55](https://github.com/dfinity/ICRC-1/pull/55)
+    No objections in the working group, likely to be stabilized by the next meeting.
+
+  * We now have basic acceptance tests: https://github.com/dfinity/ICRC-1/tree/0b57f3a85f20b178767192968867c4addeb076f2/test.
+    @roman-kashitsyn will work on adding more tests.
+
+  * The working group meetings will be biweekly, the next session is on September 20th.
+    Larger breaks allow us to do more work in the meantime and gain more experience and data.
+    Dieter Sommer will take over the working group initiative.
+
+  * The next time, we'll get speakers from [Psychedelic](https://github.com/Psychedelic) presenting approve/transferFrom extensions and subaccount management ideas.
+
 ## 2022-08-23
 
 [Slide deck](https://docs.google.com/presentation/d/1wZMylD6PbzhrLwhr72--Fxfm9jjSSTw-Rys8TSGp76o/edit?usp=sharing)

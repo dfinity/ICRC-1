@@ -99,7 +99,7 @@ async fn install_canister(agent: &Agent, wasm: &[u8], init_arg: &[u8]) -> Princi
     canister_id
 }
 
-#[tokio::test]
+#[tokio::main]
 async fn main() {
     let replica_path =
         std::fs::canonicalize(std::env::var_os("IC_REPLICA_PATH").expect("missing replica binary"))
