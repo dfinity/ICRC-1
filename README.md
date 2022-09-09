@@ -267,7 +267,7 @@ In pseudocode:
 ```sml
 decodeAccount(text) = case Principal.fromText(text) of
   | (prefix · [n, 0xff]) where Blob.size(prefix) < n ⇒ raise Error
-  | (prefix · [n, 0xff]) where n > 32 ⇒ raise Error
+  | (prefix · [n, 0xff]) where n > 32 orelse n = 0 ⇒ raise Error
   | (prefix · suffix · [n, 0xff]) where Blob.size(suffix) = n ⇒
     if suffix[0] = 0
     then raise Error

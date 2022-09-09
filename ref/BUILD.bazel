@@ -1,9 +1,24 @@
-load("@rules_motoko//motoko:defs.bzl", "motoko_binary", "motoko_library")
+load("@rules_motoko//motoko:defs.bzl", "motoko_binary", "motoko_library", "motoko_test")
 load("//bazel:didc_test.bzl", "didc_subtype_test", "motoko_actor_did_file")
 
 motoko_library(
     name = "base",
     srcs = ["@motoko_base//:sources"],
+)
+
+motoko_library(
+    name = "account",
+    srcs = ["Account.mo"],
+    deps = [":base"],
+)
+
+motoko_test(
+    name = "account_test",
+    entry = "AccountTest.mo",
+    deps = [
+        ":account",
+        ":base",
+    ],
 )
 
 motoko_binary(
