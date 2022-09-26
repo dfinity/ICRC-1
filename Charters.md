@@ -1,5 +1,18 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2022-09-20
+- [Slide deck (Dieter)](https://docs.google.com/presentation/d/1r85i2iAkli6dv-Ou_rD6l3wA2RTHoggBBsxXaj3rvFo/edit#slide=id.g125c3b1bfa8_0_0)
+- [Slide deck (Ossian)](https://docs.google.com/presentation/d/1ic4iwKEmvbTFcc5j4LkoVhqx9O1iodw3w9QoQXEQTU8/edit#slide=id.gc6fa3c898_0_0)
+
+Highlights:
+  * Textual encoding spec got an update [#55](https://github.com/dfinity/ICRC-1/pull/55).
+    The latest version of the encoding is unique (each valid encoding corresponds to a unique account), which is an important property for block explorers and dashboards.
+  * Timo Hanke proposes a generalization of the ICRC-1 textual encoding: https://forum.dfinity.org/t/using-the-principals-textual-encoding-for-other-things-than-principals/15319
+  * Ossian proposed the ICRC-2 extension for the approve/transfer_from flow.
+    No objections from the WG, but we need to sort out the exact API.
+    Ossian will create a PR with the extension, @roman-kashitsyn will help with the details.
+  * Discussed where the extensions should live.
+    Agreed that we can start adding extensions to the https://github.com/dfinity/ICRC-1 repo, we can revise this decision later.
 ## 2022-09-06
 
 [Slide deck](https://docs.google.com/presentation/d/1Z_QwRkRxDFO1iZl11QzMtBTm82MfkrPgfkUc9PX7Nj8/edit#slide=id.g125c3b1bfa8_0_0)
