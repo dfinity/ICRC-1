@@ -53,15 +53,15 @@ checkEncode({ owner = Principal.fromText("aaaaa-aa"); subaccount = null }, "aaaa
 checkEncode({ owner = Principal.fromText("aaaaa-aa"); subaccount = ?hexDecode("0000000000000000000000000000000000000000000000000000000000000000") }, "aaaaa-aa");
 checkEncode({ owner = Principal.fromText("2vxsx-fae"); subaccount = null }, "2vxsx-fae");
 checkEncode({ owner = Principal.fromText("2vxsx-fae"); subaccount = ?hexDecode("0000000000000000000000000000000000000000000000000000000000000000") }, "2vxsx-fae");
-checkEncode({ owner = Principal.fromText("2vxsx-fae"); subaccount = ?hexDecode("0000000000000000000000000000000000000000000000000000000000000001") }, hexToPrincipal("040101ff"));
-checkEncode({ owner = Principal.fromText("2vxsx-fae"); subaccount = ?hexDecode("00000000000000000000ffffffffffffffffffffffffffffffffffffffffffff") }, hexToPrincipal("04ffffffffffffffffffffffffffffffffffffffffffff16ff"));
+checkEncode({ owner = Principal.fromText("2vxsx-fae"); subaccount = ?hexDecode("0000000000000000000000000000000000000000000000000000000000000001") }, hexToPrincipal("0401017f"));
+checkEncode({ owner = Principal.fromText("2vxsx-fae"); subaccount = ?hexDecode("00000000000000000000ffffffffffffffffffffffffffffffffffffffffffff") }, hexToPrincipal("04ffffffffffffffffffffffffffffffffffffffffffff167f"));
 
 checkDecode(hexToPrincipal(""), #ok({ owner = Principal.fromText("aaaaa-aa"); subaccount = null }));
 checkDecode(hexToPrincipal("04"), #ok({ owner = Principal.fromText("2vxsx-fae"); subaccount = null }));
-checkDecode(hexToPrincipal("ff"), #err(#bad_length));
-checkDecode(hexToPrincipal("00ff"), #err(#not_canonical));
-checkDecode(hexToPrincipal("040101ff"), #ok({ owner = Principal.fromText("2vxsx-fae"); subaccount = ?hexDecode("0000000000000000000000000000000000000000000000000000000000000001") }));
-checkDecode(hexToPrincipal("040102ff"), #ok({ owner = Principal.fromText("aaaaa-aa"); subaccount = ?hexDecode("0000000000000000000000000000000000000000000000000000000000000401") }));
-checkDecode(hexToPrincipal("040103ff"), #err(#bad_length));
-checkDecode(hexToPrincipal("040001ff"), #err(#not_canonical));
-checkDecode(hexToPrincipal("04010101010101010101010101010101010101010101010101010101010101010120ff"), #ok({ owner = Principal.fromText("2vxsx-fae"); subaccount = ?hexDecode("0101010101010101010101010101010101010101010101010101010101010101") }));
+checkDecode(hexToPrincipal("7f"), #err(#bad_length));
+checkDecode(hexToPrincipal("007f"), #err(#not_canonical));
+checkDecode(hexToPrincipal("0401017f"), #ok({ owner = Principal.fromText("2vxsx-fae"); subaccount = ?hexDecode("0000000000000000000000000000000000000000000000000000000000000001") }));
+checkDecode(hexToPrincipal("0401027f"), #ok({ owner = Principal.fromText("aaaaa-aa"); subaccount = ?hexDecode("0000000000000000000000000000000000000000000000000000000000000401") }));
+checkDecode(hexToPrincipal("0401037f"), #err(#bad_length));
+checkDecode(hexToPrincipal("0400017f"), #err(#not_canonical));
+checkDecode(hexToPrincipal("040101010101010101010101010101010101010101010101010101010101010101207f"), #ok({ owner = Principal.fromText("2vxsx-fae"); subaccount = ?hexDecode("0101010101010101010101010101010101010101010101010101010101010101") }));

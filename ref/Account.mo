@@ -47,7 +47,7 @@ module {
                     };
 
                     buf.add(Nat8.fromNat(32 - zeroCount));
-                    buf.add(Nat8.fromNat(0xff));
+                    buf.add(Nat8.fromNat(0x7f));
                     
                     Principal.toText(Principal.fromBlob(Blob.fromArray(buf.toArray())))
                 }
@@ -59,7 +59,7 @@ module {
         let principal = Principal.fromText(text);
         let bytes = Blob.toArray(Principal.toBlob(principal));
 
-        if (bytes.size() == 0 or bytes[bytes.size() - 1] != Nat8.fromNat(0xff)) {
+        if (bytes.size() == 0 or bytes[bytes.size() - 1] != Nat8.fromNat(0x7f)) {
             return #ok({ owner = principal; subaccount = null });
         };
 

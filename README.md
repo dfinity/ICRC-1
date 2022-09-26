@@ -233,7 +233,7 @@ The format has the following desirable properties:
 Applications SHOULD encode accounts as follows:
 
   1. The encoding of the default account (the subaccount is null or a blob with 32 zeros) is the encoding of the owner principal.
-  2. The encoding of accounts with a non-default subaccount is the textual principal encoding of the concatenation of the owner principal bytes, the subaccount bytes with the leading zeros omitted, the length of the subaccount without the leading zeros (a single byte), and an extra byte `FF`<sub>16</sub>.
+  2. The encoding of accounts with a non-default subaccount is the textual principal encoding of the concatenation of the owner principal bytes, the subaccount bytes with the leading zeros omitted, the length of the subaccount without the leading zeros (a single byte), and an extra byte `7F`<sub>16</sub>.
 
 In pseudocode:
 
@@ -241,7 +241,7 @@ In pseudocode:
 encodeAccount({ owner; subaccount }) = case subaccount of
   | None ⇒ Principal.toText(owner)
   | Some([32; 0]) ⇒ Principal.toText(owner)
-  | Some(bytes) ⇒ Principal.toText(owner · shrink(bytes) · [|shrink(bytes)|, 0xff])
+  | Some(bytes) ⇒ Principal.toText(owner · shrink(bytes) · [|shrink(bytes)|, 0x7f])
 
 shrink(bytes) = case bytes of
   | 0x00 :: rest ⇒ shrink(rest)
@@ -253,9 +253,9 @@ shrink(bytes) = case bytes of
 Applications SHOULD decode textual representation as follows:
 
   1. Decode the text as if it was a principal into `raw_bytes`, ignoring the principal length check (some decoders allow the principal to be at most 29 bytes long).
-  2. If `raw_bytes` do not end with byte `FF`<sub>16</sub>, return an account with `raw_bytes` as the owner and an empty subaccount.
-  3. If `raw_bytes` end with `FF`<sub>16</sub>:
-     1. Drop the last `FF`<sub>16</sub> byte.
+  2. If `raw_bytes` do not end with byte `7F`<sub>16</sub>, return an account with `raw_bytes` as the owner and an empty subaccount.
+  3. If `raw_bytes` end with `7F`<sub>16</sub>:
+     1. Drop the last `7F`<sub>16</sub> byte.
      2. Read the last byte `N` and drop it. If `N > 32` or `N = 0`, raise an error.
      3. Take the last N bytes and strip them from the input.
         If the first byte in the stripped sequence is zero, raise an error.
@@ -266,9 +266,9 @@ In pseudocode:
 
 ```sml
 decodeAccount(text) = case Principal.fromText(text) of
-  | (prefix · [n, 0xff]) where Blob.size(prefix) < n ⇒ raise Error
-  | (prefix · [n, 0xff]) where n > 32 orelse n = 0 ⇒ raise Error
-  | (prefix · suffix · [n, 0xff]) where Blob.size(suffix) = n ⇒
+  | (prefix · [n, 0x7f]) where Blob.size(prefix) < n ⇒ raise Error
+  | (prefix · [n, 0x7f]) where n > 32 orelse n = 0 ⇒ raise Error
+  | (prefix · suffix · [n, 0x7f]) where Blob.size(suffix) = n ⇒
     if suffix[0] = 0
     then raise Error
     else { owner = Principal.fromBlob(prefix); subaccount = Some(expand(suffix)) }
