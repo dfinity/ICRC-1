@@ -36,5 +36,5 @@ motoko_actor_did_file(
 didc_subtype_test(
     name = "ref_candid_check",
     did = ":icrc1_ref_did",
-    previous = "//:ICRC-1.did",
+    previous = "//standards/ICRC-1:ICRC-1.did",
 )
