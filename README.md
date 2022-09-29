@@ -217,6 +217,68 @@ variant { Err = variant { BadBurn = record { min_burn_amount = ... } } }
 
 The minting account is also the receiver of the fees burnt in regular transfers.
 
+## Textual representation of accounts
+
+We specify a _canonical textual format_ that all applications should use to display ICRC-1 accounts.
+This format relies on the textual encoding of principals specified in the [Internet Computer Interface Specification](https://internetcomputer.org/docs/current/references/ic-interface-spec/#textual-ids), referred to as `Principal.toText` and `Principal.fromText` below.
+The format has the following desirable properties:
+
+1. A textual encoding of any non-reserved principal is a valid textual encoding of the default account of that principal on the ledger.
+2. The decoding function is injective (i.e., different valid encodings correspond to different accounts).
+   This property enables applications to use text representation as a key.
+3. A typo in the textual encoding invalidates it with a high probability.
+
+### Encoding
+
+Applications SHOULD encode accounts as follows:
+
+  1. The encoding of the default account (the subaccount is null or a blob with 32 zeros) is the encoding of the owner principal.
+  2. The encoding of accounts with a non-default subaccount is the textual principal encoding of the concatenation of the owner principal bytes, the subaccount bytes with the leading zeros omitted, the length of the subaccount without the leading zeros (a single byte), and an extra byte `7F`<sub>16</sub>.
+
+In pseudocode:
+
+```sml
+encodeAccount({ owner; subaccount }) = case subaccount of
+  | None ⇒ Principal.toText(owner)
+  | Some([32; 0]) ⇒ Principal.toText(owner)
+  | Some(bytes) ⇒ Principal.toText(owner · shrink(bytes) · [|shrink(bytes)|, 0x7f])
+
+shrink(bytes) = case bytes of
+  | 0x00 :: rest ⇒ shrink(rest)
+  | bytes ⇒ bytes
+```
+
+### Decoding
+
+Applications SHOULD decode textual representation as follows:
+
+  1. Decode the text as if it was a principal into `raw_bytes`, ignoring the principal length check (some decoders allow the principal to be at most 29 bytes long).
+  2. If `raw_bytes` do not end with byte `7F`<sub>16</sub>, return an account with `raw_bytes` as the owner and an empty subaccount.
+  3. If `raw_bytes` end with `7F`<sub>16</sub>:
+     1. Drop the last `7F`<sub>16</sub> byte.
+     2. Read the last byte `N` and drop it. If `N > 32` or `N = 0`, raise an error.
+     3. Take the last N bytes and strip them from the input.
+        If the first byte in the stripped sequence is zero, raise an error.
+        Prepend the bytes with (32 - N) zeros on the left to get a 32-byte subaccount.
+     4. Return an account with the owner being the rest of the input sequence as the owner and the subaccount being the byte array constructed in the previous step.
+
+In pseudocode:
+
+```sml
+decodeAccount(text) = case Principal.fromText(text) of
+  | (prefix · [n, 0x7f]) where Blob.size(prefix) < n ⇒ raise Error
+  | (prefix · [n, 0x7f]) where n > 32 orelse n = 0 ⇒ raise Error
+  | (prefix · suffix · [n, 0x7f]) where Blob.size(suffix) = n ⇒
+    if suffix[0] = 0
+    then raise Error
+    else { owner = Principal.fromBlob(prefix); subaccount = Some(expand(suffix)) }
+  | raw_bytes ⇒ { owner = Principal.fromBlob(raw_bytes); subaccount = None }
+
+expand(bytes) = if Blob.size(bytes) < 32
+                then expand(0x00 :: bytes)
+                else bytes
+```
+
 <!--
 ```candid ICRC-1.did +=
 <<<Type definitions>>>
