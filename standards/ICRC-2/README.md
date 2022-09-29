@@ -1,5 +1,9 @@
 # `ICRC-2`: Approve and Transfer From
 
+| Status |
+|:------:|
+| Draft  |
+
 ## Abstract
 
 `ICRC-2` is an extension of the base `ICRC-1` standard.
