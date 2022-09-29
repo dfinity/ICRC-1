@@ -1,0 +1,25 @@
+load("//bazel:didc_test.bzl", "didc_subtype_test")
+
+exports_files([
+    "ICRC-2.did",
+])
+
+genrule(
+    name = "candid",
+    srcs = [":README.md"],
+    outs = ["ICRC-2-generated.did"],
+    cmd_bash = "$(location @lmt) $(SRCS); mv ICRC-2.did $@",
+    exec_tools = ["@lmt"],
+)
+
+didc_subtype_test(
+    name = "check_generated_subtype",
+    did = ":ICRC-2-generated.did",
+    previous = "ICRC-2.did",
+)
+
+didc_subtype_test(
+    name = "check_source_subtype",
+    did = "ICRC-2.did",
+    previous = ":ICRC-2-generated.did",
+)
