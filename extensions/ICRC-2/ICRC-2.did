@@ -1,0 +1,56 @@
+type Account = record {
+    owner : principal;
+    subaccount : opt blob;
+};
+
+type ApproveArgs = record {
+    spender : principal;
+    amount : nat;
+    fee : opt nat;
+    memo : opt blob;
+    created_at_time : opt nat64;
+};
+
+type ApproveError = variant {
+    BadFee : record { expected_fee : nat };
+    InsufficientFunds : record { balance : nat };
+    TooOld;
+    CreatedInFuture: record { ledger_time : nat64 };
+    Duplicate : record { duplicate_of : nat };
+    TemporarilyUnavailable;
+    GenericError : record { error_code : nat; message : text };
+};
+
+type TransferFromArgs = record {
+    from : Account;
+    to : Account;
+    amount : nat;
+    fee : opt nat;
+    memo : opt blob;
+    created_at_time : opt nat64;
+};
+
+type TransferFromError = variant {
+    BadFee : record { expected_fee : nat };
+    BadBurn : record { min_burn_amount : nat };
+    InsufficientFunds : record { balance : nat };
+    InsufficientAllowance : record { allowance : nat };
+    TooOld;
+    CreatedInFuture: record { ledger_time : nat64 };
+    Duplicate : record { duplicate_of : nat };
+    TemporarilyUnavailable;
+    GenericError : record { error_code : nat; message : text };
+};
+
+type AllowanceArgs = record {
+    account : Account;
+    spender : principal;
+};
+
+service : {
+    icrc1_supported_standards : () -> (vec record { name : text; url : text }) query;
+
+    icrc2_approve : (ApproveArgs) -> (variant { Ok : nat; Err : ApproveError });
+    icrc2_transfer_from : (TransferFromArgs) -> (variant { Ok : nat; Err : TransferFromError });
+    icrc2_allowance : (AllowanceArgs) -> (nat) query;
+}
