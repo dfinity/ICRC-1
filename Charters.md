@@ -1,12 +1,38 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2022-10-04
+[Slide deck](https://docs.google.com/presentation/d/1_xiYE4Ng8gz_u_dNos-xxZ1Ro6ckOwBMkm0fBgMaYLI/edit#slide=id.g125c3b1bfa8_0_0)
+
+Highlights:
+  * Dieter presented a proposal for the governance model for the Working group.
+    One idea was to adopt the rough consensus model like IETF, see [RFC 7282](https://www.rfc-editor.org/rfc/rfc7282).
+    The WG agreed that rough consensus seems to be a good fit.
+    Questions raised:
+    - Should we create NNS votes for decisions affecting the community?
+    - How do we decide who constitutes the WG?
+      If we do not know the exact members, it is hard to be sure that we take everybody's opinion into account.
+    - Often there are no objections in the WG discussions, but when you ask people to vote and explain their decision, there is a lot of valuable feedback.
+      How do we address that?
+  * The WG discussed the ICRC-2 proposal by Psychedelic: https://github.com/dfinity/ICRC-1/tree/f8c39bec71b1ac7f6cdb1a6c9844726efc58be38/standards/ICRC-2.
+  * The main concern about ICRC-20 is that ERC-20–style approve/transfer_from does not work well with concurrency:
+    If A approves five tokens to B, then A notifies B, then A approves ten tokens to B, then A notifiers B, the following message sequence is possible:
+    - The Ledger sees five-token approval and accepts it.
+    - The Ledger sees a ten-token approval and accepts it.
+    - B tries to transfer five tokens and succeeds.
+      The Ledger reduces the allowance to five tokens.
+    - B tries to transfer ten tokens and fails.
+  * The WG agreed that making approvals additive, as suggested in https://github.com/dfinity/ICRC-1/issues/22, seems to be the best option.
+    @roman-kashitsyn will make a PR with that adjustment.
+  * Max proposed that we get back to the transaction log extension.
+    @roman-kashitsyn will make a PR with the ICRC-3 proposal for the transaction log API.
+
 ## 2022-09-20
 - [Slide deck (Dieter)](https://docs.google.com/presentation/d/1r85i2iAkli6dv-Ou_rD6l3wA2RTHoggBBsxXaj3rvFo/edit#slide=id.g125c3b1bfa8_0_0)
 - [Slide deck (Ossian)](https://docs.google.com/presentation/d/1ic4iwKEmvbTFcc5j4LkoVhqx9O1iodw3w9QoQXEQTU8/edit#slide=id.gc6fa3c898_0_0)
 
 Highlights:
   * Textual encoding spec got an update [#55](https://github.com/dfinity/ICRC-1/pull/55).
-    The latest version of the encoding is unique (each valid encoding corresponds to a unique account), which is an important property for block explorers and dashboards.
+    The latest encoding version is unique (each valid encoding corresponds to a unique account), which is an essential property for block explorers and dashboards.
   * Timo Hanke proposes a generalization of the ICRC-1 textual encoding: https://forum.dfinity.org/t/using-the-principals-textual-encoding-for-other-things-than-principals/15319
   * Ossian proposed the ICRC-2 extension for the approve/transfer_from flow.
     No objections from the WG, but we need to sort out the exact API.
