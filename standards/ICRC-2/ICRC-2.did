@@ -4,6 +4,7 @@ type Account = record {
 };
 
 type ApproveArgs = record {
+    from_subaccount : opt blob;
     spender : principal;
     amount : nat;
     fee : opt nat;
