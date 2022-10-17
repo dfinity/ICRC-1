@@ -46,10 +46,11 @@ type Account = record {
 
 ### icrc2_approve
 
-Entitles `spender` to transfer at most the provided token `amount` on behalf of the caller from account `{ owner = caller; subaccount = from_subaccount }`.
+Entitles the `spender` to transfer an additional token `amount` on behalf of the caller from account `{ owner = caller; subaccount = from_subaccount }`.
 The number of transfers the `spender` can initiate from the caller's account is unlimited as long as the total amounts and fees of these transfers do not exceed the allowance.
 The caller does not need to have the full token `amount` on the specified account for the approval to succeed, just enough tokens to pay the approval fee.
-The new `spender`'s allowance for the account overrides the previous allowance value. 
+The `spender`'s allowance for the account increases or decreases by the `amount` depending on the sign of the `amount` field. 
+The ledger MAY reject the request if the total allowance becomes too large (for example, larger than the total token supply).
 
 ```candid "Methods" +=
 icrc2_approve : (ApproveArgs) -> (variant { Ok : nat; Err : ApproveError });
@@ -59,7 +60,7 @@ icrc2_approve : (ApproveArgs) -> (variant { Ok : nat; Err : ApproveError });
 type ApproveArgs = record {
     from_subaccount : opt blob;
     spender : principal;
-    amount : nat;
+    amount : int;
     fee : opt nat;
     memo : opt blob;
     created_at_time : opt nat64;
@@ -69,6 +70,8 @@ type ApproveError = variant {
     BadFee : record { expected_fee : nat };
     // The caller does not have enough funds to pay the approval fee.
     InsufficientFunds : record { balance : nat };
+    // The allowance is too large.
+    AllowanceTooLarge : record { max_allowance : nat };
     TooOld;
     CreatedInFuture: record { ledger_time : nat64 };
     Duplicate : record { duplicate_of : nat };
@@ -83,7 +86,8 @@ type ApproveError = variant {
 
 #### Postconditions
 
-* `spender`'s allowance for the `{ owner = caller; subaccount = from_subaccount }` account is `amount`.
+* The `spender`'s allowance for the `{ owner = caller; subaccount = from_subaccount }` increases by the `amount` (or decreases if the `amount` is negative).
+  If the total allowance is negative, the ledger MUST reset the allowance to zero.
 
 ### icrc2_transfer_from
 

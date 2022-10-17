@@ -1,7 +1,7 @@
 use anyhow::{bail, Context};
 use candid::Nat;
 use futures::StreamExt;
-use icrc1_test_env::{Account, LedgerEnv, SupportedStandard, Transfer, Value};
+use icrc1_test_env::{Account, LedgerEnv, Transfer, Value};
 use std::future::Future;
 use std::pin::Pin;
 
@@ -160,10 +160,7 @@ pub async fn test_metadata(env: LedgerEnv) -> TestResult {
 /// Checks whether the ledger advertizes support for ICRC-1 standard.
 pub async fn test_supported_standards(env: LedgerEnv) -> anyhow::Result<Outcome> {
     let stds = env.supported_standards().await?;
-    if !stds.contains(&SupportedStandard {
-        name: "ICRC-1".to_string(),
-        url: "https://github.com/dfinity/ICRC-1".to_string(),
-    }) {
+    if !stds.iter().any(|std| std.name == "ICRC-1") {
         bail!("The ledger does not claim support for ICRC-1: {:?}", stds);
     }
 

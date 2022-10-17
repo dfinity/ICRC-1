@@ -6,7 +6,7 @@ type Account = record {
 type ApproveArgs = record {
     from_subaccount : opt blob;
     spender : principal;
-    amount : nat;
+    amount : int;
     fee : opt nat;
     memo : opt blob;
     created_at_time : opt nat64;
@@ -15,6 +15,7 @@ type ApproveArgs = record {
 type ApproveError = variant {
     BadFee : record { expected_fee : nat };
     InsufficientFunds : record { balance : nat };
+    AllowanceTooLarge : record { max_allowance : nat };
     TooOld;
     CreatedInFuture: record { ledger_time : nat64 };
     Duplicate : record { duplicate_of : nat };
