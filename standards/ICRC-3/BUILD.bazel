@@ -1,0 +1,11 @@
+load("//bazel:check_standard.bzl", "check_standard")
+
+exports_files([
+    "ICRC-3.did",
+])
+
+check_standard(
+    name = "icrc3",
+    candid_file = "ICRC-3.did",
+    md_file = "README.md",
+)
