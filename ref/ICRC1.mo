@@ -182,7 +182,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
   };
 
   // Constructs the transaction log corresponding to the init argument.
-  func makeGenesisChain(self : Principal) : TxLog {
+  func makeGenesisChain() : TxLog {
     validateSubaccount(init.minting_account.subaccount);
 
     let now = Nat64.fromNat(Int.abs(Time.now()));
@@ -190,7 +190,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     for ({ account; amount } in Array.vals(init.initial_mints)) {
       validateSubaccount(account.subaccount);
       let tx : Transaction = {
-        operation = #Mint({ caller = self; from = init.minting_account; to = account; amount = amount; fee = null; memo = null; created_at_time = ?now });
+        operation = #Mint({ caller = init.minting_account.owner; from = init.minting_account; to = account; amount = amount; fee = null; memo = null; created_at_time = ?now });
         fee = 0;
         timestamp = now;
       };
@@ -227,7 +227,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
   };
 
   // The list of all transactions.
-  var log : TxLog = makeGenesisChain(Principal.fromActor(this));
+  var log : TxLog = makeGenesisChain();
 
   // The stable representation of the transaction log.
   // Used only during upgrades.
