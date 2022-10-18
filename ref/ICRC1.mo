@@ -80,9 +80,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     #BadBurn : { min_burn_amount : Tokens };
   };
 
-  public type ApproveError = DeduplicationError or CommonError or {
-    #AllowanceTooLarge : { max_allowance : Nat };
-  };
+  public type ApproveError = DeduplicationError or CommonError;
 
   public type TransferFromError = TransferError or {
     #InsufficientAllowance : { allowance : Nat };

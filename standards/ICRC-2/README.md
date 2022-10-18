@@ -70,8 +70,6 @@ type ApproveError = variant {
     BadFee : record { expected_fee : nat };
     // The caller does not have enough funds to pay the approval fee.
     InsufficientFunds : record { balance : nat };
-    // The allowance is too large.
-    AllowanceTooLarge : record { max_allowance : nat };
     TooOld;
     CreatedInFuture: record { ledger_time : nat64 };
     Duplicate : record { duplicate_of : nat };
