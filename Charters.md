@@ -1,5 +1,33 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2022-11-01
+[Slide deck](https://docs.google.com/presentation/d/1cgjTFmb72W9yrE8bkMq9JJSvDbEuzVuoj-R6xCiClOE/edit?usp=sharing)
+
+Highlights:
+  * The WG continued discussing the governance model.
+    - The WG decided on using GitHub +1 / -1 over OpenChat for voting.
+      Arguments: fewer tools to maintain, easier to find the voting pages, less anonymity.
+  * ICRC-2 proposal:
+    - The WG did not have objections to the allowance expiration proposal by Ben.
+      The expiration should apply to the entire allowance to simplify the implementation.
+      @roman-kashitsyn will update the spec to include expiration times.
+    - The WG discussed the recipient filter proposed in https://github.com/dfinity/ICRC-1/issues/68.
+      Everyone agreed that this extension is not helpful for most use cases and does not worth the trouble.
+      We should submit a separate specification to address OpenChat use case (maybe bidirectional payment requests suggested by Timo).
+  * ICRC-3 proposal:
+    - There are no new technical details to dicsuss.
+      Everyone is encouraged to read and comment on the spec: https://github.com/dfinity/ICRC-1/pull/66.
+  * NFT standard:
+    Ben will drive a separate WG that shall work on an NFT standard (ICRC-X).
+    Austin expressed a desire to participate.
+    Ben will start a thread on the forum to find interested parties.
+  * Austin wanted to catch up with the recent WG meetings.
+    @MarioDfinity to post links to the WG meeting recordings.
+  * Next steps:
+    - Vote on the textual representation.
+      @roman-kashitsyn to create a GitHub issue for voting.
+    - Implement ICRC-1 in the ICP ledger to demonstrate progress.
+
 ## 2022-10-18
 [Slide deck](https://docs.google.com/presentation/d/1EFsM2aSpUecoLVTaCdFdjznN7X4CiDvwx8fq1tAp-GM/edit?usp=sharing)
 
