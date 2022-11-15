@@ -1,5 +1,59 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2022-11-01
+[Slide deck](https://docs.google.com/presentation/d/1cgjTFmb72W9yrE8bkMq9JJSvDbEuzVuoj-R6xCiClOE/edit?usp=sharing)
+
+Highlights:
+  * The WG continued discussing the governance model.
+    - The WG decided on using GitHub +1 / -1 over OpenChat for voting.
+      Arguments: fewer tools to maintain, easier to find the voting pages, less anonymity.
+  * ICRC-2 proposal:
+    - The WG did not have objections to the allowance expiration proposal by Ben.
+      The expiration should apply to the entire allowance to simplify the implementation.
+      @roman-kashitsyn will update the spec to include expiration times.
+    - The WG discussed the recipient filter proposed in https://github.com/dfinity/ICRC-1/issues/68.
+      Everyone agreed that this extension is not helpful for most use cases and does not worth the trouble.
+      We should submit a separate specification to address OpenChat use case (maybe bidirectional payment requests suggested by Timo).
+  * ICRC-3 proposal:
+    - There are no new technical details to dicsuss.
+      Everyone is encouraged to read and comment on the spec: https://github.com/dfinity/ICRC-1/pull/66.
+  * NFT standard:
+    Ben will drive a separate WG that shall work on an NFT standard (ICRC-X).
+    Austin expressed a desire to participate.
+    Ben will start a thread on the forum to find interested parties.
+  * Austin wanted to catch up with the recent WG meetings.
+    @MarioDfinity to post links to the WG meeting recordings.
+  * Next steps:
+    - Vote on the textual representation.
+      @roman-kashitsyn to create a GitHub issue for voting.
+    - Implement ICRC-1 in the ICP ledger to demonstrate progress.
+
+## 2022-10-18
+[Slide deck](https://docs.google.com/presentation/d/1EFsM2aSpUecoLVTaCdFdjznN7X4CiDvwx8fq1tAp-GM/edit?usp=sharing)
+
+Highlights:
+  * We are continuing the discussion on the governance model for the WG.
+    - Dieter described the two-step model where WG members decide using rough consensus and then submit an NNS proposal to make the standard "official."
+    - Ben proposed an extension to Dieter's two-step model: the WG should post a proposal draft on the forum and let everyone provide feedback.
+      Everyone liked the idea.
+    - Dieter proposed to use Zoom's reactions feature (yes/no, not thumbs ups) to imitate the "humming."
+    - Most people agreed that asynchronous collaboration on GitHub would be more inclusive and allow members from China to be more involved.
+    - @roman-kashitsyn suggested having a "core team" or "official committee members."
+      Those will be official members who will follow the WG process and apply the rough consensus model, accepting criticism from all interested parties (not only the WG members).
+      We will reflect on the responsibilities of the "core members," and then Dieter will post on the forum to ask who wants to self-select.
+  * There was a brief discussion of the ICRC-2 proposal:
+    - @roman-kashitsyn is working on reference implementation [#65](https://github.com/dfinity/ICRC-1/pull/65).
+      This work led to two observations:
+      1. We should allow the ledger to reject `icrc2_approve` calls that result in huge (thousands of digits) allowances.
+      2. It is unclear how the ledger should behave when the account owner calls `icrc2_transfer_from`.
+         @roman-kashitsyn proposed that `icrc2_transfer_from` acts like a regular transfer in such cases.
+         There were no objections from the audience.
+    - Ben had two suggestions:
+      1. Allowances should be compound (see [#65](https://github.com/dfinity/ICRC-1/pull/65)).
+      2. Allowances should expire over time.
+  * In the last few minutes, we looked at the [ICRC-3 proposal](https://github.com/dfinity/ICRC-1/pull/66).
+    No feedback yet.
+
 ## 2022-10-04
 [Slide deck](https://docs.google.com/presentation/d/1_xiYE4Ng8gz_u_dNos-xxZ1Ro6ckOwBMkm0fBgMaYLI/edit#slide=id.g125c3b1bfa8_0_0)
 
