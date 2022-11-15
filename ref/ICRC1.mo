@@ -43,18 +43,24 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     from : Account;
     spender : Principal;
     amount : Int;
+    expires_at : ?Nat64;
+  };
+
+  public type TransferSource = {
+    #Init;
+    #Icrc1Transfer;
+    #Icrc2TransferFrom;
   };
 
   public type Transfer = CommonFields and {
-    caller : Principal;
+    spender : Principal;
+    source : TransferSource;
     to : Account;
     from : Account;
     amount : Tokens;
   };
 
-  public type TransferFrom = Transfer and {
-    spender : Principal;
-  };
+  public type Allowance = { allowance : Nat; expires_at : ?Nat64 };
 
   public type Transaction = {
     operation : Operation;
@@ -80,7 +86,9 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     #BadBurn : { min_burn_amount : Tokens };
   };
 
-  public type ApproveError = DeduplicationError or CommonError;
+  public type ApproveError = DeduplicationError or CommonError or {
+    #Expired : { ledger_time : Nat64 };
+  };
 
   public type TransferFromError = TransferError or {
     #InsufficientAllowance : { allowance : Nat };
@@ -151,19 +159,46 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     null;
   };
 
-  // Computes allowance.
-  func allowance(account : Account, spender : Principal) : Nat {
+  // Finds an approval in the transaction log.
+  func findApproval(approval : Approve, log : TxLog) : ?TxIndex {
+    var i = 0;
+    for (tx in log.vals()) {
+      switch (tx.operation) {
+        case (#Approve(args)) { if (args == approval) { return ?i } };
+        case (_) {};
+      };
+      i += 1;
+    };
+    null;
+  };
+
+  // Computes allowance of the spender for the specified account.
+  func allowance(account : Account, spender : Principal, now : Nat64) : Allowance {
     var i = 0;
     var allowance : Int = 0;
+    var lastApprovalTs : ?Nat64 = null;
+
     for (tx in log.vals()) {
+      // Reset expired approvals, if any.
+      switch (lastApprovalTs) {
+        case (?expires_at) {
+          if (expires_at < tx.timestamp) {
+            allowance := 0;
+            lastApprovalTs := null;
+          };
+        };
+        case (null) {};
+      };
+      // Add pending approvals.
       switch (tx.operation) {
         case (#Approve(args)) {
           if (args.from == account and args.spender == spender) {
             allowance := Int.max(0, allowance + args.amount);
+            lastApprovalTs := args.expires_at;
           };
         };
         case (#Transfer(args)) {
-          if (args.from == account and args.caller == spender) {
+          if (args.from == account and args.spender == spender) {
             allowance -= args.amount + tx.fee;
           };
         };
@@ -171,7 +206,17 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
       };
     };
 
-    Int.abs(allowance);
+    switch (lastApprovalTs) {
+      case (?expires_at) {
+        if (expires_at < now) { { allowance = 0; expires_at = null } } else {
+          {
+            allowance = Int.abs(allowance);
+            expires_at = ?expires_at;
+          };
+        };
+      };
+      case (null) { { allowance = Int.abs(allowance); expires_at = null } };
+    };
   };
 
   // Checks if the principal is anonymous.
@@ -188,7 +233,16 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     for ({ account; amount } in Array.vals(init.initial_mints)) {
       validateSubaccount(account.subaccount);
       let tx : Transaction = {
-        operation = #Mint({ caller = init.minting_account.owner; from = init.minting_account; to = account; amount = amount; fee = null; memo = null; created_at_time = ?now });
+        operation = #Mint({
+          spender = init.minting_account.owner;
+          source = #Init;
+          from = init.minting_account;
+          to = account;
+          amount = amount;
+          fee = null;
+          memo = null;
+          created_at_time = ?now;
+        });
         fee = 0;
         timestamp = now;
       };
@@ -248,8 +302,15 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     idx;
   };
 
-  func classifyTransfer(transfer : Transfer) : Result<(Operation, Tokens), TransferError> {
+  func classifyTransfer(log : TxLog, transfer : Transfer) : Result<(Operation, Tokens), TransferError> {
     let minter = init.minting_account;
+
+    if (Option.isSome(transfer.created_at_time)) {
+      switch (findTransfer(transfer, log)) {
+        case (?txid) { return #Err(#Duplicate { duplicate_of = txid }) };
+        case null {};
+      };
+    };
 
     let result = if (accountsEqual(transfer.from, minter)) {
       if (Option.get(transfer.fee, 0) != 0) {
@@ -287,43 +348,51 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     #Ok(result);
   };
 
-  public shared ({ caller }) func icrc1_transfer({ from_subaccount : ?Subaccount; to : Account; amount : Tokens; fee : ?Tokens; memo : ?Memo; created_at_time : ?Timestamp }) : async Result<TxIndex, TransferError> {
-    validateSubaccount(from_subaccount);
-    validateSubaccount(to.subaccount);
-    validateMemo(memo);
+  func applyTransfer(args : Transfer) : Result<TxIndex, TransferError> {
+    validateSubaccount(args.from.subaccount);
+    validateSubaccount(args.to.subaccount);
+    validateMemo(args.memo);
 
     let now = Nat64.fromNat(Int.abs(Time.now()));
 
-    switch (checkTxTime(created_at_time, now)) {
+    switch (checkTxTime(args.created_at_time, now)) {
       case (#Ok(_)) {};
       case (#Err(e)) { return #Err(e) };
     };
 
-    let from = { owner = caller; subaccount = from_subaccount };
-
-    let args : Transfer = {
-      caller = caller;
-      from = from;
-      to = to;
-      amount = amount;
-      memo = memo;
-      fee = fee;
-      created_at_time = created_at_time;
-    };
-
-    if (Option.isSome(created_at_time)) {
-      switch (findTransfer(args, log)) {
-        case (?height) { return #Err(#Duplicate { duplicate_of = height }) };
-        case null {};
-      };
-    };
-
-    switch (classifyTransfer(args)) {
+    switch (classifyTransfer(log, args)) {
       case (#Ok((operation, effectiveFee))) {
         #Ok(recordTransaction({ operation = operation; fee = effectiveFee; timestamp = now }));
       };
       case (#Err(e)) { #Err(e) };
     };
+  };
+
+  func overflowOk(x : Nat) : Nat {
+    x;
+  };
+
+  public shared ({ caller }) func icrc1_transfer({
+    from_subaccount : ?Subaccount;
+    to : Account;
+    amount : Tokens;
+    fee : ?Tokens;
+    memo : ?Memo;
+    created_at_time : ?Timestamp;
+  }) : async Result<TxIndex, TransferError> {
+    applyTransfer({
+      spender = caller;
+      source = #Icrc1Transfer;
+      from = {
+        owner = caller;
+        subaccount = from_subaccount;
+      };
+      to = to;
+      amount = amount;
+      fee = fee;
+      memo = memo;
+      created_at_time = created_at_time;
+    });
   };
 
   public query func icrc1_balance_of(account : Account) : async Tokens {
@@ -363,7 +432,10 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     ];
   };
 
-  public query func icrc1_supported_standards() : async [{ name : Text; url : Text }] {
+  public query func icrc1_supported_standards() : async [{
+    name : Text;
+    url : Text;
+  }] {
     [
       {
         name = "ICRC-1";
@@ -376,7 +448,15 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     ];
   };
 
-  public shared ({ caller }) func icrc2_approve({ from_subaccount : ?Subaccount; spender : Principal; amount : Int; memo : ?Memo; fee : ?Tokens; created_at_time : ?Timestamp }) : async Result<TxIndex, ApproveError> {
+  public shared ({ caller }) func icrc2_approve({
+    from_subaccount : ?Subaccount;
+    spender : Principal;
+    amount : Int;
+    expires_at : ?Nat64;
+    memo : ?Memo;
+    fee : ?Tokens;
+    created_at_time : ?Timestamp;
+  }) : async Result<TxIndex, ApproveError> {
     validateSubaccount(from_subaccount);
     validateMemo(memo);
 
@@ -387,7 +467,30 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
       case (#Err(e)) { return #Err(e) };
     };
 
-    // TODO: dedup
+    let approverAccount = { owner = caller; subaccount = from_subaccount };
+    let approval = {
+      from = approverAccount;
+      spender = spender;
+      amount = amount;
+      expires_at = expires_at;
+      fee = fee;
+      created_at_time = created_at_time;
+      memo = memo;
+    };
+
+    if (Option.isSome(created_at_time)) {
+      switch (findApproval(approval, log)) {
+        case (?txid) { return #Err(#Duplicate { duplicate_of = txid }) };
+        case (null) {};
+      };
+    };
+
+    switch (expires_at) {
+      case (?expires_at) {
+        if (expires_at < now) { return #Err(#Expired { ledger_time = now }) };
+      };
+      case (null) {};
+    };
 
     let effectiveFee = init.transfer_fee;
 
@@ -395,21 +498,45 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
       return #Err(#BadFee({ expected_fee = effectiveFee }));
     };
 
-    let approverAccount = { owner = caller; subaccount = from_subaccount };
     let approverBalance = balance(approverAccount, log);
     if (approverBalance < init.transfer_fee) {
       return #Err(#InsufficientFunds { balance = approverBalance });
     };
 
-    let op = #Approve({ from = approverAccount; spender = spender; amount = amount; fee = fee; created_at_time = created_at_time; memo = memo });
-    let txId = recordTransaction({ operation = op; fee = effectiveFee; timestamp = now });
+    let txid = recordTransaction({
+      operation = #Approve(approval);
+      fee = effectiveFee;
+      timestamp = now;
+    });
 
-    assert (balance(approverAccount, log) == approverBalance - effectiveFee);
+    assert (balance(approverAccount, log) == overflowOk(approverBalance - effectiveFee));
 
-    #Ok(txId);
+    #Ok(txid);
   };
 
-  public shared ({ caller }) func icrc2_transfer_from({ from : Account; to : Account; amount : Tokens; fee : ?Tokens; memo : ?Memo; created_at_time : ?Timestamp }) : async Result<TxIndex, TransferFromError> {
+  public shared ({ caller }) func icrc2_transfer_from({
+    from : Account;
+    to : Account;
+    amount : Tokens;
+    fee : ?Tokens;
+    memo : ?Memo;
+    created_at_time : ?Timestamp;
+  }) : async Result<TxIndex, TransferFromError> {
+    let transfer : Transfer = {
+      spender = caller;
+      source = #Icrc2TransferFrom;
+      from = from;
+      to = to;
+      amount = amount;
+      fee = fee;
+      memo = memo;
+      created_at_time = created_at_time;
+    };
+
+    if (caller == from.owner) {
+      return applyTransfer(transfer);
+    };
+
     validateSubaccount(from.subaccount);
     validateSubaccount(to.subaccount);
     validateMemo(memo);
@@ -421,43 +548,29 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
       case (#Err(e)) { return #Err(e) };
     };
 
-    let transfer : Transfer = {
-      caller = caller;
-      from = from;
-      to = to;
-      amount = amount;
-      fee = fee;
-      memo = memo;
-      created_at_time = created_at_time;
-    };
-
-    if (Option.isSome(created_at_time)) {
-      switch (findTransfer(transfer, log)) {
-        case (?height) { return #Err(#Duplicate { duplicate_of = height }) };
-        case null {};
-      };
-    };
-
-    let (operation, effectiveFee) = switch (classifyTransfer(transfer)) {
+    let (operation, effectiveFee) = switch (classifyTransfer(log, transfer)) {
       case (#Ok(result)) { result };
       case (#Err(err)) { return #Err(err) };
     };
 
-    // TODO: should we skip this check if caller is the account owner?
-
-    let callerAllowance = allowance(from, caller);
-    if (callerAllowance < amount + effectiveFee) {
-      return #Err(#InsufficientAllowance { allowance = callerAllowance });
+    let preTransferAllowance = allowance(from, caller, now);
+    if (preTransferAllowance.allowance < amount + effectiveFee) {
+      return #Err(#InsufficientAllowance { allowance = preTransferAllowance.allowance });
     };
 
-    let txid = recordTransaction({ operation = operation; fee = effectiveFee; timestamp = now });
+    let txid = recordTransaction({
+      operation = operation;
+      fee = effectiveFee;
+      timestamp = now;
+    });
 
-    assert (allowance(from, caller) == callerAllowance - amount - effectiveFee);
+    let postTransferAllowance = allowance(from, caller, now);
+    assert (postTransferAllowance.allowance == overflowOk(preTransferAllowance.allowance - (amount + effectiveFee)));
 
     #Ok(txid);
   };
 
-  public query func icrc2_allowance({ account : Account; spender : Principal }) : async Nat {
-    allowance(account, spender);
+  public query func icrc2_allowance({ account : Account; spender : Principal }) : async Allowance {
+    allowance(account, spender, Nat64.fromNat(Int.abs(Time.now())));
   };
 };
