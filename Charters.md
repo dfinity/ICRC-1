@@ -1,5 +1,20 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2022-11-15
+[Slide deck](https://docs.google.com/presentation/d/10PxWKYbWdZUmnafIMrc6_bdvNBwBCXHiHQnoRR8kIT0/edit#slide=id.g15a049007c6_0_20)
+
+Highlights:
+  * The ICRC-2 proposal seems to be feature-complete.
+    @roman-kashitsyn and @ozwaldorf will prepare slides with the overall design overview and present them in one of the following community conversations.
+  * The ICRC-0 proposal on governance by @dietersommer is open for review.
+    @dietersommer will sync with the governance working group and get feedback.
+  * There is a new repository for community-driven proposals: https://github.com/dfinity/ICRC.
+    The processes for creating new proposals and allocating standard IDs are TBD.
+  * The WG had a conversation on whether we need many token-related ICRC-x proposals or whether there should be a single standard that newcomers can easily understand and adopt.
+    The plan is to proceed as we planned before:
+    - Keep working on the most needed missing pieces (approvals, transaction log, certification, presigned transactions).
+    - Once we have a solid base, we can group them under an umbrella "core" standard that most new ledgers could use.
+
 ## 2022-11-01
 [Slide deck](https://docs.google.com/presentation/d/1cgjTFmb72W9yrE8bkMq9JJSvDbEuzVuoj-R6xCiClOE/edit?usp=sharing)
 
