@@ -6,7 +6,7 @@
 Highlights:
   * The ICRC-2 proposal seems to be feature-complete.
     @roman-kashitsyn and @ozwaldorf will prepare slides with the overall design overview and present them in one of the following community conversations.
-  * The ICRC-0 proposal on governance by @dietersommer is open for review.
+  * The ICRC-0 proposal on governance by @dietersommer is open for review (https://github.com/dfinity/ICRC-1/pull/71).
     @dietersommer will sync with the governance working group and get feedback.
   * There is a new repository for community-driven proposals: https://github.com/dfinity/ICRC.
     The processes for creating new proposals and allocating standard IDs are TBD.
