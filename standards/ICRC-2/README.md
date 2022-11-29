@@ -46,10 +46,13 @@ type Account = record {
 
 ### icrc2_approve
 
-Entitles `spender` to transfer at most the provided token `amount` on behalf of the caller from account `{ owner = caller; subaccount = from_subaccount }`.
+Entitles the `spender` to transfer an additional token `amount` on behalf of the caller from account `{ owner = caller; subaccount = from_subaccount }`.
 The number of transfers the `spender` can initiate from the caller's account is unlimited as long as the total amounts and fees of these transfers do not exceed the allowance.
 The caller does not need to have the full token `amount` on the specified account for the approval to succeed, just enough tokens to pay the approval fee.
-The new `spender`'s allowance for the account overrides the previous allowance value. 
+The `spender`'s allowance for the account increases or decreases by the `amount` depending on the sign of the `amount` field. 
+If the `expires_at` field is not null, the ledger resets the approval expiration time to the specified value.
+The ledger SHOULD reject the request if the caller is the same principal as the spender (no self-approvals allowed).
+The ledger MAY reject the request if the total allowance becomes too large (for example, larger than the total token supply).
 
 ```candid "Methods" +=
 icrc2_approve : (ApproveArgs) -> (variant { Ok : nat; Err : ApproveError });
@@ -59,7 +62,8 @@ icrc2_approve : (ApproveArgs) -> (variant { Ok : nat; Err : ApproveError });
 type ApproveArgs = record {
     from_subaccount : opt blob;
     spender : principal;
-    amount : nat;
+    amount : int;
+    expires_at : opt nat64;
     fee : opt nat;
     memo : opt blob;
     created_at_time : opt nat64;
@@ -69,6 +73,8 @@ type ApproveError = variant {
     BadFee : record { expected_fee : nat };
     // The caller does not have enough funds to pay the approval fee.
     InsufficientFunds : record { balance : nat };
+    // The approval request expired before the ledger had a chance to apply it.
+    Expired : record { ledger_time : nat64; };
     TooOld;
     CreatedInFuture: record { ledger_time : nat64 };
     Duplicate : record { duplicate_of : nat };
@@ -80,15 +86,19 @@ type ApproveError = variant {
 #### Preconditions
 
 * The caller has enough fees on the `{ owner = caller; subaccount = from_subaccount }` account to pay the approval fee.
+* The caller is different from the `spender`.
+* If the `expires_at` field is set, it's creater than the current ledger time.
 
 #### Postconditions
 
-* `spender`'s allowance for the `{ owner = caller; subaccount = from_subaccount }` account is `amount`.
+* The `spender`'s allowance for the `{ owner = caller; subaccount = from_subaccount }` increases by the `amount` (or decreases if the `amount` is negative).
+  If the total allowance is negative, the ledger MUST reset the allowance to zero.
 
 ### icrc2_transfer_from
 
 Transfers a token amount from between two accounts.
 The ledger draws the fees from the `from` account.
+If the caller is the owner of the `from` account, `icrc2_transfer_from` ignores allowances and acts as an `icrc1_transfer`.
 
 ```candid "Methods" +=
 icrc2_transfer_from : (TransferFromArgs) -> (variant { Ok : nat; Err : TransferFromError });
@@ -121,30 +131,35 @@ type TransferFromArgs = record {
 
 #### Preconditions
  
- * The caller's allowance for the `from` account is large enough to include the transfer amount and the fees.
+ * If the caller is no the `from` account owner, the caller's allowance for the `from` account is large enough to cover the transfer amount and the fees.
    Otherwise, the ledger MUST return an `InsufficientAllowance` error.
 
 * The `from` account holds enough funds to cover the transfer amount and the fees.
   Otherwise, the ledger MUST return an `InsufficientFunds` error.
  #### Postconditions
 
- * Caller's allowance for the `from` account decreases by the transfer amount and the fees.
+ * If the caller is not the `from` account owner, caller's allowance for the `from` account decreases by the transfer amount and the fees.
  * The ledger debited the specified `amount` of tokens and fees from the `from` account.
  * The ledger credited the specified `amount` to the `to` account.
 
 ### icrc2_allowance
 
-Returns the token allowance that the `spender` can transfer from the specified `account`.
-If there is no corresponding active approval, the ledger MUST return `0`.
+Returns the token allowance that the `spender` can transfer from the specified `account`, and the expiration time for that allowance, if any.
+If there is no active approval, the ledger MUST return `0`.
 
 ```candid "Methods" +=
-icrc2_allowance : (AllowanceArgs) -> (nat) query;
+icrc2_allowance : (AllowanceArgs) -> (Allowance) query;
 ```
 ```candid "Type definitions" +=
 type AllowanceArgs = record {
     account : Account;
     spender : principal;
 };
+
+type Allowance = record {
+  allowance : nat;
+  expires_at : opt nat64;
+}
 ```
 ### icrc1_supported_standards
 
