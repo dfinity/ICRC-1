@@ -51,8 +51,11 @@ The number of transfers the `spender` can initiate from the caller's account is 
 The caller does not need to have the full token `amount` on the specified account for the approval to succeed, just enough tokens to pay the approval fee.
 The `spender`'s allowance for the account increases or decreases by the `amount` depending on the sign of the `amount` field. 
 If the `expires_at` field is not null, the ledger resets the approval expiration time to the specified value.
+
 The ledger SHOULD reject the request if the caller is the same principal as the spender (no self-approvals allowed).
-The ledger MAY reject the request if the total allowance becomes too large (for example, larger than the total token supply).
+
+The ledger MAY cap the total allowance if it becomes too large (for example, larger than the total token supply).
+For example, if there are only 100 tokens, and the ledger receives two approvals for 60 tokens for the same `(account, principal)` pair, the ledger may cap the total allowance to 100.
 
 ```candid "Methods" +=
 icrc2_approve : (ApproveArgs) -> (variant { Ok : nat; Err : ApproveError });
