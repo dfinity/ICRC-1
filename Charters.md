@@ -1,5 +1,60 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2022-12-06
+[Slide deck](https://docs.google.com/presentation/d/1nHgxpfDhkfR1eou91wLRn8Zz634BfwccCkysqEvEOfM/edit?usp=share_link), [recording](https://drive.google.com/file/d/1qv6_OV472OwMiIYuzTW1d4jXFGU9N9Ia/view?usp=share_link)
+
+**ICRC-2**
+
+* ICRC-2 presentation
+* Discussion
+  * Overflow semantics (should we cap or fail in case of an overflow caused by an approval?)
+    * The reason why we cannot allow for unbounded approvals is that this would result in unbounded numbers, which would be an attack vector against a ledger implementation  by exhausting their memory. Thus, balances and approvals are implemented as bounded number types.
+    * A common case may be that a user has a limited approval already defined and makes another one with the maximum amount in the context of working with a DEX. The intention here is clearly to increase the approval to the maximum possible, thus having this succeed and cap at the maximum is the intended semantics.
+    * For usability reasons: Cap, OK: nat
+  * Question: transaction history -> ICRC-3 is defining this for the fungible token standard.
+  * Question: atomicity -> The application should be able to handle it with the current definition of the ICRC-1 token standard.
+  * Security model: allow user to opt out of approvals?
+    * Limit user privileges? -> higher level issue
+    * Would a revoke_all method be sufficient?
+    * Separate issue to solve for all extensions
+    * This seems to be a more fundamental UX issue
+    * This should be documented in some form so people are aware of it
+* Virtual humming: Rough consensus for ICRC-2 reached
+* Next step is to initiate the voting, but only once we have made some adjustments to the working group and its governance structure.
+
+**Working Group Governance (ICRC-0)**
+
+* Arthur Falls presents his feedback from the side of the governance WG on ICRC-0
+  * Most of his points are not on the substance of the proposal, but rather on being more open towardws different tools, not only focusing on GitHub
+    * The process should be tool agnostic, it should only make recommendations on tools, but not prescribe tools
+    * We need boilerplate to make sure that when people using different tools, it works together
+  * Biggest problem with governance on the IC: not enough effectively-structured information in proposals for neurons to make effective decisions; not assertive enough community engagement for bringing proposals to the neurons; WGs should improve on this when making proposals to the NNS
+  * Hosted two Twitter spaces to get community feedback on their WG results, was really useful
+    * Concerns and opinions had developed responses to their concerns already
+    * Do not rediscuss those in the future thanks to the documentation
+  * Arthur presented the documentation system they used in the governance WG resulting in 4 documents
+    * Originating Document: all ideas, framing the scope to work on, forum posts seemed relevant
+    * Problems & Solutions Identification: 300 words; problem statement, solution; provides also external evidence to support their work
+    * NNS Principles: Document that contains all their thinking, all ideas etc.; much more in depth; effectively structured; FAQ
+    * Overview: pre-proposal; document with the wording they thought should be used in the proposal
+  * The essence of why this process has been used is that people need to be able to see the thought process; that's why something like this is necessary
+  * Arthur thinks that all objections and related discussions need to be documented in a referenceable form; PDFs are great for this as they don't change; having objections and the related discussions available will preempt discussions in the community in the future (all objections will come up again in the community and the available material can preempt it instead of us having to re-discuss the same things repeatedly whenever they come up in the community later)
+    * All objections need to be recorded
+    * Want to be really comprehensive about this to preempt similar community discussions
+    * An FAQ might be useful for this
+  * Using this approach, they had really nice community feedback
+    * All the initial scepticism and controversy was removed through this transparent process
+  * To summarize, Arthur likes the process we have described in ICRC-0
+    * It needs to be more neutral in terms of the concrete tools
+  * Discussion outcome
+    * We want to have more details in the meeting minutes / charters
+    * No agreement on whether static documents like PDFs or GitHub is more appropriate; either could be used, depending on preference on the working group or editors
+      * Ben objected to mandate PDFs, because GitHub may be more suitable for many things and PDFs are not always the easiest to reference
+    * The assertion that we should document objections and related discussions thoroughly finds support in the group
+    * Being more open in terms of tools seems to make sense, e.g., leave the concrete choice of tools to the working group or editors
+    * Roman proposes that a standard itself can contain the "why" we do not do certain things and thereby capture (parts of) objections in the standard itself
+      * This makes lots of sense, but we might not want mandate it, rather it should be used as fits the standard at hand; in the end, the objections need to be captured somewhere
+
 ## 2022-11-01
 [Slide deck](https://docs.google.com/presentation/d/1cgjTFmb72W9yrE8bkMq9JJSvDbEuzVuoj-R6xCiClOE/edit?usp=sharing)
 
