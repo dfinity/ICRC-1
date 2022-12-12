@@ -22,13 +22,17 @@ We next give more details on how working groups are structured in terms of membe
 
 An IC technical working group can be joined by anyone interested in participating in the discussions and joint development of the technology the WG addresses or just following the discussions. A subset of the members of the WG, the *core WG team members* will be most actively involved in the work, the remaining *participating members* will rather listen to discussions and occasionally make contributions.
 
-* *Core WG team members:* The core team of the WG actively participates in the work of the WG and in developing the corresponding technology. The core team needs to be in agreement on the technical issues. The core team attempts to reach *rough consensus* as explained below and is eligible to vote in the WG, such as new standard proposals.
-* *Participating members:* Anyone besides the core team is a *participating member* of the WG and can join the meetings and discussions on all channels. Participating members may express their opinions and are welcome to contribute to the work, however, they are not part of the decision making of the WG.
+* *Core WG team members:* The core team of the WG actively participates in the work of the WG and in developing the corresponding technology. The core team needs to be in agreement on the technical issues. The core team attempts to reach *rough consensus* as explained below and is eligible to vote in the WG, such as on new standard proposals.
+* *Participating members:* Anyone besides the core team is a *participating member* of the WG and can join the meetings and discussions on all channels. Participating members may express their opinions and are welcome to contribute to the work, however, they are not expected to make substantial contributions and are not part of the decision making of the WG.
 * *Chair:* Each WG appoints at least one chair, ideally two co-chairs, who are responsible for driving the WG, scheduling meetings, and orchestrating the processes of the WG. The chair is also responsible for determining whether the group is in rough consensus on a topic.
 
-Finding the core team of a new WG to be established is an informal process that will quickly converge to an initial core team. The founding members or proposers of the WG will typically be part of the core team, quickly attracting further interested community members early on who are willing to contribute. The core team will evolve over time with members joining (or leaving), as the working group progresses.
+Finding the core team of a new WG to be established is an informal process that will quickly converge to an initial core team. The founding members or proposers of the WG will typically be part of the core team, quickly attracting further interested community members early on who are willing to contribute. The core team will evolve over time with members joining and leaving, as the working group progresses. Participants of the core team who do not make major contributions to the WG any more should remove themselves from or be removed from the group.
 
-The co-chairs of the WG should be agreed on by the WG in the spirit of WG decision making.
+The members of the core team and the co-chairs of the WG should be agreed on by the WG in the spirit of WG decision making.
+
+### Subgroups
+
+A subgroup may form in a WG to address specific topics which not all members are interested in. The subgroup would then convene separately and work to produce its envisioned results. It can use the same governance structures and principles of the WG applied to the subgroup to find agreement within the subgroup. Once a subgroup has arrived at a result with sufficient agreement, it presents it to the full WG. The full WG should strive to have rough consensus. Voting on the results of the subgroup is done in the full WG. A subgroup dissolves itself once its goal, which can be the production of a single result or a series of results, has been achieved.
 
 ## Collaboration and communication
 
@@ -36,14 +40,41 @@ As the team members are distributed globally throughout all time zones and there
 
 For a distributed group like the IC community it is crucial to have a WG setup that can include also the people in the discussion that cannot attend the regular virtual WG meetings, e.g., due to time zone constraints.
 
-IC WGs will typically use the collaboration tools mentioned below. The idea is to have as few tools as possible to avoid overhead for members (and the chairs).
-* *GitHub* as asynchronous collaboration tool: working on documents and code; discussions on PRs; commenting on and objecting to specific issues of proposals; determining rough consensus through humming; formal voting
+IC WGs will typically use a subset of the collaboration tools mentioned below. The idea is to have as few tools as possible to avoid overhead for members (and the chairs). The concrete choice of tools is left to the discretion of the WG. As recommendation, more technical- and coding-affine WGs should use Zoom, the Forum, Discord, and GitHub, while less technical-affine groups might want to replace GitHub with GoogleDocs for the drafting of and commenting on their working documents. The governance processes are in principle tool agnostic, however, we provide some discussion and recommendations on tools here to allow for faster bootstrapping of a new WG and to help the WG avoid reinvent the wheel w.r.t. tooling.
+
+* *GitHub* as asynchronous collaboration tool: working on documents and code; discussions of PRs; commenting on and objecting to specific issues of proposals; determining rough consensus through humming; formal voting
+* *Google Docs* as asynchronous collaboration tool: document authoring; commenting; making objections; discussing
 * *Virtual meetings in Zoom* as synchronous collaboration tool: technical discussions, continuing discussions from GitHub in a synchronous setting; discussion of strategic topics such as new work items, spawning a new working group; resolving issues
-* *IC developer forum* as asynchronous communication channel: updates to the working group; announcements; technical discussions that do not fit into specific items on GitHub; strategic discussions
+* *IC developer forum* as asynchronous communication channel: updates to the working group; announcements; technical discussions that do not fit into specific items on GitHub or Google Docs; strategic and roadmap discussions
+* *Discord* as a communication tool with similar usage as the forum and in addition synchronous chats.
+
+The Ledger and Tokenization WG uses the following tools:
+
+* Zoom
+* GitHub
+* Forum
+* Discord
+
+### Zoom teleconferencing
+
+Regular (typically weekly or bi-weekly 1-hour) virtual video conference meetings provide a platform for *synchronous collaboration* of the team. These meetings are the periodic integration points of discussions held on other channels, where team members can engage in a realtime discourse on the currently handled topics of the WG, as well as strategic and roadmap topics. The meeting cadence and schedule can be changed at the discretion of the WG, e.g., to align with the current workload or timeline requirements.
+
+Particularly, the meetings are used, among other things, for the following:
+
+* Discussing individual items the group is currently working on: A main part of the meetings is dedicated to addressing comments and objections on standards proposals in the spirit of rough consensus. This continues discussions on GitHub and uses the power of synchronous interactions between the participants.
+* Elaborating the strategic roadmap of the WG: For example, discussing the direction, future work items, new WGs or subgroups to be created for specific topics.
+* Discussing upcoming work items.
+* Virtual humming to assess the degree of consensus in the group.
+
+WG meetings should have minutes published on GitHub that summarize the discussions and main decisions taken in the meeting. This helps transparency for everyone and individuals outside the WG as well as participants who cannot participate in a meeting to catch up with the progress of the WG.
+
+Due to the IC community's global presence, at least one of the geographies may not be conveniently able to participate during a given time slot. The WG can either choose a fixed time slot and involve the team members from non-participating geographies via other channels, or rotate the time slot so that all parts of the world can participate in a subset of the meetings. The further leads to a more stable attendance while being less fair towards one part of the team, the latter leads to a less stable participation of members while being fair. The chosen mode must be determined and decided by the WG.
+
+Zoom meetings can be used for realtime humming during the meeting to measure rough consensus in the core team.
 
 ### GitHub
 
-GitHub is the main tool for asynchronous collaboration in the WG, used for the following purposes, for example:
+GitHub is one option for the main tool for asynchronous collaboration in IC WGs, used, for example, for the following purposes:
 
 * Drafting standards proposals;
 * Working on source code;
@@ -52,25 +83,23 @@ GitHub is the main tool for asynchronous collaboration in the WG, used for the f
 * Asynchronous virtual humming;
 * Voting.
 
-### Virtual meetings in Zoom
+### Google Docs
 
-Regular (typically weekly or bi-weekly 1-hour) virtual video conference meetings provide a platform for *synchronous collaboration* of the team. These meetings are the periodic integration points of discussions held on other channels, where team members can engage in a realtime discourse on the currently handled topics of the WG. The meeting cadence and schedule can be changed at the discretion of the WG, e.g., to align with the current workload or timeline requirements.
+For less-technically oriented WGs the members of which may not be familiar with GitHub, Google Docs may be a viable alternative for part of what GitHub offers.
 
-Particularly, the meetings are used, among other things, for the following:
+* Drafting standard proposals;
+* Commenting on and objecting to (parts of) proposals;
+* Technical discussions to address comments and objections.
 
-* Discussing individual items the group is currently working on: A main part of the meetings is dedicated to addressing comments and objections on standards proposals in the spirit of rough consensus. This continues discussions on GitHub and uses the power of synchronous interactions between the participants.
-* Elaborating the strategic roadmap of the WG: For example, discussing the direction, future work items, new WGs to be created for specific topics.
-* Discussing upcoming work items.
-* Virtual humming to assess the degree of consensus in the group.
-
-WG meetings should have minutes published on GitHub that summarize the discussions and main decisions taken in the meeting. This helps transparency as well as participants who cannot participate in a meeting to catch up with the progress of the WG.
-
-Due to the IC community's global presence, at least one of the geographies may not be conveniently able to participate during a given time slot. The WG can either choose a fixed time slot and involve the team members from non-participating geographies via other channels, or rotate the time slot so that all parts of the world can participate in a subset of the meetings. The further leads to a more stable attendance while being less fair towards one part of the team, the latter leads to a less stable participation of members while being fair. The chosen mode must be determined and decided by the WG.
-Zoom meetings can be used for realtime humming during the meeting to measure rough consensus in the core team.
+Humming and voting may be possible with Google Forms, or otherwise need to be done on another channel.
 
 ### Forum
 
-Each WG has its own forum topic used for announcements and discussions. Announcements such as changes to the WG meeting schedule or upcoming asynchronous hums or votes are posted on the forum. Discussions that do not fit into a PR on GitHub also find their place on the forum. Technical discussions related to a specific topic should be done as part of the respective PR on GitHub, though. Any other communication not related to an item on GitHub can be done on the forum.
+Each WG has its own forum topic used for announcements and discussions. Announcements such as changes to the WG meeting schedule or upcoming asynchronous hums or votes are posted on the forum. Discussions that do not fit into a PR on GitHub or into Google Docs also find their place on the forum. Technical discussions related to a specific topic should be done as part of the respective PR on GitHub or the Google Docs document, though. Any other communication not related to an item on GitHub can be done on the forum. The forum should also be a useful resource for people not part of the WG who want to learn about the WG's results later.
+
+### Discord
+
+Each WG has its own Discord channel in the "WORKING-GROUPS" category of the "DFINITY DEV OFFICIAL" space. The channel can be used for communication of the WG members and is suitable also for synchronous chat communication. Announcements on the forum, e.g., on upcoming meetings and votes, should be mirrored on the Discord channel to maximize outreach.
 
 ## Consensus and decision making
 
@@ -106,14 +135,36 @@ Hums using GitHub are asynchronous, but have a rather high latency. Synchronous 
 
 It is at the discretion of the WG to adopt the approach of humming for sensing whether the group is in rough consensus or whether additional work needs to be done. Any other suitable mechanism can be used as alternative tool to achieve this.
 
+### Documentation
+
+The outcode of a WG is one or more standards and ideally reference implementations thereof. However, not only the standards and reference implementations should be made available, but also supporting documentation that allows everyone, particularly the NNS neurons who vote on making a proposal official, to reproduce how the WG has come to its proposal. This supporting material should comprise the following:
+
+* Minutes of the virtual WG meetings;
+* GitHub history;
+* Google documents including discussions;
+* PDFs with summaries of crucial points, e.g., remaining objections;
+* Forum discussions.
+
+The materials should allow "outsiders" to the WG to understand the path it took the WG to arrive  at the final proposal. Particularly, all objections and related discussions should be reproducible, particularly for those that have not been accommodated by the proposal, i.e., those of the people that are in the rough part of consensus when the proposal is considered final.
+
+Further experience with the process needs to show what is the best approach. For groups using GitHub, discussions of objections on GitHub as well as the meeting minutes can be sufficient to serve this purpose. The group might want to highlight the open objections to the community in a separate PR on GitHub, Google Docs document or PDF to facilitate decision making by the NNS neurons.
+
+### Interaction with the community
+
+Generally, the idea is that anybody interested in a particular topic can join and contribute to a WG and thereby influence the results it produces. However, not always will all relevant people be part of the WG from its very beginning. Thus, it is important that the WG interact with the broader IC community when producing a standard proposal. At a minimum, this should include that the work and communication being done be open so anybody can read up on the progress and intermediate results. Social media can be used to disseminate certain results more widely.
+
+Once a WG has converged with a proposal and has reached rough consensus, it should make the proposal available to the public and ideally do so in a public presentation that is widely announced beforehand to reach the broadest-possible interested audience. The audience should particularly include the IC neurons so that they can make up their mind for their vote regarding adoption of the proposal. This publicizing event attempts to educate the community including the voting neurons and to solicit feedback as well as objections to the proposal. Depending on severity, objections can lead to another iteration over the standard to be accommodated, but must at least be discussed on a technical level. This process should be followed at least for the important and potentially contentious items the WG works on as it may create too much overhead to do so for every small result of the WG, e.g., if the WG has split its work into a series of smaller work packages.
+
+The WG should also make information that allows for understanding the WG's path towards the proposal and relevant background material available to the community. This will help everyone to understand why objections may have not been accommodated and will avoid to rediscuss those with the community whenever someone thinks about the same objection. This information is part of the meeting minutes as well as GitHub or Google Docs discussions, which are all public.
+
 ### Voting
 
-Once the WG has established rough consensus on a proposal, i.e., through its discussions over time on the subject and possibly supported by a (virtual) hum, the proposal can be subjected to a formal "vote" by the core WG members. Voting is initiated and closed by the chair of the WG. Voting in the WG requires a participation of at least 50% of the core WG members. A majority of two thirds is required for the acceptance of a proposal. Requiring a super majority for accepting a proposal is in-line with how major technical standards bodies handle voting. Still allowing for a fraction of members objecting in a vote may be necessary to be able to reach agreement for certain proposals, particularly for those on more controversial topics.
+Once the WG has established rough consensus on a proposal, i.e., through its discussions over time on the subject and possibly supported by a (virtual) hum, and has obtained feedback from the wider community and addressed its comments and objections, the proposal can be subjected to a formal vote by the core WG members. Voting is initiated and closed by the chair of the WG. Voting in the WG requires no minimum participation. The reason to not have a minimum quorum is to avoid the need that the WG chair chase core WG members to vote. However, it is important for this approach to be workable, that every vote is prominently announced in the WG's forum topic and possibly also on the Discord channel and the virtual meeting. A majority of at least two thirds of the votes having been cast is required for the acceptance of a proposal. Requiring a super majority for accepting a proposal is in-line with how major technical standards bodies handle voting. Still allowing for a fraction of members objecting in a vote, reflecting rough consensus rather than unanimity, may be necessary to be able to reach agreement for certain proposals, particularly for those on more controversial topics.
 
-For the, hopefully unlikely, case of a WG not being able to achieve rough consensus on an issue and not getting agreement in a vote held despite impossibility of achieving rough consensus, a mechanism should be in place that helps resolve such situations. Details of this need to be refined further. One option would be that the WG can revert to an NNS vote to help resolve the issue, e.g., in the form of a consultative input or a decision on the crucial points that cannot be resolved. However, such situations are to be avoided in the light of the rough consensus approach.
+For the, hopefully unlikely, case of a WG not being able to achieve rough consensus on an issue and not getting agreement in a vote held despite impossibility of achieving rough consensus, a mechanism should be in place that helps resolve such situations. Details of this need to be refined further based on experience still to be gained. One option is that the WG can revert to an NNS vote to help resolve the issue, e.g., in the form of a consultative input or a decision on the crucial points that cannot be resolved. However, such situations are to be generally avoided in the light of the rough consensus approach which attempts to reach a solid level of consensus in the WG.
 
 Proposals accepted through a vote by the WG with a two-thirds super majority are moved forward to a formal vote by the NNS, following the usual principles of IC governance, on adoption of the proposal for the Internet Computer and its ecosystem.
 
 ## Conclusions
 
-This document proposes how IC WGs can be governed. It has emerged from the Ledger and Tokenization WG due to a need for this group's own governance. As next steps, the proposal needs to be agreed upon as a starting point, of course using rough consensus, and then applied in the daily TWG practice and further refined as needed, first within the Ledger and Tokenization WG. The gained experience will lead to an iterative refinement and improvement. Other IC WGs are free to pick up this proposal or parts of it for their own governance and are invited to contribute to improving this proposal. Ideally, the IC community can converge to a single approach for how WGs operate and are governed to avoid every group having to reinvent the wheel.
+This document proposes how IC WGs can be governed. It has emerged from the Ledger and Tokenization WG due to a need for this group's own governance. As next steps, the proposal needs to be agreed upon as a starting point, of course using rough consensus, and then applied in the daily WG practice and further refined as needed, first within the Ledger and Tokenization WG. The gained experience will lead to an iterative refinement and improvement. Other IC WGs are free to pick up this proposal or parts of it for their own governance and are invited to contribute to improving this proposal. Ideally, the IC community can converge to a single approach for how WGs operate and are governed to avoid every group having to reinvent the wheel.
