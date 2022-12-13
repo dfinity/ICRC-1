@@ -1,7 +1,7 @@
 # Ledger & Tokenization Working Group Charters
 
 ## 2022-12-06
-[Slide deck](https://docs.google.com/presentation/d/1nHgxpfDhkfR1eou91wLRn8Zz634BfwccCkysqEvEOfM/edit?usp=share_link), [recording](https://drive.google.com/file/d/1qv6_OV472OwMiIYuzTW1d4jXFGU9N9Ia/view?usp=share_link)
+[Slide deck](https://docs.google.com/presentation/d/1nHgxpfDhkfR1eou91wLRn8Zz634BfwccCkysqEvEOfM/edit?usp=share_link), [ICRC-2 slides](https://docs.google.com/presentation/d/1ltqc1GR2BXcbVSU1KrW4h3LTXa7ZWudnaOdMmBjini4/edit#slide=id.p), [documents](https://docs.google.com/document/d/1OlP7fwplFiKQlWuDNgdes0iWd61q230VHlyBrKJkYbs/edit), [recording](https://drive.google.com/file/d/1qv6_OV472OwMiIYuzTW1d4jXFGU9N9Ia/view?usp=share_link)
 
 **ICRC-2**
 
@@ -25,6 +25,7 @@
 **Working Group Governance (ICRC-0)**
 
 * Arthur Falls presents his feedback from the side of the governance WG on ICRC-0
+  * [Presented documents](https://docs.google.com/document/d/1OlP7fwplFiKQlWuDNgdes0iWd61q230VHlyBrKJkYbs/edit)
   * Most of his points are not on the substance of the proposal, but rather on being more open towardws different tools, not only focusing on GitHub
     * The process should be tool agnostic, it should only make recommendations on tools, but not prescribe tools
     * We need boilerplate to make sure that when people using different tools, it works together
