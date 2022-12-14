@@ -1,5 +1,72 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2022-12-13
+[Slide deck](https://docs.google.com/presentation/d/1dxypgWRN5Vz30uy2mdMIDqNBoNbMKMRibw5DU34xiMs/edit#slide=id.g125c3b1bfa8_0_0), recording not available
+
+**Communication & collaboration channels**
+
+* Dieter summarizes the communications and collaboration channels used by the WG
+Working group composition
+* We agree to adapt the composition of the core WG to reality of participation
+  * Ossian Mapes (the same person as Oz Waldorf) leaves the group as Fleek has left the IC ecosystem for now
+  * The new core team now is composed of the following people:
+    * Alessandro Rietmann
+    * Max Chamberlin
+    * Austin Fatheree
+    * Levi Feldman
+    * Jordan Last
+    * Daniel Steren
+    * Matthew Harmon
+    * Jorgen Hookham
+    * Roman Kashitsyn
+    * Mario Pastorelli
+    * Ben Zhai
+    * Dieter Sommer
+    * Vesselin Tsukev (requested to join; membership conditioned on participation)
+    * Witter Lee (located in Asia, cannot attend regular meeting; membership conditioned on participation)
+  * We need to see whether participation works out for Vesselin and Witter (asynchronous only) and depending on this, they can remain part of the group or leave it
+  * The new WG composition was accepted by a hum, without objections
+
+**Working group xomposition – WG co-leads**
+
+* Volunteering as WG co-leads
+  * Dieter Sommer
+  * Ben Zhai
+  * Tim Hermann
+* On request to the group, no one from the community would join as another volunteer for now. Anyone interested in volunteering for this role in the future can approach us.
+* The above co-chairs were accepted by a hum without objections.
+
+**Proposed change to voting**
+
+* The proposed change to not require a 50% minimum quorum of participants for a vote to be valid was accepted by a hum without objections.
+
+**Governance**
+
+* Dieter recaps the main points brought into the group by Arthur Falls in the previous working group meeting.
+  * Communication of the proposal and objections, the importance of presenting proposals to the wider community.
+  * Keeping clear record of the discussions and objections.
+  * He emphasizes that the WG must not bias the decisions of the neurons by a summary, which may eventually be biased.
+* Matt emphasizes the point that crypto people don't want to read specs, they will rather watch a video, but otherwise agrees
+* The group agrees that we should use videos to present our results
+* The group agrees that this is an important point and we should strive to do a video presentation for at least the larger and important outputs
+  * It was suggested to use the Global R&D as a platform for presenting important results
+* After some discussion about how democracy on the IC works, Arthur agrees on the pragmatic approach proposed in ICRC-0 and that good communication of proposals with presentations is the key to disseminate the ideas and get feedback from the community.
+
+**Textual encoding format for ICRC-1 account addresses**
+
+* When we wanted to re-open the vote, Max brought up a suggestion on whether we want to have a more readable form of the representation, namely a separator between the principal and subaccount for better readability. We had a discsussion on this and whether this could retain the nice properties of the current scheme and could not come to a definite conclusion. We decided to bring this discussion back on the [forum](https://forum.dfinity.org/t/announcing-token-standard-as-topic-of-the-first-meeting-of-the-ledger-tokenization-working-group/11925) and make an attempt to resolve it there within the coming days. Max will start the discussion by bringing up his argument.
+
+**ICRC-2 proposal**
+
+* The [vote](https://github.com/dfinity/ICRC-1/issues/77) for [ICRC-2](https://github.com/dfinity/ICRC-1/blob/main/standards/ICRC-2/README.md) is open now. Voting period is one week from when it was opened.
+* [YouTube explainer](https://www.youtube.com/watch?v=IYTglSXtUtg)
+
+**Next meeting**
+
+* January 10, 2023
+* The December 27 meeting is dropped due to holiday season
+
+
 ## 2022-12-06
 [Slide deck](https://docs.google.com/presentation/d/1nHgxpfDhkfR1eou91wLRn8Zz634BfwccCkysqEvEOfM/edit?usp=share_link), [ICRC-2 slides](https://docs.google.com/presentation/d/1ltqc1GR2BXcbVSU1KrW4h3LTXa7ZWudnaOdMmBjini4/edit#slide=id.p), [documents](https://docs.google.com/document/d/1OlP7fwplFiKQlWuDNgdes0iWd61q230VHlyBrKJkYbs/edit), [recording](https://drive.google.com/file/d/1qv6_OV472OwMiIYuzTW1d4jXFGU9N9Ia/view?usp=share_link)
 
