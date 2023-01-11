@@ -63,46 +63,41 @@
   * New Candid release with support for this is coming today or tomorrow
     * Extensible variants
       * If have option with variant, tries to decode
-      * Even if types fo not match
+      * Even if types do not match
         * If success, it uses the value
         * Otherwise, sets it to null
-  * Mario
-    * Variants are much easier to use then records in his experience
-    * Strongly advocates using variants
-  * **Decision to use variant instead of the record, everyone agrees**
+  * Mario notes that variants are much easier to use then records in his experience and strongly advocates using variants, according to his experience
+  * **Decision to use extensible variant instead of the record, everyone agrees**
     * Cleaner
     * Easier to use in code
 
 * Philipp expresses a strong feeling that we need a filter option when reading data from a ledger's archives
-  * Otherwise, we need to retrieve all data of all archives and filter at client
+  * Otherwise, we need to retrieve all data of all archives and filter at the client
   * Filter is used to specify what kind of transactions we want to have
   * Opportunity to pass more filter options per transaction type
     * Want to receive mint transaction for specific account
     * Or transfer transaction for specific account
-  * Otherwise need client-side filtering, but too much data for this
+  * Otherwise need client-side filtering, but too much data for this (a single archive can hold gigabytes of transactions logs)
     * Or build index canister
   * Roman mentions that the problem is that the ledger cannot filter as it does not have the transactions and does not have an index; only has balances and pointer to archive
   * Philipp: We could do same filtering on ledger and every archive canister to get a filtered response
     * Use is most likely within wallets to display transactions to the users
     * Mostly clients would want user-specific transactions
   * Mario: If want to have this on the archive, need to add an index
-    * Every wallet would ask archives all the time and create heavy load and cycle consuming
+    * Every wallet would ask archives all the time and create heavy load and heavily drain the cycle balance
     * Want to have caching of information somewhere, e.g., for Wallets
-    * Reason for index canister
-      * Index canister fetches transactions from ledger and archives once
-      * Index canister could offer data in fast way compared to ledger and archive
+    * That has been the reason for the index canister
+      * Index canister fetches transactions from ledger and its archives once
+      * Index canister could offer data in a fast way compared to ledger and archive
       * Index could comprise a set of canisters for very large transaction sets
     * Have the following options to realize an index
       * Keep only subset of transactions, e.g., last 1000 per user
       * Keep full list of transactions
-      * Keep pointers to transactions (done for NNS currently); when frontend asks for transactions, index canister fetches them from ledger or archives; index needs to be on the same subnet as ledger for this to be performant
+      * Keep pointers to transactions (done for NNS currently); when frontend asks for transactions, index canister fetches them from ledger or archives based on its index; index canister needs to be on the same subnet as ledger for this to be performant
   * Index canister that does not hold transactions and pulls transactions from archives is slow if not on same subnet
 
-* We may want to standardize also the API of the index canister to be useful
-  * Separate API for index canisters as accessed from clients
-
 * Roman: Don't know in advance what you want to index
-  * With arbitrary query, would need database in every index that can efficiently answer all queries; all within the cycles limit and with multiple canisters
+  * With arbitrary query support, would need database in every index that can efficiently answer all queries; all within the cycles limit and with multiple canisters
   * Goal of ICRC-3 was to have a means to obtain the transaction data
   * Can build index canister that syncs transactions you want, builds index you want, and serve queries to clients
 
@@ -111,34 +106,35 @@
   * This WG could work on index or multi-canister solution
   * Currently, most of wallets are building their own index canister
 
-* Could work on an interface for the index canister
+* **We should standardize also the API of the index canister to be useful**
+  * Separate API for index canisters as accessed from clients
   * Maybe make it discoverable via the ledger
     * Client can ask ledger whether it has an index and ledger can point to it
   * Index canister must comply with index API, can be queries according to API
 
 * 2 architecture options for index canisters
-  * Make every archive into an index
-    * Each archive becomes complicated; now 1 page of code
+  * Make every archive also an index
+    * Each archive becomes complicated; now it is 1 page of code
     * Ledger includes archive in its own memory, cannot have large codebase here
-    * Nice that archive is small, stupid thing that dumps blocks into stable memory and serves them
+    * Nice that archive is a small, stupid component that stores blocks into stable memory and retrieves and serves them
     * Don't want archive to be complex, want it simple; don't want bugs there
   * Have separate index canister in addition to archive
 
 * Index should not necessarily be a single-canister solution
-  * Index may be huge for large set of transactions
-  * Many ways to implement different designs for this; have all options you want
+  * Index may be huge for a large set of transactions
+  * Many ways to implement different designs for this, for example
+    * Everything in one canister that keeps everything
+      * Ledger points to itself for index discovery
+      * Ledger implements index itself and serves index queries
     * Index canister can delegate queries to smart archives or index helper canisters
       * Index canister is coordinator that uses further canisters; finds data for you
       * Coordinate distributed queries
       * Ledger points to coordinator for index discovery
       * Clients use coordinator as index canister
-    * Everything in one big canister that keeps everything
-      * Ledger points to itself for index discovery
-      * Ledger implements index itself and serves index queries
 
 * Conclusion
-  * *ICRC-3 still needed as a foundation for all index canister functionality*
-  * *Current functionality of ICRC-3 seems sufficient for the foundation*
+  * **ICRC-3 still needed as a foundation for all index canister functionality**
+  * **Current functionality of ICRC-3 seems sufficient for the foundation**
 
 ## 2022-12-13
 [Slide deck](https://docs.google.com/presentation/d/1dxypgWRN5Vz30uy2mdMIDqNBoNbMKMRibw5DU34xiMs/edit#slide=id.g125c3b1bfa8_0_0), recording not available
