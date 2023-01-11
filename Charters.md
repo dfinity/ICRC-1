@@ -1,5 +1,145 @@
 # Ledger & Tokenization Working Group Charters
 
+
+## 2023-01-10
+[Slide deck](https://docs.google.com/presentation/d/1bADDPijUR653DfoS3cZ5HLJuRLXSMeXZcQjZGCz_U0o/edit), [recording](https://drive.google.com/file/d/1D-XGvc69IbH5J4UZwGxO5agMIoTzHYex/view)
+
+**ICRC-2: Next steps**
+
+* Dieter suggests the following next steps
+  * Presenting ICRC-2 in an upcoming Global R&D (Roman)
+  * Submitting an NNS proposal for making ICRC-2 an ICP standard
+* Levi points out that Austin made a post on the forum on how he made an ICRC-2 canister to escrow approvals just using the ICRC-1 standard; essentially, it adds ICRC-2 to ICRC-1 canister; Do we still require ICRC-2 then?
+  * We need ICRC-2 if want it atomically, inside canister
+  * Austin's canister: If ledger canister does not have ICRC-2, that canister would give you ICRC-2 workflow and interface; but not atomically; different model than having ICRC-2 directly in the token ledger, which is more powerful
+  * Austin clarifies that this does not obsolete ICRC-2; having ICRC-2 interfaces on a ledger is super important; will be using it at Origyn
+* There is agreement in the group that we move forward as proposed
+
+**ICRC-3: A standard for accessing the transaction log**
+
+* Dieter explains the current ICRC-3 proposal
+  * ICRC-3 allows canister to access the transaction log of a ledger
+  * Scalability, archive canisters, scather-gather-type interface
+  * Support for the upcoming NFT standard as well
+  * ... see slides for details
+
+* Philipp Litzenberger raises a question: Are queries supported, such as getting the transactions for a specific account?
+  * This is not part of the standard
+  * The standard is only to get the transaction log
+  * Querying is a functionality of the index canister that indexes transactions by account and principal
+  * The index canister is a companion canister to the ledger
+
+* Matthew Harmon raises a question about integrity of data: Is it possible that the integrity of data is protected so the client can give data to another party who can verify the data?
+  * Roman responds that this is not possible
+  * Certified variables work for outside of the IC, but not for canisters
+  * There is no good solution to this problem, any solution would be hard to implement
+    * No access to signatures of the subnet in the replicated context; certified variables: no access to them inside the IC; would be technically very hard to implement
+  * Outside of IC, certified variables is just an optimization that allows for using a query instead of update call
+  * There are two levels for representing transactions
+    * Transactions: Transactions come from the client
+    * Blocks: Wraps transaction from client into envelope; contains pointer to previous block and timestamp; is like a block in a blockchain containing one transaction; can be verified
+  * But the ICRC-3 interface is meant for canisters to access, does not provide any proof; if you would like to compute hashes to verify stuff, it is painful with this interface
+  * Other thing you can do is make update call and get transaction object, update call contains signature, so need no other proofs, but is substantially more expensive
+  * ICRC-3 is for canisters, they don't care about proofs, care about transaction data
+  * For Rosetta nodes, which need to verify blockchains, we will probably have a different API
+  * To summarize, there is no way to achieve to have a proof that can be give to other parties for the query response on the IC for a canister client
+
+* Roman clarifies why the GetTransactionsResponse contains the log_length parameter
+  * Mental model: Some transactions are still in the ledger; ledger batches transactions before sending them downstream; other transactions are in the archives; when we query the ledger for transactions, if it has them locally, it can return them right away; for transactions in archives, it returns a pointer to the archive; the client will know what the latest transaction for the ledger is
+
+* Plan for standardizing
+  * Collect further input from all people in the WG and wider community
+    * Post it in forum
+    * Bring it up in upcoming meetings
+  * Refine draft
+  * Have a WG vote on it
+
+* Roman notes that if ICRC-2 comes out before ICRC-3, **we should include new transaction types so that ICRC-3 covers approve and transfer_from transactions already**
+
+* **Roman suggests to change modeling of transaction types**
+  * Now we use a huge record with plenty of optional fields
+    * Because Candid did not support extensible variants
+  * Should use extensible variantes: transaction ... opt variant with types
+  * New Candid release with support for this is coming today or tomorrow
+    * Extensible variants
+      * If have option with variant, tries to decode
+      * Even if types fo not match
+        * If success, it uses the value
+        * Otherwise, sets it to null
+  * Mario
+    * Variants are much easier to use then records in his experience
+    * Strongly advocates using variants
+  * **Decision to use variant instead of the record, everyone agrees**
+    * Cleaner
+    * Easier to use in code
+
+* Philipp expresses a strong feeling that we need a filter option when reading data from a ledger's archives
+  * Otherwise, we need to retrieve all data of all archives and filter at client
+  * Filter is used to specify what kind of transactions we want to have
+  * Opportunity to pass more filter options per transaction type
+    * Want to receive mint transaction for specific account
+    * Or transfer transaction for specific account
+  * Otherwise need client-side filtering, but too much data for this
+    * Or build index canister
+  * Roman mentions that the problem is that the ledger cannot filter as it does not have the transactions and does not have an index; only has balances and pointer to archive
+  * Philipp: We could do same filtering on ledger and every archive canister to get a filtered response
+    * Use is most likely within wallets to display transactions to the users
+    * Mostly clients would want user-specific transactions
+  * Mario: If want to have this on the archive, need to add an index
+    * Every wallet would ask archives all the time and create heavy load and cycle consuming
+    * Want to have caching of information somewhere, e.g., for Wallets
+    * Reason for index canister
+      * Index canister fetches transactions from ledger and archives once
+      * Index canister could offer data in fast way compared to ledger and archive
+      * Index could comprise a set of canisters for very large transaction sets
+    * Have the following options to realize an index
+      * Keep only subset of transactions, e.g., last 1000 per user
+      * Keep full list of transactions
+      * Keep pointers to transactions (done for NNS currently); when frontend asks for transactions, index canister fetches them from ledger or archives; index needs to be on the same subnet as ledger for this to be performant
+  * Index canister that does not hold transactions and pulls transactions from archives is slow if not on same subnet
+
+* We may want to standardize also the API of the index canister to be useful
+  * Separate API for index canisters as accessed from clients
+
+* Roman: Don't know in advance what you want to index
+  * With arbitrary query, would need database in every index that can efficiently answer all queries; all within the cycles limit and with multiple canisters
+  * Goal of ICRC-3 was to have a means to obtain the transaction data
+  * Can build index canister that syncs transactions you want, builds index you want, and serve queries to clients
+
+* **Need a forum discussion how a wallet interacts with the ledgers**
+  * ICRC-3 is not enough for wallet developers, need something more
+  * This WG could work on index or multi-canister solution
+  * Currently, most of wallets are building their own index canister
+
+* Could work on an interface for the index canister
+  * Maybe make it discoverable via the ledger
+    * Client can ask ledger whether it has an index and ledger can point to it
+  * Index canister must comply with index API, can be queries according to API
+
+* 2 architecture options for index canisters
+  * Make every archive into an index
+    * Each archive becomes complicated; now 1 page of code
+    * Ledger includes archive in its own memory, cannot have large codebase here
+    * Nice that archive is small, stupid thing that dumps blocks into stable memory and serves them
+    * Don't want archive to be complex, want it simple; don't want bugs there
+  * Have separate index canister in addition to archive
+
+* Index should not necessarily be a single-canister solution
+  * Index may be huge for large set of transactions
+  * Many ways to implement different designs for this; have all options you want
+    * Index canister can delegate queries to smart archives or index helper canisters
+      * Index canister is coordinator that uses further canisters; finds data for you
+      * Coordinate distributed queries
+      * Ledger points to coordinator for index discovery
+      * Clients use coordinator as index canister
+    * Everything in one big canister that keeps everything
+      * Ledger points to itself for index discovery
+      * Ledger implements index itself and serves index queries
+
+* Conclusion
+  * *ICRC-3 still needed as a foundation for all index canister functionality*
+  * *Current functionality of ICRC-3 seems sufficient for the foundation*
+
 ## 2022-12-13
 [Slide deck](https://docs.google.com/presentation/d/1dxypgWRN5Vz30uy2mdMIDqNBoNbMKMRibw5DU34xiMs/edit#slide=id.g125c3b1bfa8_0_0), recording not available
 
@@ -27,7 +167,7 @@ Working group composition
   * We need to see whether participation works out for Vesselin and Witter (asynchronous only) and depending on this, they can remain part of the group or leave it
   * The new WG composition was accepted by a hum, without objections
 
-**Working group xomposition – WG co-leads**
+**Working group composition – WG co-leads**
 
 * Volunteering as WG co-leads
   * Dieter Sommer
