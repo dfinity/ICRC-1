@@ -128,7 +128,7 @@ Ledger and archives MAY return fewer transactions than the client requested.
 The following example demonstrates how a client can synchronize with the ledger state distributed across multiple canisters using the proposed interface.
 
   1. The client calls `icrc3_get_transactions({ start = 0; length = 10_000 })` on the ledger.
-  2. The ledger has 5_500 transactions and happens to have transactions `4_000..5_500` in memory.
+  2. The ledger has 5_500 transactions and happens to have transactions `4_000..5_499` in memory.
      However, the ledger implementors decided not to return more than 1_000 per request.
   3. The ledger returns the following value.
      ```candid
