@@ -42,8 +42,8 @@ type GetTransactionsResponse = record {
         length : nat;
 
         // The function you should call to fetch the archived transactions.
-        // The range of the transaction accessible using this function is given by [from]
-        // and [len] fields above.
+        // The range of the transaction accessible using this function is given by [start]
+        // and [length] fields above.
         callback : QueryArchiveFn;
     };
 };

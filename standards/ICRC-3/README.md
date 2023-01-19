@@ -93,7 +93,7 @@ The ledger returns a record with the following fields:
   * The `first_index` field is the index of the first transaction in the `transaction` field.
     If the `transactions` field is an empty vector, the value of `first_index` is unspecified.
   * The `archived_transactions` field contains instructions for fetching the _prefix_ of the requested range.
-    Each entry indicates that the client can fetch transactions in the range `[start, length]` with the specified `callback` method reference.
+    Each entry indicates that the client can fetch transactions in the range `[start, start+length-1]` with the specified `callback` method reference.
 
 ```candid "Type definitions" +=
 type GetTransactionsRequest = record { start : TxIndex; length : nat };
@@ -128,44 +128,44 @@ Ledger and archives MAY return fewer transactions than the client requested.
 The following example demonstrates how a client can synchronize with the ledger state distributed across multiple canisters using the proposed interface.
 
   1. The client calls `icrc3_get_transactions({ start = 0; length = 10_000 })` on the ledger.
-  2. The ledger has 9_500 transactions and happens to have transactions `4_000..5_500` in memory.
+  2. The ledger has 5_500 transactions and happens to have transactions `4_000..5_500` in memory.
      However, the ledger implementors decided not to return more than 1_000 per request.
   3. The ledger returns the following value.
      ```candid
      record {
         log_length = 5_500;
-        transactions = vec { /* transactions 4_000..5_000 */ };
+        transactions = vec { /* transactions 4_000..4_999 */ };
         first_index = 4_000;
         archived_transactions = vec {
             record { start = 0; length = 4_000; callback = "4kydj-ryaaa-aaaag-qaf7a-cai"."get_archived_transactions" }
         }
      }
      ```
-  4. The client appends transactions `4_000..5_000` to the local buffer and issues a follow-up call to the archive: `get_archived_transactions({ start = 0; length = 4_000 })`.
+  4. The client appends transactions `4_000..4_999` to the local buffer and issues a follow-up call to the archive: `get_archived_transactions({ start = 0; length = 4_000 })`.
   5. The archive implementors decided not to return more than 2_000 transactions per request.
      The archive returns the following value.
      ```candid
-     record { transactions : vec { /* transactions 0..2_000 */ } }
+     record { transactions : vec { /* transactions 0..1_999 */ } }
      ```
-  6. The client appends transactions `0..2_000` to the buffer.
+  6. The client appends transactions `0..1_999` to the buffer.
      Since the archive returned fewer blocks than requested, the client repeats the call with a different range: `get_archived_transactions({ start = 2_000; length = 2_000 })`.
   7. The archive returns the following value.
      ```candid
-     record { transactions : vec { /* transactions 2_000..4_000 */ } }
+     record { transactions : vec { /* transactions 2_000..3_999 */ } }
      ```
-  8. The client appends transactions `2_000..4_000` to the buffer.
+  8. The client appends transactions `2_000..3_999` to the buffer.
      Since there are more transactions to fetch according to the `log_length` value, the client makes a follow-up call to the ledger: `icrc3_get_transactions({ start = 5_000; length = 1_000 })`.
-  9. The ledger accepted a hundred more transactions in the meantime and archived transactions `4_000..5_000`.
+  9. The ledger accepted a hundred more transactions in the meantime and archived transactions `4_000..4_999`.
      It returns the following value:
      ```candid
      record {
         log_length = 5_600;
-        transactions = vec { /* transactions 5_000..5_600 */ };
+        transactions = vec { /* transactions 5_000..5_599 */ };
         first_index = 5_000;
         archived_transactions = vec {};
      }
      ```
-  10. The client adds transactions `5_000..5_600` to the buffer.
+  10. The client adds transactions `5_000..5_599` to the buffer.
       It is synced with the ledger now.
 
 <!--
