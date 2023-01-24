@@ -29,7 +29,7 @@ where
     K: PartialEq<U>,
     U: ?Sized,
 {
-    meta.iter().find_map(|(k, v)| (k == key).then(|| v))
+    meta.iter().find_map(|(k, v)| (k == key).then_some(v))
 }
 
 fn assert_equal<T: PartialEq + std::fmt::Debug>(lhs: T, rhs: T) -> anyhow::Result<()> {
