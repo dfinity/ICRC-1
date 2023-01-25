@@ -179,7 +179,7 @@ Namespace `icrc1` is reserved for keys defined in this standard.
 | `icrc1:name` | The name of the token. When present, should be the same as the result of the [`icrc1_name`](#name_method) query call. | `variant { Text = "Test Token" }` | 
 | `icrc1:decimals` |  The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the [`icrc1_decimals`](#decimals_method) query call. | `variant { Nat = 8 }` |
 | `icrc1:fee` | The default transfer fee. When present, should be the same as the result of the [`icrc1_fee`](#fee_method) query call. |  `variant { Nat = 10_000 }` |
-| `icrc1:logo` | The logo the token uses. It can either be an url pointing to an image or directly the data of the image. [Data URLs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs), URLs prefixed with the data: scheme, allow content creators to embed small files inline in documents.  | `variant { Text = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InJlZCIvPjwvc3ZnPg==" }` | 
+| `icrc1:logo` | The URL of the token logo. The value can contain the actual image if it's a [Data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs).  | `variant { Text = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InJlZCIvPjwvc3ZnPg==" }` | 
 
 
 ## Transaction deduplication <span id="transfer_deduplication"></span>
