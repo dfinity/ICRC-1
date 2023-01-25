@@ -1,3 +1,4 @@
+
 # ICRC-1 Token Standard
 
 |   Status  |
@@ -172,13 +173,14 @@ The metadata keys are arbitrary Unicode strings and must follow the pattern `<na
 Namespace `icrc1` is reserved for keys defined in this standard.
 
 ### Standard metadata entries
-
-| Key | Example value | Semantics |
+| Key | Semantics | Example value
 | --- | ------------- | --------- |
-| `icrc1:symbol` | `variant { Text = "XTKN" }` | The token currency code (see [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)). When present, should be the same as the result of the [`icrc1_symbol`](#symbol_method) query call. |
-| `icrc1:name` | `variant { Text = "Test Token" }` | The name of the token. When present, should be the same as the result of the [`icrc1_name`](#name_method) query call. |
-| `icrc1:decimals` | `variant { Nat = 8 }` | The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the [`icrc1_decimals`](#decimals_method) query call. |
-| `icrc1:fee` | `variant { Nat = 10_000 }` | The default transfer fee. When present, should be the same as the result of the [`icrc1_fee`](#fee_method) query call. |
+| `icrc1:symbol` | The token currency code (see [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)). When present, should be the same as the result of the [`icrc1_symbol`](#symbol_method) query call. | `variant { Text = "XTKN" }` | 
+| `icrc1:name` | The name of the token. When present, should be the same as the result of the [`icrc1_name`](#name_method) query call. | `variant { Text = "Test Token" }` | 
+| `icrc1:decimals` |  The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the [`icrc1_decimals`](#decimals_method) query call. | `variant { Nat = 8 }` |
+| `icrc1:fee` | The default transfer fee. When present, should be the same as the result of the [`icrc1_fee`](#fee_method) query call. |  `variant { Nat = 10_000 }` |
+| `icrc1:logo` | The URL of the token logo. The value can contain the actual image if it's a [Data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs).  | `variant { Text = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InJlZCIvPjwvc3ZnPg==" }` | 
+
 
 ## Transaction deduplication <span id="transfer_deduplication"></span>
 
