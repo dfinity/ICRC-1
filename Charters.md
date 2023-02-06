@@ -1,5 +1,95 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2023-01-24
+[Slide deck](https://docs.google.com/presentation/d/1J4RG6Dj2oFzOWTRbxh8J59I3iF49WSM1YoU92_vBMnM/edit#slide=id.g1cb864ea205_0_62), [recording]()
+
+**Textual encoding format for ICRC-1 account addresses**
+
+* Dieter presents the different options.
+
+Video starts only after the initial presentation.
+
+* Jorgen wonders about privacy properties of the encodings.
+* Austin, Dieter explain: It does not matter which encoding we use, as they all encode the same information. In the original ICP encoding we had better perceived privacy. We made a strategic decision to use the pair (principal, subaccount) unhashed, which does not give the perceived privacy of the original ledger API. Any encoding we choose contains this information, thus they are all the same in terms of privacy.
+* Timo: There is an early fork between Option 1 and all the other options. Let's decide on which of the two ways to go.
+* Dieter clarifies why we went for other options than 1: Option 1 does not have a human-readable representation, it is much harder to work with.
+* Mario gives the example of the dashboard: It was tedious to work with the Option 1, which is currenrly implemented. He agrees with going for a human-readable approach.
+* Roman: Another nice property of a human-readable representation is that it implicitly sorts the accounts by principle, which is very helpful because related things end up close together.
+* Matthew brings up a concern: Hand-craftability may not even be desirable in the future.
+* Dieter clarifies that among proposals 2-4b, there are other options that are not hand craftable. When eliminating Option 1 now, the only thing we lose is the lack of human-readability.
+* Levi: Most important to him are checked subaccounts. No strong opinion on whether "simple" subaccounts can be unchecked. But complex subaccount with the first characters of 1, 2, etc. could still be miscopied.
+* **We agree that we can eliminate Option 1.**
+
+* **Option 2**
+* Dieter: eyeballing principal when comparing is harder than in other options because of encoding in character case.
+* Ben: Thinks is not correctly represented. Cannot compare principals across subaccounts.
+* Austin: Principal is checksummed itself already.
+* **We agree to eliminate also Option 2.**
+
+* **Shootout between Options 3, 4a, 4b**
+* Dieter reiterates the essence of the option 3 
+* Austin: Is it fair to say 4b is hand craftable?
+* Dieter: If you want to hand craft checksum without a tool: no.
+* Ben: not handcraftable is not necessarily bad
+* Dieter: uniqueness is not a big thing to be fair; whenever you want uniqueness, you can normalize the rep in other options easily.
+* Could it be a big thing that people copy/paste non-checksummed representations that were not intended for copying, e.g., from a block explorer?
+* Ben: Strong opposition against variable length checksum. Adds complexity for not much benefit. Should have fixed-length checksum.
+  * Medium-strength objection regarding optionality. Developers may start not implement it and we could end up with ecosystem where checksums are not really used.
+  * Medium opposition against 4a.
+  * No strong preference for 3 or 4b.
+  * 3 does have some nice properties.
+* Timo: Always possible that programmer does not add checksum.
+* Ben: Extra path in codepath, not nice property.
+* Levi: Uniqueness important to him, helps avoid confusion. More than 1 representation is weird.
+  * Option 3: Make checked green and hand craftable red, would be perfect. Suggestion: What about take subaccount of 3 and make last 4 bytes of subaccount section a checksum as mandatory, even for simple subaccounts.
+  * Dieter: This is almost option 4b (there, the checksum is in the middle).
+  * Levi: Could leave it even without a separator, at end of subaccount, as checksum over principal and subaccount.
+  * Timo: If no separator and small subaccount ids, would that not be confusing?
+  * Austin: Just having one separator implies simplicity over having 2 separators. Do like only having 1, but might complicate it.
+  * Mario: Prefers 2 separators.
+  * Are we sure we don't want the ability to hand craft small subaccounts? Can get them wrong but is 1 or a few digits only. For big transfers, copy from a wallet anyway.
+  * Roman: Think it's nice in general, but is easier to have a tool to compute the textual representation. They have this for Bitcoin, for example. Much more important to have unique representation. Should not have options, but one unique way to represent it.
+  * Timo: Uniqueness required for lookup, easy to do. Developer needs to do it. Block explorer removes checksum to get it unique, for example.
+  * Roman: Prefers no optionality at all.
+* Discussion that block explorers need to normalize the representation for their use anyway, otherwise it would be an incorrect implementation. Block explorer could present all addresses with or without checksum, depending on user-settable toggle.
+* Levi: User may be confused if putting in account id and page loads with different account id.
+* Timo: Where in the lifetime of account address do you want a checksum as you need it, and where is it required. Only needed where there is human involved, e.g., when copy/pasting it. Even when using QR, not required. When reading on block explorer or tracing tx, a checksum is rather counter productive.
+* Ben: We cannot expect developers doing an app to figure out exact user path, there can be always new ways of doing things. Eliminating issues here eliminates problems.
+* Roman: The fewer options we give to people, the less they can screw up.
+* Ben: 3 has embedded checksum as advantage.
+* Levi: Leaning towards 4b, with mandatory checksum at the end. 2 separators would be fine as well. Prefers colons as separators.
+  * Roman: Also likes this idea better. Not sure about dash also, principal has dashes as separators. Should have 4c with checksum in the end without the dash.
+* Dieter: Let's make main decision first, and then go into details: Optionality and handcraftability. 3 or 4a/4b.
+  * Jorgen: Hand craftability might even be an anti-pattern, one should maybe not be able to do this. Important to be able to eyeball the encoding. Not encourage anything else than copy/pasting it.
+    * Roman: Fully agrees.
+  * Austin: As prior art, both principal and human-readable version of account id has checksum, does not know of anyone sending money to completely wrong place. May already have a good starting point by having checksums already on individual elements.
+  * Dieter summarizes that 3 does not have much support.
+* Norbert brings up Option 1 again: Is it a good idea to have a checksum for everything?
+  * Mario: In Option 1, the principal is not readable at all.
+  * Roman: Most important that the principal can be seen. This helps a lot already. If searching for principal on web page and can see all accounts of it, this is also extremely valuable. Either is not possible with 1.
+* Matthew: What about checksum only when subaccount has a certain complexity.
+  * Roman: Problem that if prefix is copied, goes to wrong account. Cool part of checksum at end: many web sites shorten the account to first and last bytes, so get most amount of information about account in this way. Referring to Option 4b with overall checksum at the, which has the principal checksum in the beginning and the overall checksum at the end.
+* Dieter: We gravitate towards 4b, there is strong opposition by some people against having checksum optional. Seems 4b is preferred option by the majority currently.
+  * Timo summarizes about giving up optionality: When sending to "simple" subaccount, need (online) tool tool where one can paste in components and it computes the encoding.
+  * Ben: 3 was intended to not require such a tool when crafting small subaccounts.
+  * Timo: Clarifies that he gives up his preference for optionality of 4a and is fine with 4b.
+  * Dieter: Thinks most people now gravitate towards 4b.
+
+* **We run a poll on 3, 4a, 4b (4c is included in 4b)**
+  * 3: Checksum encoded as part of principal, hand craftable
+  * 4a: Optional explicit checksum
+  * 4b: Mandatory explicit checksum in the middle or the end (details t.b.d.)
+  * N.B.: Some people interpreted 4b as mandatory checksum in the middle only and voted for 4c (mandatory explicit checksum at the end as other option)
+  * **People very clearly prefer 4b (or 4c).**
+    * No vote for 3 or 4a
+    *  **Everyone prefers 4b (or 4c): mandatory checksum over everything in the middle or at the end**
+
+* In the next meeting, we have to discuss the details of representation:
+  * checksum in the middle or at the end;
+  * if, and if so, which separator to use for the checksum.
+* Jorgen wants to discuss also whether principal alone is valid.
+* Mario announces that we have released the new ledger with the ICRC-1 interface. This means that now the ICP ledger and SNS ledgers all support ICRC-1.
+
 
 ## 2023-01-10
 [Slide deck](https://docs.google.com/presentation/d/1bADDPijUR653DfoS3cZ5HLJuRLXSMeXZcQjZGCz_U0o/edit), [recording](https://drive.google.com/file/d/1D-XGvc69IbH5J4UZwGxO5agMIoTzHYex/view)
