@@ -11,27 +11,27 @@
 
 The ICRC-4 interface is a generalized interface for submitting multiple transactions in one Internet computer call to an ICRC-1 ledger. It makes no guarantees about the atomicity of the execution of the items, but does outline convinience parameters and the data return in such away that the caller can self verify the results of the transactions.
 
-The interface allows a principle to supply a set of transactions that move tokens from one of their sub accounts to another account. There is no restrictions on which sub accounts, or how many sub accounts can be used, but it is assumed that the principal has the rights to all the sub accounts provided. if the user runs out of funds in any of those sub accounts during the course of the batch being executed, the remaining transactions will fail. 
+The interface allows a principle to supply a set of transactions that move tokens from one of their sub accounts to another account. There is no restrictions on which subaccounts, or how many sub accounts can be used, but it is assumed that the principal has the rights to all the sub accounts provided.
+
 ## Motivation
 
-The approve-transfer-from pattern became popular in the Ethereum ecosystem thanks to the [ERC-20](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) token standard.
+Many contracts provide multiplarty transactions or settlment processes tht may move tokens from any accounts owned by a principal to many other accounts. With the ICRC-1 standard, each of these transactions must be submitted seperatelay and incure both call cylce charge(more if a subnet boundry is crossed) and a latency charge as a contract cannot blindly submit unlimited transactions without awaiting due to cycle limits.
+
 This interface enables new application capabilities:
 
-  1. Recurring payments.
-     Alice can approve a large amount to Bob in advance, allowing Bob to make periodic transfers in small installments.
-     Real-world examples include subscription services and rents.
+  1. Send from multiple account to multiple accounts in one transaction.
+     Alice can approve a transfer of 10 ICP from her sub-account 1 to Bob and 2 ICP from her sub-account 2 to Charlie.
 
-  2. Uncertain transfer amounts.
-     In some applications, such as automatic trading services, the exact price of goods is unknown in advance.
-     With approve-transfer-from flow, Alice can allow Bob to trade securities on Alice's behalf, buying/selling at yet-unknown price up to a specified limit.
+  2. Check that all transactions are valid befor starting tranfers.
+     In some ledgers, transfers are atomic and we can check at the begining that all transactions will pass before performing the transactions.
 
 ## Specification
 
 > The keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in RFC 2119.
 
-**Canisters implementing the `ICRC-2` standard MUST implement all the functions in the `ICRC-1` interface**
+**Canisters implementing the `ICRC-4` standard MUST implement all the functions in the `ICRC-4` interface**
 
-**Canisters implementing the `ICRC-2` standard MUST include `ICRC-2` in the list returned by the `icrc1_supported_standards` method**
+**Canisters implementing the `ICRC-4` standard MUST include `ICRC-4` in the list returned by the `icrc1_supported_standards` method**
 
 ## Methods
 
@@ -42,130 +42,105 @@ type Account = record {
 };
 ```
 
-### icrc2_approve
+### icrc4_transfer_batch
 
-Entitles the `spender` to transfer an additional token `amount` on behalf of the caller from account `{ owner = caller; subaccount = from_subaccount }`.
-The number of transfers the `spender` can initiate from the caller's account is unlimited as long as the total amounts and fees of these transfers do not exceed the allowance.
-The caller does not need to have the full token `amount` on the specified account for the approval to succeed, just enough tokens to pay the approval fee.
-The `spender`'s allowance for the account increases or decreases by the `amount` depending on the sign of the `amount` field. 
-If the `expires_at` field is not null, the ledger resets the approval expiration time to the specified value.
+Moves tokens from many accounts `{ owner = caller; subaccount = from_subaccount }` to many other accounts.
 
-The ledger SHOULD reject the request if the caller is the same principal as the spender (no self-approvals allowed).
-
-The ledger MAY cap the total allowance if it becomes too large (for example, larger than the total token supply).
-For example, if there are only 100 tokens, and the ledger receives two approvals for 60 tokens for the same `(account, principal)` pair, the ledger may cap the total allowance to 100.
+The ledger MAY cap the total numbr of transactions in one batch as the IC has a current limitation of message size of around 2MB and thus neither outgoing messages or return types should be greater than this. In addition, some ledger may include extensive calculations to balances that could limit the number of processed transactions that may be exdcuted within the cycle limit.
 
 ```candid "Methods" +=
-icrc2_approve : (ApproveArgs) -> (variant { Ok : nat; Err : ApproveError });
+icrc4_transfer_batch: (TransferBatchArgs) -> (variant { Ok : [(TransferArg, variant {Ok: Nat, Err: TransferError})]; Err : TransferBatchError });
 ```
 
 ```candid "Type definitions" +=
-type ApproveArgs = record {
-    from_subaccount : opt blob;
-    spender : principal;
-    amount : int;
-    expires_at : opt nat64;
-    fee : opt nat;
-    memo : opt blob;
-    created_at_time : opt nat64;
+type TransferBatchArgs = record {
+    pre_validate : bool;
+    transactions : [TransferArgs];
+    batch_fee : opt nat;
 };
 
-type ApproveError = variant {
-    BadFee : record { expected_fee : nat };
-    // The caller does not have enough funds to pay the approval fee.
-    InsufficientFunds : record { balance : nat };
-    // The approval request expired before the ledger had a chance to apply it.
-    Expired : record { ledger_time : nat64; };
-    TooOld;
-    CreatedInFuture: record { ledger_time : nat64 };
-    Duplicate : record { duplicate_of : nat };
-    TemporarilyUnavailable;
-    GenericError : record { error_code : nat; message : text };
-};
-```
-
-#### Preconditions
-
-* The caller has enough fees on the `{ owner = caller; subaccount = from_subaccount }` account to pay the approval fee.
-* The caller is different from the `spender`.
-* If the `expires_at` field is set, it's creater than the current ledger time.
-
-#### Postconditions
-
-* The `spender`'s allowance for the `{ owner = caller; subaccount = from_subaccount }` increases by the `amount` (or decreases if the `amount` is negative).
-  If the total allowance is negative, the ledger MUST reset the allowance to zero.
-
-### icrc2_transfer_from
-
-Transfers a token amount from between two accounts.
-The ledger draws the fees from the `from` account.
-If the caller is the owner of the `from` account, `icrc2_transfer_from` ignores allowances and acts as an `icrc1_transfer`.
-
-```candid "Methods" +=
-icrc2_transfer_from : (TransferFromArgs) -> (variant { Ok : nat; Err : TransferFromError });
-```
-
-```candid "Type definitions" +=
-type TransferFromError = variant {
-    BadFee : record { expected_fee : nat };
-    BadBurn : record { min_burn_amount : nat };
-    // The [from] account does not hold enough funds for the transfer.
-    InsufficientFunds : record { balance : nat };
-    // The caller exceeded its allowance.
-    InsufficientAllowance : record { allowance : nat };
-    TooOld;
-    CreatedInFuture: record { ledger_time : nat64 };
-    Duplicate : record { duplicate_of : nat };
-    TemporarilyUnavailable;
-    GenericError : record { error_code : nat; message : text };
-};
-
-type TransferFromArgs = record {
-    from : Account;
+type TransferArgs = record {
+    from_subaccount : opt Subaccount;
     to : Account;
     amount : nat;
     fee : opt nat;
     memo : opt blob;
     created_at_time : opt nat64;
 };
+
+type TransferError = variant {
+    BadFee : record { expected_fee : nat };
+    BadBurn : record { min_burn_amount : nat };
+    InsufficientFunds : record { balance : nat };
+    TooOld;
+    CreatedInFuture : record { ledger_time: nat64 };
+    Duplicate : record { duplicate_of : nat };
+    TemporarilyUnavailable;
+    GenericError : record { error_code : nat; message : text };
+};
+
+type TransferBatchError = variant {
+    TooManyTransactions : record { max : nat };
+    BadBurn : (TransferArg, record { min_burn_amount : nat });
+    InsufficientFunds : (TransferArgs, record { balance : nat });
+    TooOld: TransferArgs;
+    CreatedInFuture : (TransferArg, record { ledger_time: nat64 });
+    Duplicate : (TransferArg, record { duplicate_of : nat });
+    TemporarilyUnavailable;
+    GenericError : record { error_code : nat; message : text };
+};
+
+
 ```
 
 #### Preconditions
- 
- * If the caller is no the `from` account owner, the caller's allowance for the `from` account is large enough to cover the transfer amount and the fees.
-   Otherwise, the ledger MUST return an `InsufficientAllowance` error.
 
-* The `from` account holds enough funds to cover the transfer amount and the fees.
-  Otherwise, the ledger MUST return an `InsufficientFunds` error.
- #### Postconditions
+* The caller has enough fees on the `{ owner = caller; subaccount = from_subaccount }` account to pay the transfer fees.
+* The caller has included at or below the max_transactions in the request.
 
- * If the caller is not the `from` account owner, caller's allowance for the `from` account decreases by the transfer amount and the fees.
- * The ledger debited the specified `amount` of tokens and fees from the `from` account.
- * The ledger credited the specified `amount` to the `to` account.
+#### Postconditions
 
-### icrc2_allowance
+* The accounts are updated with a new balance unless the pre_validate was requested and failed.
 
-Returns the token allowance that the `spender` can transfer from the specified `account`, and the expiration time for that allowance, if any.
-If there is no active approval, the ledger MUST return `0`.
+### query icrc4_balance_of_batch
+
+Allows anyone to query the ballance of a set of accounts.
 
 ```candid "Methods" +=
-icrc2_allowance : (AllowanceArgs) -> (Allowance) query;
+icrc4_balance_of_batch : ([Account]) -> (record{ Ok: [(Account,nat)]; Err: BalanceBatchError);
 ```
+
 ```candid "Type definitions" +=
-type AllowanceArgs = record {
-    account : Account;
-    spender : principal;
+type TransferBatchError = variant {
+    TooManyBalances : record { max : nat };
 };
 
-type Allowance = record {
-  allowance : nat;
-  expires_at : opt nat64;
-}
+#### Preconditions
+ 
+ * The number of accounts must be below max_balances in the request
+ #### Postconditions
+
+ * Accounts are provide in an array with the original request associated with request such that ordering of request and response does not need to be synced.
+
+### icrc4_metadata
+
+Returns the metadata for the ICRC-4 specification.
+
+```candid "Methods" +=
+icrc4_metatdata : () -> (ICRC4Metada) query;
+```
+```candid "Type definitions" +=
+type ICRC4Metada = record {
+    max_transactions : opt nat;
+    max_balances : opt nat;
+    batch_fee: opt nat;
+};
+
 ```
 ### icrc1_supported_standards
 
 Returns the list of standards this ledger supports.
-Any ledger supporting `ICRC-2` MUST include a record with the `name` field equal to `"ICRC-2"` in that list.
+Any ledger supporting `ICRC-4` MUST include a record with the `name` field equal to `"ICRC-4"` in that list.
 
 ```candid "Methods" +=
 icrc1_supported_standards : () -> (vec record { name : text; url : text }) query;
