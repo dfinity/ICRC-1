@@ -101,6 +101,7 @@ type TransferBatchError = variant {
 #### Postconditions
 
 * The accounts are updated with a new balance unless the pre_validate was requested and failed.
+* the results of each transaction are paired with the original request arguments. Ordering is not guaranteed.
 
 ### query icrc4_balance_of_batch
 
@@ -114,6 +115,8 @@ icrc4_balance_of_batch : ([Account]) -> (record{ Ok: [(Account,nat)]; Err: Balan
 type TransferBatchError = variant {
     TooManyBalances : record { max : nat };
 };
+'
+```
 
 #### Preconditions
  
@@ -148,26 +151,6 @@ icrc1_supported_standards : () -> (vec record { name : text; url : text }) query
 
 ## Examples
 
-### Alice deposits tokens to a canister
-
-1. Alice wants to deposit 100 tokens on an `ICRC-2` ledger to a canister.
-2. Alice calls `icrc2_approve` with `spender` set to the canister's principal and `amount` set to the token amount she wants to deposit (100) plus the transfer fee.
-3. Alice can then call some `deposit` method on the canister, which calls `icrc2_transfer_from` with `from` set to Alice's (the caller) account, `to` set to the canister's account, and `amount` set to the token amount she wants to deposit (100).
-4. The canister can now determine from the result of the call whether the transfer was successful.
-   If it was successful, the canister can now safely commit the deposit to state and know that the tokens are in its account.
-
-### A canister transfers tokens from Alice's account to Bob's account, on Alice's behalf
-
-1. A canister wants to transfer 100 tokens on an `ICRC-2` ledger from Alice's account to Bob's account.
-2. Alice previously approved the canister to transfer tokens on her behalf by calling `icrc2_approve` with `spender` set to the canister's principal and `amount` set to the token amount she wants to allow (100) plus the transfer fee.
-3. During some update call, the canister can now call `icrc2_transfer_from` with `from` set to Alice's account, `to` set to Bob's account, and `amount` set to the token amount she wants to transfer (100).
-4. Depending on the result of the call, Bob now has 100 tokens in his account, and Alice has 100 tokens less in her account.
-
-### Alice wants to remove her allowance for a canister
-
-1. Alice wants to remove her allowance of 100 tokens on an `ICRC-2` ledger for a canister.
-2. Alice calls `icrc2_approve` on the ledger with `spender` set to the canister's principal and `amount` set to 0.
-3. The canister can no longer transfer tokens on Alice's behalf.
 
 <!--
 ```candid ICRC-2.did +=
