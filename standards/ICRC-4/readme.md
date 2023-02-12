@@ -80,6 +80,7 @@ type TransferError = variant {
 };
 
 type TransferBatchError = variant {
+    BadBatchFee : record { expected_fee : nat };
     TooManyTransactions : record { max : nat };
     BadBurn : (TransferArg, record { min_burn_amount : nat });
     InsufficientFunds : (TransferArgs, record { balance : nat });
@@ -95,20 +96,28 @@ type TransferBatchError = variant {
 
 #### Preconditions
 
-* The caller has enough fees on the `{ owner = caller; subaccount = from_subaccount }` account to pay the transfer fees.
+* The caller has enough fees on the `{ owner = caller; subaccount = from_subaccount }` account to pay the transfer fees required by the application. The application is free to determine the fee schema. It MAY require a batch fee and it MAY require a fee on each tranaaction.
 * The caller has included at or below the max_transactions in the request.
+* If pre_validate is true then all transactions included in the batch will pass validation before any are processed.  If any transaction does not pass pre_validation then no transactions will be processed.
+
 
 #### Postconditions
 
 * The accounts are updated with a new balance unless the pre_validate was requested and failed.
-* the results of each transaction are paired with the original request arguments. Ordering is not guaranteed.
+* The results of each transaction are paired with the original request arguments. Ordering is not guaranteed.
+* If prevalidate fails, the triggering error should be indicated by the TransferBatchError. Only the first, triggering error is returned.
+
+#### Application Specific Conditions
+
+* The batch_fee is optional, it indicates the max batch fee the users is willing to pay for the entire batch. If the application requires a larger fee, it shold fail with a BadBatchFee error.
+* The order of transaction processing will be decided by the application, including, but not limited to, any async processing that may be required.
 
 ### query icrc4_balance_of_batch
 
 Allows anyone to query the ballance of a set of accounts.
 
 ```candid "Methods" +=
-icrc4_balance_of_batch : ([Account]) -> (record{ Ok: [(Account,nat)]; Err: BalanceBatchError);
+icrc4_balance_of_batch : ([Account]) -> (record{ Ok: [(Account,nat)]; Err: BalanceBatchError) query;
 ```
 
 ```candid "Type definitions" +=
@@ -125,7 +134,27 @@ type TransferBatchError = variant {
 
  * Accounts are provide in an array with the original request associated with request such that ordering of request and response does not need to be synced.
 
-### icrc4_metadata
+### query icrc4_validate_batch
+
+Validates a batch of transactions.  Returns Ok if the transactions pass the pre_validate conditions.  If an Error is returned it should be the first error that triggerd a failure
+
+```candid "Methods" +=
+icrc4_validate_batch: (ValidateBatchArgs) -> (variant { Ok : (); Err : TransferBatchError }) query;
+```
+
+```candid "Type definitions" +=
+type ValidateBatchArgs = record {
+    transactions : [TransferArgs];
+    batch_fee : opt nat;
+};
+
+```
+
+#### Application Specific Conditions
+
+* The batch_fee is optional. If provided the users should expect the application to validate that the batch fee provided will pass.
+
+### query icrc4_metadata
 
 Returns the metadata for the ICRC-4 specification.
 
@@ -140,6 +169,13 @@ type ICRC4Metada = record {
 };
 
 ```
+
+#### Details
+
+* max_transactions indicates the maximum transactions allowed per batch.
+* max_balances indicates the maximum query balances allowed per batch.
+* batch_fee indicates a minimum required batch fee if required.
+
 ### icrc1_supported_standards
 
 Returns the list of standards this ledger supports.
