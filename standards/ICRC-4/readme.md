@@ -117,7 +117,10 @@ type TransferBatchError = variant {
 Allows anyone to query the ballance of a set of accounts.
 
 ```candid "Methods" +=
-icrc4_balance_of_batch : ([Account]) -> (record{ Ok: [(Account,nat)]; Err: BalanceBatchError) query;
+icrc4_balance_of_batch : ([Account]) -> (record{ 
+    Ok: [(Account,nat)]; 
+    Err: BalanceBatchError) query;
+    });
 ```
 
 ```candid "Type definitions" +=
