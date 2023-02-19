@@ -1,5 +1,104 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2023-02-07
+[Slide deck](https://docs.google.com/presentation/d/1vCIl8bMFcKUVyoNZl0MAq8WlSI_U2cBAPgN8XxO05BE/edit?usp=share_link), [recording](https://drive.google.com/file/d/1bgYyay1jgox2Cw6cm67lbEiKwDEAE0qx/view?usp=share_link)
+
+* Dieter summarizes the progress of the last meeting where we have found the best options to consider
+  * Options 4b and 4c remain
+  * Both have a fixed-length checksum element and a human-readable representation
+  * 4b: checksum in the middle
+  * 4c: checksum at the end
+  * Separator still t.b.d.
+    * Different variants available based on separator used
+* Discussion starts
+* Milind would prefer 4c with checksum in the end as a natural continuation of principal and subaccount
+  * People generally prefer the checksum at the end
+* **Discussion on separator**
+  * Ben: separators we use should not constrain application, e.g., encoding embedded in a QR code:
+    * Should be compatible with URI scheme
+      * Should not use colon as it would mean something in the URI scheme
+  * Could use "." and "-"
+  * Could use "+", as it is a valid character
+  * Austin: What to prioritize?
+    * Understanding
+    * Practical simplicity (".")
+  * Ben would opt for simplicity; could have just one "." separator
+  * Dieter: one separator harms human readibility, need to count characters in subaccount/checksum to see where subaccount ends
+  * If we treat subaccount and checksum as integral part, don't care what is the checksum
+  * Ben: assumption: no use case where user needs to populate principal and subaccount separately
+  * Working assumption: 4 hex characters (16 bits) of checksum, fixed-length checksum
+  * Timo: Now thinks that in the use case of subaccount being large (e.g., Ethereum address), one would want to see the subaccount explicitly, which is hard with no separator; therefore, not use the "." / "" option
+    * People agree
+    * Dieter: cleaner to use another separator for checksum
+  * Dieter proposes to narrow selection to "." / "--" (or single dash) and "." / "."
+    * People agree
+  * "--" is easier to parse as second separator, "." is more uniform
+  * Both are similarly bad in double-click selection behaviour, no big difference
+  * Timo: strong separation is not an argument any more; don't like the "-" because of confusion with principal part; undecided between "." and "--"
+    * Using "." may make it look hiararchical, like a domain name, "--" does not have this
+  * Max: very subjective at this point; likes ":" or "::"
+    * Dieter: not a valid character as discussed earlier
+  * We try how the "+" looks as second separator
+    * Max likes it, "+" has meaning of check"sum"
+    * Ben: would be OK for URI scheme, there is a slight remaining risk; tend to avoid it
+    * Austin: in a URI, "+" is space, might be problem when copy/pasting
+    * Dieter: technological risk; let's not use it
+  * Max: What about caret or tilde? "^" or "~"
+    * Ben: cannot use caret; tilde is valid; want to avoid non-common separators; on user side, may create confusion
+    * Austin thinks "." is good
+    * "=" sign: part of query string, would need to be encoded in URI
+    * Austin: "-", ".", "_", "~" are OK according to URI scheme specification
+    * "~" look out of the norm, "_" looks misplaced
+  * Timo: is tradeoff
+    * What about "--"?
+    * Austin: is extra character
+    * Single dash: only downside that it also has meaning in the principal
+    * Ben prefers "-" over "." due to hierarchy implied by multiple "." in the encoding
+  * Dieter proposes to settle for "-" as checksum separator
+    * People agree
+* **Handling of default account**
+  * Dieter presents the options of Slide 8
+    * Option 1: explicit default subaccount
+    * Option 2: implied by using plain principal only
+    * Option 3: principal with extra checksum
+  * Austin: "--" prevented half-byte when parsing; half-byte makes parser somewhat more complicated, but "-" should be fine
+  * Austin likes just having a principal for default subaccount
+  * Dieter: argument against it is copy/paste error; just copy principal instead of the full encoding, and tokens go to default subaccount instead the intended subaccount
+  * Max would still go for Option 2 for backward compatibility
+    * Ben: going forward, there would be no place for inserting principal and subaccount separately in a user interface; we always use the encoding
+    * Roman: if we don't support Option 2, people will support both mechanisms anyway, which creates optionality; people can just ignore encoding and make transfers between principals
+    * Ben: if app decides to support interface to transfer to principal, but when sticking with textual encoding, it should be very explicit; input field has type textual encoding; standard should specify something explicit
+  * Max: people are already supporting principals; if we change that, users will try to enter principals for default accounts; not sure how smooth the transition will be
+  * Ben: there will be transition issues; during transition period, can implement this as an option, when mainstream adoption is here, hopefully everyone adapts explicit encoding
+  * Discussion on copy/paste errors when using principal for default subaccount
+    * Ben: what if user just knows the principal concept? recognizes principal and transfers to principal instead of full address
+  * Roman: most would support both approaches anyway; people may prefer to send to principal directly; immediately useful; thinks Option 2 is the best choice
+  * Austin: also thinks 2 is good as it is already out there
+  * Discussion on whether this could be implemented as part of the frontend; principal transfer can still be supported; have branch in frontend to call either
+  * Roman: browser extensions have little screen real estate, they may just shown one field; security argument gone then
+  * If we have the option in the frontend, we don't really have uniquness
+    * Timo: paste something in, later look at block explorer, you expect the same thing; don't like this translation happening in the back; what user pastes and sees should be the same data
+    * Levi: allowing the principal itself is an issue because of copy/paste errors when missing subaccount
+    * Timo: would accept that risk; if someone copies only the principal of the whole encoding, we can probably accept this
+  * Ben: What about checksum in the middle, attached with "-" to principal? blends in checksum with principal
+    * Properties
+      * Less risk to just copy the principal and miss the checksum and subaccount
+      * Little less readability of principal
+      * Would be compromise between reducing risk of copy/paste error and slightly less readable representation
+    * Discussion of copy/paste error: would need knowledge of the encoding by the user to copy only the principal; a new user to the ecosystem would typically copy the principal including the checkum as it looks like visually belonging together
+    * Ben: problem with "." is that user can clearly visually separate the parts; in that case, he would prefer to intentionally confuse user on which part is the principal, if the principal should be a valid encoding on its own
+    * Roman: parsing becomes hard, principals don't all have the same length
+    * Milind: This has a high semantic burden on user
+    * Levi: original textual encoding option also shows the principal, but without the checksum characters in the beginning
+      * Comment: not sure whether this is true as every character represents 6 bits
+  * Continue discussion in the next meeting
+  * Roman: should allow principal as subaccount
+    * After some clarifying discussion, Roman might think the proposal could be OK
+    * Not having checksum at the end removes the nice property that the first and last characters have most information on the whole encoding, however
+  * Roman: how to deal with zeroes in subaccounts
+  * Let's continue the discussion next time, this is too important to be rushed
+
+
 ## 2023-01-24
 [Slide deck](https://docs.google.com/presentation/d/1J4RG6Dj2oFzOWTRbxh8J59I3iF49WSM1YoU92_vBMnM/edit#slide=id.g1cb864ea205_0_62), [recording](https://drive.google.com/file/d/1B04AtA-yMQcJdtFItb76dP48yAZkoiMu/view?usp=share_link)
 
