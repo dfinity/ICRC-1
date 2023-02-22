@@ -1,5 +1,154 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2023-02-21
+[Slide deck](https://docs.google.com/presentation/d/1c62oP0p3bM2B21n5ORYI0OAJWVEytO0vCjEspTnIIgw/edit#slide=id.g20f9d73110e_0_20), [recording](https://drive.google.com/file/d/1lHevLT_Dmk-2wpyJ4chhzsJE00SYtiR3/view?usp=share_link)
+
+**Encoding of accounts**
+
+* **Encoding of account, main decision**
+* Dieter summarizes where we stand regarding the encoding discussion
+  * Latest thinking is that principal + "-" + checksum + "." + subaccount is a good compromise given that the standalong principal is used a lot already these days
+    * Principal can still be compared by eye with possibly a little confusion
+    * Risk of wrong copy/pasting up to end of the "perceived principal" is avoided
+* Discussion starts
+  * Matthew: likely there will be some confusion no matter what we do
+  * Levi: there are principals and subaccounts shown on the dashboard already; principal must be able to be its own identifier, subaccount must be shown clearly
+    * Hyphen-subaccount is nice
+    * Levi is fine with the proposed approach
+  * Roman agrees as well, approach looks good to him; it is important that when collating accounts, that accounts with the same principal are nearby; this approach achieves this
+  * Alessandro: is fine with it
+  * **The group agrees on the proposed solution**
+    * Principal = default subaccount
+    * Other subaccounts: The checksum is suffixed with "-"-separator to the principal, this is followed by "." and the subaccount
+  * Roman volunteers for sketching a first draft of the specification
+* **Trimming of leading zeroes**
+  * **People agree with trimming leading zeroes at the character level**
+* **Checksum algorithm and checksum length**
+  * Current working assumption has been 4 characters
+  * CRC32 seems fine, SHA is most secure one and is likely not required for this
+  * CRC32 is used for the checksum in the principal
+  * CRC32 is easy to implement
+  * Is it safe to trim a CRC32 checksum to fewer bits?
+  * Checksum will be fixed length, cannot have different length then, unless we have a new version of the standard
+  * 32 bits would be 7 characters
+  * **Roman agrees to look into using a CRC with fewer bits**
+
+**A standard for DAB and replacing DAB**
+
+* Ben presents the need for a replacement of DAB
+  * DAB is token registry for both fungible and non-fungible tokens
+    * If you have token called "ABC", anyone can issue such token
+    * The ledger gives the name
+    * Potential for phising attacks here
+    * For this reason we need a registry for tokens; DAB is such registry
+    * They manually approve tokens
+  * DAB is not maintained
+  * DAB is a centralized service
+  * Don't want centralized token registry
+  * Motivation and proposal
+    * Record preferences on the wallet level; completely decentralized
+    * If there are two tokens called "ABC", a user would usually know which token they are interacting with; they can add that token as their preference
+    * Wallets and NFT marketplaces: in order to know which tokens a user owns, they don't need to query all existing ledgers to know which tokens user owns; this is what currently the NFT marketplaces do; not sustainable; Entrepot currently queries around 600 canisters when user logs in to know which NFTs they own
+    * Benefit of registry on wallet level
+      * Marketplaces will know which tokens user is interested in
+      * Not possible in Ethereum as it is too expensive there to store such data
+      * Each dapp keeps whitelist of their own
+    * Proposal does not require central authority
+    * Should be standardized as an ICRC standard
+* Discussion
+  * Roman
+    * Financial Integrations team has been thinking about this for a long time
+    * Would prefer central canister on the NNS subnet
+    * People can submit proposals for adding their token canisters
+    * NNS governance manages this in decentralized way
+    * Avoid confusion of having different configurations in different wallets
+    * Each token symbol could be registered once
+  * Austin asks whether in Roman's approach every token would need to go through NNS vote
+    * Would highly recommend not doing this; minefield; not there yet in terms of governance
+    * Not pleasant user experience at all
+    * Socially, community not ready yet
+  * Ben
+    * NNS should handle limited things, and not expand to application level too much
+    * This would be application-level access control
+    * Anti-pattern for NNS
+  * Max
+    * Understands this is a registry for users' tokens
+  * Austin
+    * Understands that it would be a mapping from principal to the NFTs user follows
+    * Would want to give another service permission in which NFTs one is interested in
+    * Any kind of centralized service for this gets tricky quickly
+      * Who gets approved
+      * What counts as spam
+      * What if someone wants to blacklist someone else
+  * Max
+    * Integration challenge
+  * Levi
+    * Asks for clarification of proposals having been made
+  * Roman: was talking about registry of unique symbols only
+    * Central ledger with all token names
+    * Need some trustworthy way to officially register tokens
+    * Would prefer canister with well-known address holding index of all tokens
+  * Max
+    * Not as big an issue as for fungible tokens; no NFT naming issues
+    * Since DAB left, there is no registry where we can find which users own which NFTs; seems completely separate issue to Roman's point
+  * Levi agrees this is a different solution; would start with ledger symbol reservation canister as first step
+  * Ben
+    * Thinks there should be possibility of multiple tokens with the same name; which token gets accepted by community is a different question; on Ethereum you can have multiple tokens with the same name
+    * Can be resolved on the wallet level on IC; not possible on Ethereum
+    * Sees this as better solution to have central canister to register wallet-level preferences
+  * Max
+    * Should focus what problems are for the people, wallets, users
+    * Token names is not a problem; can import this as a list
+    * If user wants to add custom token, can do that by principal id or address
+    * Main problem right now: discovering NFTs is hard
+      * NFTs are not like fungible tokens where there are a few famous ones
+      * Need to be able to discover NFTs if you want all of yours in one wallet
+  * Roman
+    * Agrees
+    * Need different solutions to different problems
+    * Central canister for fungible tokens would be great
+    * NFTs is separate problem, NNS should definitely not handle this
+  * Levi
+    * What happens when user gets an NFT?
+  * Max clarifies existing approaches for handling NFTs
+    * DAB approach
+      * Creators register their NFT with DAB and inform it about which standard it uses
+      * You can use DAB to find out whether you own particular NFTs
+    * Other approach
+      * Pull information directly from the NFT marketplaces
+      * Marketplace must provide endpoint that canister can query for this
+      * No central party like DAB involved in that case
+    * Closely-related question to what are the standards for NFTs
+      * Once define standard for NFTs, it's trivial to make canister that can query all different NFTs that are out there; currently have several different standards
+    * Connected question is what the NFT standard is
+  * Ben thinks that this proposal would not be specific to NFTs
+    * Ben disagrees with the assertion that fungile and non-fungible tokens should be handled differently; what about semi-fungible; they are all tokens and should be handled in the same way, there is no fundamental difference
+  * We agree to continue the discussion on the forum and pick it up again next time  
+
+**ICRC-2: Final recap before NNS vote**
+
+* ICRC-2 brings over the idea of the approve/transferFrom flow from Ethereum
+  * Do group members have any additional thoughts about the current standard before we take it to an NNS vote?
+* Discussion
+  * Roman: once approved by NNS vote, will implement ICRC-2 in all our ledgers
+  * Levi: recurring payments is one of the goals for ICRC-2; e.g., subscriptions
+    * What about adding an interval argument, e.g., to approve a given payment every 30 days
+    * Now user needs to agree on larger sum for longer time period
+  * Roman: would complicate ledger a lot; language to express installments may be pretty complicated; need to trust application anyway to some extend; if we do it, should be simple
+  * Approval is always from a specific subaccount
+  * Transfers behave as if you sent them yourself
+  * Ben: very good use case scenario; but need to draw boundaries clearly; thinks, this should not go into the ledger
+    * Can approve one subaccount to one application; can control risk exposure
+    * Can have canister wallet that periodically increases approval
+  * Levi: most people waiting for ICRC-2 are waiting for recurring payments
+  * Ben: recurring payments can still be done; comparable to using a credit card for any subscription in the real world
+    * Feedback he got is that people want improved payment flow
+  * Levi will think about it and see whether he can come up with a simple API
+    * See whether this would be worth the tradeoff
+  * Roman: functionality might require to keep longer tx history, need to look into it in more detail to make conclusive assessment; might need to store lots of tx in memory
+  * Continue discussion of this on the forum and upcoming meeting
+
+
 ## 2023-02-07
 [Slide deck](https://docs.google.com/presentation/d/1vCIl8bMFcKUVyoNZl0MAq8WlSI_U2cBAPgN8XxO05BE/edit?usp=share_link), [recording](https://drive.google.com/file/d/1bgYyay1jgox2Cw6cm67lbEiKwDEAE0qx/view?usp=share_link)
 
