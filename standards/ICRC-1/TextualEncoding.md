@@ -1,5 +1,9 @@
 # Textual encoding of ICRC-1 accounts
 
+| Status |
+|:------:|
+| Draft  |
+
 This document specifies the canonical textual representation of ICRC-1 accounts.
 
 ICRC-1 accounts have two components: the owner (up to 29 bytes) and the subaccount (32 bytes).
@@ -9,7 +13,7 @@ If the subaccount is not present, it's considered to be equal to an array with 3
 type Account = { owner : principal; subaccount : opt blob };
 ```
 
-# Default accounts
+## Default accounts
 
 The textual representation of the account coincides with the textual encoding of the account owner's principal if the `subaccount` is not set or equal to an array with 32 zero bytes.
 
@@ -24,7 +28,7 @@ Account.toText(record {
 }) = "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae"
 ```
 
-# Non-default accounts
+## Non-default accounts
 
 The textual representation of accounts with non-default subaccounts consists of the following parts:
   1. The textual encoding of the owner's principal as described in the [Internet Computer Interface Specification](https://internetcomputer.org/docs/current/references/ic-interface-spec#textual-ids).
