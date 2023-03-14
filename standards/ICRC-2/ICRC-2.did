@@ -6,7 +6,7 @@ type Account = record {
 type ApproveArgs = record {
     from_subaccount : opt blob;
     spender : principal;
-    amount : int;
+    amount : nat;
     expires_at : opt nat64;
     fee : opt nat;
     memo : opt blob;
@@ -45,9 +45,30 @@ type TransferFromError = variant {
     GenericError : record { error_code : nat; message : text };
 };
 
-type AllowanceArgs = record {
+type AllowancesArgs = record {
     account : Account;
     spender : principal;
+    start : opt nat;
+};
+
+type AllowancesData = record {
+    latest_approval_id : opt nat;
+    total_allowance : nat;
+    allowances : vec Allowance;
+};
+
+type Allowance = record {
+  approval_id: nat;
+  allowance : nat;
+  expires_at : opt nat64;
+};
+
+
+type CancelApprovalError = variant {
+    ApprovalNotFound;
+    CallerIsNotTheApprover;
+    ApprovalIsExpired;
+    ApprovalIsCanceled : record { cancellation: nat; };
 };
 
 service : {
@@ -55,5 +76,6 @@ service : {
 
     icrc2_approve : (ApproveArgs) -> (variant { Ok : nat; Err : ApproveError });
     icrc2_transfer_from : (TransferFromArgs) -> (variant { Ok : nat; Err : TransferFromError });
-    icrc2_allowance : (AllowanceArgs) -> (record { allowance : nat; expires_at : opt nat64 }) query;
+    icrc2_allowances : (AllowancesArgs) -> (AllowancesData) query;
+    icrc2_cancel_approval : (nat) -> (variant { Ok : nat; Err : CancelApprovalError });
 }
