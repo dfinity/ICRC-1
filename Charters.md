@@ -1,5 +1,60 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2023-03-07
+[Slide deck](https://docs.google.com/presentation/d/11QcNtl8QFNg2LL1BrahDU559Uy7LoSXXPGJz_vDxKTk/edit?usp=share_link), [recording](https://drive.google.com/file/d/1jpwUIQgkDl_M-IVdKLOBMzXfoPA8j6Ad/view?usp=share_link)
+
+**Textual encoding format for ICRC-1 account addresses: Checksum**
+
+* Dieter summarizes where the group stands with the discussion
+  * We have a decision on the following way of encoding: `principal | "-" | checksum | "." subaccount` for non-default subaccounts; leading zeroes in subaccounts are truncated in the hexadecimal representation
+  * The default subaccount `0` is encoded as just the principal: `princial`
+  * Now the checksum algorithm and length is to be decided: In the last meeting CRC-32 and CRC-16 and truncated versions thereof were up as potential candidates for discussion
+* **Algorithm and length**
+  * In a discussion we agreed that the success rate of non-truncated and truncated CRC-16 or CRC-32 are very similar and that the difference is not substantial enought to drive a decision. However, the availability of libraries is important for implementors of the standard. Here, CRC-16 has fewer libraries and there are many different polynomials used. For CRC-32, there are more libraries and one polynomial is widely used, essentially like a quasi standard.
+  * Regarding encoding, there is a dicussion whether to use hex encoding or base-32 encoding, where the latter is used for the principal.
+  * Timo prefers hex encoding for the reason of better tooling support, e.g., on the console. He thinks that it blends in with the actual principal as nicely as base-32-encoding. Ben also prefers hex initially.
+  * There was a discussion what fraction of bit flips, e.g., due to copy-paste errors, would go undetected. 0.2% could go through unnoticed.
+  * Dieter summarizes the discussion so far: Considering the team's argument of library availability, CRC-16 seems to be not the very good idea. CRC-32 seems to have one widely used polynomial. That's probably the default used in all the command line tools if you don't specify anything specific now, which means this would hint towards using CRC-32. The question is, would we want the full CRC-32 or would we want to truncate it down and then accept the slightly higher chance of not detecting errors. Would we use base-16 or base-32 for encoding? Those are the open questions right now. AFAIK, the principal has full CRC-32 with base-32 encoding as checksum.
+  * Timo clarifies that in the principal encoding, the checksum is prefixed to the principal in the binary representation and the resulting string is encoded using base-32 and then grouped in groups of five characters.
+  * Timo prefers two-byte truncated CRC-32 encoded in hex.
+  * 20-bit truncated CRC-32 was discussed, but found to be harder to parse.
+  * Matthew thinks we should go for the full checksum.
+  * Dieter notes that this would be 8 hex characters, which gets long.
+  * Dieter writes down how the different discussed variants would look like. He finds the full CRC-32 checksum in hex gets a bit too long.
+  * We also look at 5 and 6 hex character truncated variants of the CRC-32 checksum.
+  * We have now 4, 5, or 6 characters on the table.
+  * Roman prefers the full one, either full CRC-32 or full CRC-16 because it's easier to implement.
+  * Dieter clarifies that CRC-16 was found to not be a good idea before Roman has joined the call.
+  * **Full CRC-32 without truncation is found to be the most suitable choice** because of the availability of libraries and command line tools and a widely-used quasi-standard polynomial.
+* **Checksum over characters or binary data**
+  * There is a discussion whether the checkum should be computed over the encoded characters or the bytes, which resolved that **computing the checksum over the bytes is what we should do** as it is the natural way. This is also how it is done for the principal. Also, this is optimizes the processing for canisters over client-side generation.
+* **Encoding**
+  * There is a discussion by Timo on why hex could be better in terms of tooling, e.g., one could use the standard command line tools easily. But it was not found a strong argument by most members in the group. Also, he finds base-32 as used in the principal non-standard.
+  * Roman prefers base-32 mostly for how it better blends in.
+  * The discussions continue on what is the better representation and why. We agree to make a vote to come to rough consensus.
+  * The result is that the vast majority prefers **base-32 encoding**. We have rough consensus.
+* **Summary of decisions**
+  * Non-truncated CRC-32 checkum computed over the byte representation of the inputs.
+  * Checksum is encoded with base-32 and appended with a hypen (`-`) to the principal.
+* Roman volunteers to finish the specification.
+
+**ICRC-2: Recurring payments**
+
+* Levi explains his idea for expiration semantics for approvals and motivates it with problems of the currently-standing design of new approvals changing current ones additively, but the expiration is always set based on the latest approval. This can lead to an undesired accumulation of approvals.
+* Roman: Might make sense to keep each approval a separate entity with its own expiration date. Approvals than expire independently of each other. If you make a transfer, the older available approval could be used, for example.
+* Levi: We can have an optional approval ID parameter on the `transfer_from` function. Either a specific approval id can be used or deducted from the earliest approvals.
+  * Mario clarifies that if you then use an approval id, then the ledger only considers this approval.
+* Levi would see no harm in adding an optional approval id field.
+* Ben thinks the extra complication of this extension does not justify the extra functionality. Strongly against it.
+* It is clarified that approvals are always charged a fee to prevent DoS attacks.
+* Mario also thinks that this may make things unnecessarily complicated.
+* Roman: The logic to handle the transfers becomes a bit more complicated because you might need to process multiple approvals in one go. But I think it's still worth it because the semantics of each approval is a separate thing and expired in its own time, much cleaner than what we have now. And it's not much harder to implement than the original solution. It requires a bit more space, I agree, but I think it's much cleaner. And it's also fair because you pay for each approval.
+* Dieter triggers a discussion on what this semantics would mean for formal verifiability.
+  * The conclusion is that it would be easier to formally verify because the representation is cleaner.
+* Levi suggests he will prepare an example for two scenarios so that we can assess the implications thereof in terms of implementation, complexity, and usability.
+Roman: By the way, just last note, when I implemented reference implementation, the current variant was actually much harder to implement than the one when you have separate expirations. Because basically, if you want to know what's the allowance right now, you go through all the blocks, you know the current time stamp, you count all the approvals that happened that are still available for this block, and you look at all the transfers that happened. Much easier to figure out than trying to replay the logic and connect blocks. Okay, which one extends which one is very complicated. From formal verification point of view, the separate approvals is much clearer.
+
+
 ## 2023-02-21
 [Slide deck](https://docs.google.com/presentation/d/1c62oP0p3bM2B21n5ORYI0OAJWVEytO0vCjEspTnIIgw/edit#slide=id.g20f9d73110e_0_20), [recording](https://drive.google.com/file/d/1lHevLT_Dmk-2wpyJ4chhzsJE00SYtiR3/view?usp=share_link)
 
@@ -25,10 +80,10 @@
   * **People agree with trimming leading zeroes at the character level**
 * **Checksum algorithm and checksum length**
   * Current working assumption has been 4 characters
-  * CRC32 seems fine, SHA is most secure one and is likely not required for this
-  * CRC32 is used for the checksum in the principal
-  * CRC32 is easy to implement
-  * Is it safe to trim a CRC32 checksum to fewer bits?
+  * CRC-32 seems fine, SHA is most secure one and is likely not required for this
+  * CRC-32 is used for the checksum in the principal
+  * CRC-32 is easy to implement
+  * Is it safe to trim a CRC-32 checksum to fewer bits?
   * Checksum will be fixed length, cannot have different length then, unless we have a new version of the standard
   * 32 bits would be 7 characters
   * **Roman agrees to look into using a CRC with fewer bits**
