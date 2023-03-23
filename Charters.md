@@ -1,5 +1,401 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2023-03-07
+[Slide deck](https://docs.google.com/presentation/d/11QcNtl8QFNg2LL1BrahDU559Uy7LoSXXPGJz_vDxKTk/edit?usp=share_link), [recording](https://drive.google.com/file/d/1jpwUIQgkDl_M-IVdKLOBMzXfoPA8j6Ad/view?usp=share_link)
+
+**Textual encoding format for ICRC-1 account addresses: Checksum**
+
+* Dieter summarizes where the group stands with the discussion
+  * We have a decision on the following way of encoding: `principal | "-" | checksum | "." subaccount` for non-default subaccounts; leading zeroes in subaccounts are truncated in the hexadecimal representation
+  * The default subaccount `0` is encoded as just the principal: `princial`
+  * Now the checksum algorithm and length is to be decided: In the last meeting CRC-32 and CRC-16 and truncated versions thereof were up as potential candidates for discussion
+* **Algorithm and length**
+  * In a discussion we agreed that the success rate of non-truncated and truncated CRC-16 or CRC-32 are very similar and that the difference is not substantial enought to drive a decision. However, the availability of libraries is important for implementors of the standard. Here, CRC-16 has fewer libraries and there are many different polynomials used. For CRC-32, there are more libraries and one polynomial is widely used, essentially like a quasi standard.
+  * Regarding encoding, there is a dicussion whether to use hex encoding or base-32 encoding, where the latter is used for the principal.
+  * Timo prefers hex encoding for the reason of better tooling support, e.g., on the console. He thinks that it blends in with the actual principal as nicely as base-32-encoding. Ben also prefers hex initially.
+  * There was a discussion what fraction of bit flips, e.g., due to copy-paste errors, would go undetected. 0.2% could go through unnoticed.
+  * Dieter summarizes the discussion so far: Considering the team's argument of library availability, CRC-16 seems to be not the very good idea. CRC-32 seems to have one widely used polynomial. That's probably the default used in all the command line tools if you don't specify anything specific now, which means this would hint towards using CRC-32. The question is, would we want the full CRC-32 or would we want to truncate it down and then accept the slightly higher chance of not detecting errors. Would we use base-16 or base-32 for encoding? Those are the open questions right now. AFAIK, the principal has full CRC-32 with base-32 encoding as checksum.
+  * Timo clarifies that in the principal encoding, the checksum is prefixed to the principal in the binary representation and the resulting string is encoded using base-32 and then grouped in groups of five characters.
+  * Timo prefers two-byte truncated CRC-32 encoded in hex.
+  * 20-bit truncated CRC-32 was discussed, but found to be harder to parse.
+  * Matthew thinks we should go for the full checksum.
+  * Dieter notes that this would be 8 hex characters, which gets long.
+  * Dieter writes down how the different discussed variants would look like. He finds the full CRC-32 checksum in hex gets a bit too long.
+  * We also look at 5 and 6 hex character truncated variants of the CRC-32 checksum.
+  * We have now 4, 5, or 6 characters on the table.
+  * Roman prefers the full one, either full CRC-32 or full CRC-16 because it's easier to implement.
+  * Dieter clarifies that CRC-16 was found to not be a good idea before Roman has joined the call.
+  * **Full CRC-32 without truncation is found to be the most suitable choice** because of the availability of libraries and command line tools and a widely-used quasi-standard polynomial.
+* **Checksum over characters or binary data**
+  * There is a discussion whether the checkum should be computed over the encoded characters or the bytes, which resolved that **computing the checksum over the bytes is what we should do** as it is the natural way. This is also how it is done for the principal. Also, this is optimizes the processing for canisters over client-side generation.
+* **Encoding**
+  * There is a discussion by Timo on why hex could be better in terms of tooling, e.g., one could use the standard command line tools easily. But it was not found a strong argument by most members in the group. Also, he finds base-32 as used in the principal non-standard.
+  * Roman prefers base-32 mostly for how it better blends in.
+  * The discussions continue on what is the better representation and why. We agree to make a vote to come to rough consensus.
+  * The result is that the vast majority prefers **base-32 encoding**. We have rough consensus.
+* **Summary of decisions**
+  * Non-truncated CRC-32 checkum computed over the byte representation of the inputs.
+  * Checksum is encoded with base-32 and appended with a hypen (`-`) to the principal.
+* Roman volunteers to finish the specification.
+
+**ICRC-2: Recurring payments**
+
+* Levi explains his idea for expiration semantics for approvals and motivates it with problems of the currently-standing design of new approvals changing current ones additively, but the expiration is always set based on the latest approval. This can lead to an undesired accumulation of approvals.
+* Roman: Might make sense to keep each approval a separate entity with its own expiration date. Approvals than expire independently of each other. If you make a transfer, the older available approval could be used, for example.
+* Levi: We can have an optional approval ID parameter on the `transfer_from` function. Either a specific approval id can be used or deducted from the earliest approvals.
+  * Mario clarifies that if you then use an approval id, then the ledger only considers this approval.
+* Levi would see no harm in adding an optional approval id field.
+* Ben thinks the extra complication of this extension does not justify the extra functionality. Strongly against it.
+* It is clarified that approvals are always charged a fee to prevent DoS attacks.
+* Mario also thinks that this may make things unnecessarily complicated.
+* Roman: The logic to handle the transfers becomes a bit more complicated because you might need to process multiple approvals in one go. But I think it's still worth it because the semantics of each approval is a separate thing and expired in its own time, much cleaner than what we have now. And it's not much harder to implement than the original solution. It requires a bit more space, I agree, but I think it's much cleaner. And it's also fair because you pay for each approval.
+* Dieter triggers a discussion on what this semantics would mean for formal verifiability.
+  * The conclusion is that it would be easier to formally verify because the representation is cleaner.
+* Levi suggests he will prepare an example for two scenarios so that we can assess the implications thereof in terms of implementation, complexity, and usability.
+Roman: By the way, just last note, when I implemented reference implementation, the current variant was actually much harder to implement than the one when you have separate expirations. Because basically, if you want to know what's the allowance right now, you go through all the blocks, you know the current time stamp, you count all the approvals that happened that are still available for this block, and you look at all the transfers that happened. Much easier to figure out than trying to replay the logic and connect blocks. Okay, which one extends which one is very complicated. From formal verification point of view, the separate approvals is much clearer.
+
+
+## 2023-02-21
+[Slide deck](https://docs.google.com/presentation/d/1c62oP0p3bM2B21n5ORYI0OAJWVEytO0vCjEspTnIIgw/edit#slide=id.g20f9d73110e_0_20), [recording](https://drive.google.com/file/d/1lHevLT_Dmk-2wpyJ4chhzsJE00SYtiR3/view?usp=share_link)
+
+**Encoding of accounts**
+
+* **Encoding of account, main decision**
+* Dieter summarizes where we stand regarding the encoding discussion
+  * Latest thinking is that principal + "-" + checksum + "." + subaccount is a good compromise given that the standalong principal is used a lot already these days
+    * Principal can still be compared by eye with possibly a little confusion
+    * Risk of wrong copy/pasting up to end of the "perceived principal" is avoided
+* Discussion starts
+  * Matthew: likely there will be some confusion no matter what we do
+  * Levi: there are principals and subaccounts shown on the dashboard already; principal must be able to be its own identifier, subaccount must be shown clearly
+    * Hyphen-subaccount is nice
+    * Levi is fine with the proposed approach
+  * Roman agrees as well, approach looks good to him; it is important that when collating accounts, that accounts with the same principal are nearby; this approach achieves this
+  * Alessandro: is fine with it
+  * **The group agrees on the proposed solution**
+    * Principal = default subaccount
+    * Other subaccounts: The checksum is suffixed with "-"-separator to the principal, this is followed by "." and the subaccount
+  * Roman volunteers for sketching a first draft of the specification
+* **Trimming of leading zeroes**
+  * **People agree with trimming leading zeroes at the character level**
+* **Checksum algorithm and checksum length**
+  * Current working assumption has been 4 characters
+  * CRC-32 seems fine, SHA is most secure one and is likely not required for this
+  * CRC-32 is used for the checksum in the principal
+  * CRC-32 is easy to implement
+  * Is it safe to trim a CRC-32 checksum to fewer bits?
+  * Checksum will be fixed length, cannot have different length then, unless we have a new version of the standard
+  * 32 bits would be 7 characters
+  * **Roman agrees to look into using a CRC with fewer bits**
+
+**A standard for DAB and replacing DAB**
+
+* Ben presents the need for a replacement of DAB
+  * DAB is token registry for both fungible and non-fungible tokens
+    * If you have token called "ABC", anyone can issue such token
+    * The ledger gives the name
+    * Potential for phising attacks here
+    * For this reason we need a registry for tokens; DAB is such registry
+    * They manually approve tokens
+  * DAB is not maintained
+  * DAB is a centralized service
+  * Don't want centralized token registry
+  * Motivation and proposal
+    * Record preferences on the wallet level; completely decentralized
+    * If there are two tokens called "ABC", a user would usually know which token they are interacting with; they can add that token as their preference
+    * Wallets and NFT marketplaces: in order to know which tokens a user owns, they don't need to query all existing ledgers to know which tokens user owns; this is what currently the NFT marketplaces do; not sustainable; Entrepot currently queries around 600 canisters when user logs in to know which NFTs they own
+    * Benefit of registry on wallet level
+      * Marketplaces will know which tokens user is interested in
+      * Not possible in Ethereum as it is too expensive there to store such data
+      * Each dapp keeps whitelist of their own
+    * Proposal does not require central authority
+    * Should be standardized as an ICRC standard
+* Discussion
+  * Roman
+    * Financial Integrations team has been thinking about this for a long time
+    * Would prefer central canister on the NNS subnet
+    * People can submit proposals for adding their token canisters
+    * NNS governance manages this in decentralized way
+    * Avoid confusion of having different configurations in different wallets
+    * Each token symbol could be registered once
+  * Austin asks whether in Roman's approach every token would need to go through NNS vote
+    * Would highly recommend not doing this; minefield; not there yet in terms of governance
+    * Not pleasant user experience at all
+    * Socially, community not ready yet
+  * Ben
+    * NNS should handle limited things, and not expand to application level too much
+    * This would be application-level access control
+    * Anti-pattern for NNS
+  * Max
+    * Understands this is a registry for users' tokens
+  * Austin
+    * Understands that it would be a mapping from principal to the NFTs user follows
+    * Would want to give another service permission in which NFTs one is interested in
+    * Any kind of centralized service for this gets tricky quickly
+      * Who gets approved
+      * What counts as spam
+      * What if someone wants to blacklist someone else
+  * Max
+    * Integration challenge
+  * Levi
+    * Asks for clarification of proposals having been made
+  * Roman: was talking about registry of unique symbols only
+    * Central ledger with all token names
+    * Need some trustworthy way to officially register tokens
+    * Would prefer canister with well-known address holding index of all tokens
+  * Max
+    * Not as big an issue as for fungible tokens; no NFT naming issues
+    * Since DAB left, there is no registry where we can find which users own which NFTs; seems completely separate issue to Roman's point
+  * Levi agrees this is a different solution; would start with ledger symbol reservation canister as first step
+  * Ben
+    * Thinks there should be possibility of multiple tokens with the same name; which token gets accepted by community is a different question; on Ethereum you can have multiple tokens with the same name
+    * Can be resolved on the wallet level on IC; not possible on Ethereum
+    * Sees this as better solution to have central canister to register wallet-level preferences
+  * Max
+    * Should focus what problems are for the people, wallets, users
+    * Token names is not a problem; can import this as a list
+    * If user wants to add custom token, can do that by principal id or address
+    * Main problem right now: discovering NFTs is hard
+      * NFTs are not like fungible tokens where there are a few famous ones
+      * Need to be able to discover NFTs if you want all of yours in one wallet
+  * Roman
+    * Agrees
+    * Need different solutions to different problems
+    * Central canister for fungible tokens would be great
+    * NFTs is separate problem, NNS should definitely not handle this
+  * Levi
+    * What happens when user gets an NFT?
+  * Max clarifies existing approaches for handling NFTs
+    * DAB approach
+      * Creators register their NFT with DAB and inform it about which standard it uses
+      * You can use DAB to find out whether you own particular NFTs
+    * Other approach
+      * Pull information directly from the NFT marketplaces
+      * Marketplace must provide endpoint that canister can query for this
+      * No central party like DAB involved in that case
+    * Closely-related question to what are the standards for NFTs
+      * Once define standard for NFTs, it's trivial to make canister that can query all different NFTs that are out there; currently have several different standards
+    * Connected question is what the NFT standard is
+  * Ben thinks that this proposal would not be specific to NFTs
+    * Ben disagrees with the assertion that fungile and non-fungible tokens should be handled differently; what about semi-fungible; they are all tokens and should be handled in the same way, there is no fundamental difference
+  * We agree to continue the discussion on the forum and pick it up again next time  
+
+**ICRC-2: Final recap before NNS vote**
+
+* ICRC-2 brings over the idea of the approve/transferFrom flow from Ethereum
+  * Do group members have any additional thoughts about the current standard before we take it to an NNS vote?
+* Discussion
+  * Roman: once approved by NNS vote, will implement ICRC-2 in all our ledgers
+  * Levi: recurring payments is one of the goals for ICRC-2; e.g., subscriptions
+    * What about adding an interval argument, e.g., to approve a given payment every 30 days
+    * Now user needs to agree on larger sum for longer time period
+  * Roman: would complicate ledger a lot; language to express installments may be pretty complicated; need to trust application anyway to some extend; if we do it, should be simple
+  * Approval is always from a specific subaccount
+  * Transfers behave as if you sent them yourself
+  * Ben: very good use case scenario; but need to draw boundaries clearly; thinks, this should not go into the ledger
+    * Can approve one subaccount to one application; can control risk exposure
+    * Can have canister wallet that periodically increases approval
+  * Levi: most people waiting for ICRC-2 are waiting for recurring payments
+  * Ben: recurring payments can still be done; comparable to using a credit card for any subscription in the real world
+    * Feedback he got is that people want improved payment flow
+  * Levi will think about it and see whether he can come up with a simple API
+    * See whether this would be worth the tradeoff
+  * Roman: functionality might require to keep longer tx history, need to look into it in more detail to make conclusive assessment; might need to store lots of tx in memory
+  * Continue discussion of this on the forum and upcoming meeting
+
+
+## 2023-02-07
+[Slide deck](https://docs.google.com/presentation/d/1vCIl8bMFcKUVyoNZl0MAq8WlSI_U2cBAPgN8XxO05BE/edit?usp=share_link), [recording](https://drive.google.com/file/d/1bgYyay1jgox2Cw6cm67lbEiKwDEAE0qx/view?usp=share_link)
+
+* Dieter summarizes the progress of the last meeting where we have found the best options to consider
+  * Options 4b and 4c remain
+  * Both have a fixed-length checksum element and a human-readable representation
+  * 4b: checksum in the middle
+  * 4c: checksum at the end
+  * Separator still t.b.d.
+    * Different variants available based on separator used
+* Discussion starts
+* Milind would prefer 4c with checksum in the end as a natural continuation of principal and subaccount
+  * People generally prefer the checksum at the end
+* **Discussion on separator**
+  * Ben: separators we use should not constrain application, e.g., encoding embedded in a QR code:
+    * Should be compatible with URI scheme
+      * Should not use colon as it would mean something in the URI scheme
+  * Could use "." and "-"
+  * Could use "+", as it is a valid character
+  * Austin: What to prioritize?
+    * Understanding
+    * Practical simplicity (".")
+  * Ben would opt for simplicity; could have just one "." separator
+  * Dieter: one separator harms human readibility, need to count characters in subaccount/checksum to see where subaccount ends
+  * If we treat subaccount and checksum as integral part, don't care what is the checksum
+  * Ben: assumption: no use case where user needs to populate principal and subaccount separately
+  * Working assumption: 4 hex characters (16 bits) of checksum, fixed-length checksum
+  * Timo: Now thinks that in the use case of subaccount being large (e.g., Ethereum address), one would want to see the subaccount explicitly, which is hard with no separator; therefore, not use the "." / "" option
+    * People agree
+    * Dieter: cleaner to use another separator for checksum
+  * Dieter proposes to narrow selection to "." / "--" (or single dash) and "." / "."
+    * People agree
+  * "--" is easier to parse as second separator, "." is more uniform
+  * Both are similarly bad in double-click selection behaviour, no big difference
+  * Timo: strong separation is not an argument any more; don't like the "-" because of confusion with principal part; undecided between "." and "--"
+    * Using "." may make it look hiararchical, like a domain name, "--" does not have this
+  * Max: very subjective at this point; likes ":" or "::"
+    * Dieter: not a valid character as discussed earlier
+  * We try how the "+" looks as second separator
+    * Max likes it, "+" has meaning of check"sum"
+    * Ben: would be OK for URI scheme, there is a slight remaining risk; tend to avoid it
+    * Austin: in a URI, "+" is space, might be problem when copy/pasting
+    * Dieter: technological risk; let's not use it
+  * Max: What about caret or tilde? "^" or "~"
+    * Ben: cannot use caret; tilde is valid; want to avoid non-common separators; on user side, may create confusion
+    * Austin thinks "." is good
+    * "=" sign: part of query string, would need to be encoded in URI
+    * Austin: "-", ".", "_", "~" are OK according to URI scheme specification
+    * "~" look out of the norm, "_" looks misplaced
+  * Timo: is tradeoff
+    * What about "--"?
+    * Austin: is extra character
+    * Single dash: only downside that it also has meaning in the principal
+    * Ben prefers "-" over "." due to hierarchy implied by multiple "." in the encoding
+  * Dieter proposes to settle for "-" as checksum separator
+    * People agree
+* **Handling of default account**
+  * Dieter presents the options of Slide 8
+    * Option 1: explicit default subaccount
+    * Option 2: implied by using plain principal only
+    * Option 3: principal with extra checksum
+  * Austin: "--" prevented half-byte when parsing; half-byte makes parser somewhat more complicated, but "-" should be fine
+  * Austin likes just having a principal for default subaccount
+  * Dieter: argument against it is copy/paste error; just copy principal instead of the full encoding, and tokens go to default subaccount instead the intended subaccount
+  * Max would still go for Option 2 for backward compatibility
+    * Ben: going forward, there would be no place for inserting principal and subaccount separately in a user interface; we always use the encoding
+    * Roman: if we don't support Option 2, people will support both mechanisms anyway, which creates optionality; people can just ignore encoding and make transfers between principals
+    * Ben: if app decides to support interface to transfer to principal, but when sticking with textual encoding, it should be very explicit; input field has type textual encoding; standard should specify something explicit
+  * Max: people are already supporting principals; if we change that, users will try to enter principals for default accounts; not sure how smooth the transition will be
+  * Ben: there will be transition issues; during transition period, can implement this as an option, when mainstream adoption is here, hopefully everyone adapts explicit encoding
+  * Discussion on copy/paste errors when using principal for default subaccount
+    * Ben: what if user just knows the principal concept? recognizes principal and transfers to principal instead of full address
+  * Roman: most would support both approaches anyway; people may prefer to send to principal directly; immediately useful; thinks Option 2 is the best choice
+  * Austin: also thinks 2 is good as it is already out there
+  * Discussion on whether this could be implemented as part of the frontend; principal transfer can still be supported; have branch in frontend to call either
+  * Roman: browser extensions have little screen real estate, they may just shown one field; security argument gone then
+  * If we have the option in the frontend, we don't really have uniquness
+    * Timo: paste something in, later look at block explorer, you expect the same thing; don't like this translation happening in the back; what user pastes and sees should be the same data
+    * Levi: allowing the principal itself is an issue because of copy/paste errors when missing subaccount
+    * Timo: would accept that risk; if someone copies only the principal of the whole encoding, we can probably accept this
+  * Ben: What about checksum in the middle, attached with "-" to principal? blends in checksum with principal
+    * Properties
+      * Less risk to just copy the principal and miss the checksum and subaccount
+      * Little less readability of principal
+      * Would be compromise between reducing risk of copy/paste error and slightly less readable representation
+    * Discussion of copy/paste error: would need knowledge of the encoding by the user to copy only the principal; a new user to the ecosystem would typically copy the principal including the checkum as it looks like visually belonging together
+    * Ben: problem with "." is that user can clearly visually separate the parts; in that case, he would prefer to intentionally confuse user on which part is the principal, if the principal should be a valid encoding on its own
+    * Roman: parsing becomes hard, principals don't all have the same length
+    * Milind: This has a high semantic burden on user
+    * Levi: original textual encoding option also shows the principal, but without the checksum characters in the beginning
+      * Comment: not sure whether this is true as every character represents 6 bits
+  * Continue discussion in the next meeting
+  * Roman: should allow principal as subaccount
+    * After some clarifying discussion, Roman might think the proposal could be OK
+    * Not having checksum at the end removes the nice property that the first and last characters have most information on the whole encoding, however
+  * Roman: how to deal with zeroes in subaccounts
+  * Let's continue the discussion next time, this is too important to be rushed
+
+
+## 2023-01-24
+[Slide deck](https://docs.google.com/presentation/d/1J4RG6Dj2oFzOWTRbxh8J59I3iF49WSM1YoU92_vBMnM/edit#slide=id.g1cb864ea205_0_62), [recording](https://drive.google.com/file/d/1B04AtA-yMQcJdtFItb76dP48yAZkoiMu/view?usp=share_link)
+
+The full discussion can be viewed in the video.
+
+**Textual encoding format for ICRC-1 account addresses**
+
+* Dieter presents the different options.
+  * Not in the slides: For 4a/4b, a variable-length checksum has been proposed as a possibility.
+* Note: Video starts directly after the initial presentation of the options.
+* Jorgen wonders about privacy properties of the encodings.
+* Austin and Dieter explain: It does not matter which encoding we use, as they all encode the same information. In the original ICP encoding we had better perceived privacy. We made a strategic decision to use the pair `(principal, subaccount)` unhashed, which does not give the perceived privacy of the original ledger API. Any useful encoding we choose for this information contains this information, thus they are all the same in terms of privacy.
+* Timo: There is an early fork between Option 1 and all the other options. Let's decide on which of the two ways to go.
+* Dieter clarifies why we went for other options than 1: Option 1 does not have a human-readable representation, it is much harder to work with.
+* Mario gives the example of the dashboard: It was tedious to work with the Option 1, which is currenrly implemented. He agrees with going for a human-readable approach.
+* Roman: Another nice property of a human-readable representation is that it implicitly sorts the accounts by principle, which is very helpful because related things end up close together.
+* Matthew brings up a concern: Hand-craftability may not even be desirable in the future.
+* Dieter clarifies that among proposals 2-4b, there are other options that are not hand craftable. When eliminating Option 1 now, the only thing we lose is the lack of human-readability.
+* Levi: Most important to him are checked subaccounts. No strong opinion on whether "simple" subaccounts can be unchecked. But complex subaccount with the first characters of 1, 2, etc. could still be miscopied.
+* **The working group agrees that we can eliminate Option 1.**
+
+* **Option 2**
+* Dieter: Eyeballing the principal when comparing is harder in Option 2 than in other options because of encoding in character case.
+* Ben: Thinks is not even correctly represented. Cannot compare principals across subaccounts.
+* Austin: Principal is checksummed itself already.
+* After some discussion the group comes to a conclusion:
+* **The working group agrees to eliminate Option 2 as well.**
+
+* **Decision between Options 3, 4a, and 4b**
+* Dieter reiterates the essence of the option 3 
+* Austin: Is it fair to say 4b is hand craftable?
+  * Dieter: If you want to hand craft a checksum without a tool: no.
+  * Ben: not being handcraftable is not necessarily a bad thing
+* Dieter: uniqueness is not a big thing to be fair; whenever you want uniqueness, you can normalize the representation in other options easily.
+* Could it be a big thing that people copy/paste non-checksummed representations that were not intended for copying, e.g., from a block explorer?
+  * Ben: Strong opposition against variable length checksum. Adds complexity for not much benefit. We should have fixed-length checksum.
+  * Medium-strength objection regarding optionality. Developers may start not implementing it and we could end up with ecosystem where checksums are not really used.
+  * Medium opposition against 4a.
+  * No strong preference for 3 or 4b.
+  * 3 does have some nice properties.
+* Timo: Always possible that programmer does not add checksum.
+* Ben: Extra path in codepath, not a nice property.
+* Levi: Uniqueness important to him, helps avoid confusion. Having more than 1 representation for one account is not a good idea.
+  * What about the following: In Option 3, making property "checked" green and "hand craftable" red, would be perfect. Suggestion: What about taking the subaccount of 3 and add as last 4 bytes to the subaccount section a mandatory checksum, even for simple subaccounts.
+  * Dieter: This is almost option 4b (N.B.: there, the checksum is in the middle, and may or may not have a separator, details t.b.d.).
+  * Levi: Could leave it even without a separator, at end of subaccount, as checksum over principal and subaccount.
+  * Timo: If there is no separator and small subaccount ids, would that not be confusing?
+  * Austin: Just having one separator implies simplicity over having 2 separators. Do like only having 1, but might complicate it.
+  * Mario: Prefers 2 separators.
+  * Are we sure we don't want the ability to hand craft small subaccounts? Can get them wrong but it is 1 or a few digits only. For big transfers, copy from a wallet anyway.
+  * Roman: Think it's nice in general, but is easier to have a tool to compute the textual representation. They have this for Bitcoin, for example. Much more important to have unique representation. Should not have options, but one unique way to represent it.
+  * Timo: Uniqueness required for lookup, easy to do. Developer needs to do it. Block explorer removes checksum to get it unique, for example.
+  * Roman prefers no optionality at all.
+* Discussion that block explorers need to normalize the representation for their use anyway, otherwise it would be an incorrect implementation. Block explorer could present all addresses with or without checksum, depending on user-settable toggle.
+* Levi: User may be confused if putting in account id and page loads with different account id.
+* Timo: Where in the lifetime of account address do you want a checksum as you need it, and where is it required. Only needed where there is a human involved, e.g., when copy/pasting it. Even when using QR, it is not required. When reading on block explorer or tracing tx, a checksum is rather counterproductive.
+* Ben: We cannot expect developers doing an app to figure out exact user path, there can be always new ways of doing things. Eliminating issues here eliminates problems.
+* Roman: The fewer options we give to people, the less they can screw up.
+* Ben: Option 3 has embedded checksum as advantage.
+* Levi: Leaning towards 4b, with mandatory checksum at the end. 2 separators would be fine as well. Prefers colons as separators.
+  * Roman: Also likes this idea better. Not sure about dash also, principal has dashes as separators. Should have 4c with checksum in the end without the dash.
+* Dieter: Let's make main decision first, and then go into details: Optionality and handcraftability. 3 or 4a or 4b.
+  * Jorgen: Hand craftability might even be an anti-pattern, one should maybe not be able to do this. Important to be able to eyeball the encoding. Not encourage anything else than copy/pasting it.
+    * Roman: Fully agrees.
+  * Austin: As prior art, both principal and human-readable version of account id has checksum, does not know of anyone sending money to completely wrong place. May already have a good starting point by having checksums already on individual elements.
+  * Dieter summarizes that Option 3 does not have much support.
+* Norbert brings up Option 1 again: Is it a good idea to have a checksum for everything?
+  * Mario: In Option 1, the principal is not readable at all.
+  * Roman: Most important that the principal can be seen. This helps a lot already. If searching for principal on web page and can see all accounts of it, this is also extremely valuable. Either is not possible with 1.
+  * Other options than 1 have a checksum over everything, this is not a unique property of 1, whereas opaqueness is.
+* Matthew: What about checksum only when subaccount has a certain complexity.
+  * Roman: Problem that if prefix is copied, goes to wrong account. Cool part of checksum at the end: many web sites shorten the account to first and last bytes, so we get most amount of information about account in this way. Referring to Option 4b with overall checksum at the end, which has the principal checksum in the beginning and the overall checksum at the end.
+* Dieter: We gravitate towards 4b, there is rather strong opposition by some people against having the checksum optional. Seems 4b is preferred option by the majority currently.
+  * Timo summarizes about giving up optionality: When sending to "simple" subaccount, need (online) tool tool where one can paste in components and it computes the encoding.
+  * Ben: Option 3 was intended to not require such a tool when crafting small subaccounts.
+  * Timo: Clarifies that he gives up his preference for optionality of 4a and is fine with 4b.
+  * Dieter thinks most people now gravitate towards 4b.
+
+* **We run a poll on 3, 4a, 4b (4c is included in 4b)**
+  * 3: Checksum encoded as part of principal, hand craftable
+  * 4a: Optional explicit checksum, hand craftable if no checksum
+  * 4b: Mandatory explicit checksum in the middle or the end (details t.b.d.), not hand craftable
+  * N.B.: Some people interpreted 4b as mandatory checksum in the middle only and voted for 4c (mandatory explicit checksum at the end) as other option
+  * **People very clearly prefer 4b (or 4c).**
+    * No vote for 3 or 4a
+    *  **Everyone prefers 4b (or 4c): mandatory checksum over everything in the middle or at the end**
+
+* In the **next meeting**, we have to discuss the details of representation:
+  * checksum in the middle or at the end;
+  * if, and if so, which, separator to use for the checksum.
+* Jorgen wants to discuss also whether a principal alone is valid.
+* Mario announces that we have released the new ledger with the ICRC-1 interface. This means that now the ICP ledger and SNS ledgers all support ICRC-1.
+
 
 ## 2023-01-10
 [Slide deck](https://docs.google.com/presentation/d/1bADDPijUR653DfoS3cZ5HLJuRLXSMeXZcQjZGCz_U0o/edit), [recording](https://drive.google.com/file/d/1D-XGvc69IbH5J4UZwGxO5agMIoTzHYex/view)
