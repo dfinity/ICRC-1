@@ -198,8 +198,6 @@ icrc2_cancel_approval : (nat) -> (variant { Ok : nat; Err : CancelApprovalError 
 type CancelApprovalError = variant {
     ApprovalNotFound;
     CallerIsNotTheApprover;
-    ApprovalIsExpired;
-    ApprovalIsCanceled : record { cancellation: nat; };
 };
 
 ```
@@ -213,10 +211,10 @@ type CancelApprovalError = variant {
    Otherwise, the ledger MUST return an `CallerIsNotTheApprover` error.
     
  * The approval must not be expired.
-  Otherwise, the ledger MUST return an `ApprovalIsExpired` error.
+  Otherwise, the ledger MUST return an `ApprovalNotFound` error.
 
  * The approval must not have been previously canceled.
-  Otherwise, the ledger MUST return an `ApprovalIsCanceled` error with the cancellation block-id.
+  Otherwise, the ledger MUST return an `ApprovalNotFound` error.
 
 #### Postconditions
 

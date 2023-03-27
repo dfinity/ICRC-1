@@ -67,8 +67,6 @@ type Allowance = record {
 type CancelApprovalError = variant {
     ApprovalNotFound;
     CallerIsNotTheApprover;
-    ApprovalIsExpired;
-    ApprovalIsCanceled : record { cancellation: nat; };
 };
 
 service : {
