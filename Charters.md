@@ -1,5 +1,105 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2023-03-21
+[Slide deck](https://docs.google.com/presentation/d/1sOj9HEcnn_p9m1Xh1jlLfOFMB0KIUs9Lvy1XBwFE3qk/edit?usp=share_link), [recording](https://drive.google.com/file/d/1YNzDNZFlGcqcaGabXAClXqnYrZsHLigi/view?usp=share_link)
+
+Sam / Samer joins the WG; he is working on a Motoko book and decided to join the WG
+
+**ICRC-2: Recurring payments**
+
+* Dieter summarizes the discussions of the proposal so far
+  * Levi's proposal is about handling each approval separately with independent expirations
+  * Currently, approvals are subsumed additively and the whole approved amount gets the expiration date of the latest approval
+  * The proposal has the following properties:
+    * Somewhat higher complexity of implementation
+    * Cleaner modeling of data
+    * Require more storage
+  * A discussion in Dfinity has come to the following conclusions:
+    * If we go for this proposal, we may want to also have a starting time for the approvals
+    * We would not want to have negative approvals
+    * We need to be able to cancel approvals
+* Levi
+  * Negative approvals have been removed in the proposal already in his PR
+  * New method to cancel approvals by the id
+  * Allowance now returns all allowances and approvals between account and spender
+* Roman
+  * Tried to implement previous version; main problem were negative amounts; needs representation of u64 for token amount and the sign; pain to have this; would be in favour of removing negative approvals
+    * Semantics of expirations: Levi's proposal is most natural thing to have; each approval is a separate entity independent of other approvals; most people would expect this semantics when using this API
+    * If we also have starting points of validity, users can use this for recurring payments
+* Levi agrees that having a starting date is a great way of realizing recurring approvals
+  * Better to have this than an approval type for recurring approvals
+* Dieter explains an issue related to memory consumption and DoS potential
+  * Attackers can create a large number of approvals and then repeatedly make transfers that need to touch many of those, but fail; this would consume lots of computational resources; this is fixable by a limit on the number of approvals between two entities; the parameter and applicable fees to work need to be determined
+  * Levi thinks this would be a great thing to do
+  * Levi wonders whether we should set it globalls for all ledgers
+  * Dieter suggests we could make a recommendation or require a minimum and leave the decision to a ledger; 100 approvals as a minimum may make sense practically
+  * Roman mentions that when needing more approvals, one can work around it with subaccounts, so the limit should not be a limiting issue
+* Dieter raises the point of **overall memory consumption**: Is the additional memory consumption a problem?
+  * Mario thinks it is the same as everything else in the ledger as a fee is paid
+    * Same as approving different principals; does not add any more problems in his opinion
+* **Differences to ERC-20**: Is that an issue?
+  * Levi thinks it's not an issue; IC contracts are different than those in the synchronous world
+  * Dieter also thinks we should not take over the limiting things from the ERC-20 world that originally have arised from the limitations of the synchronous world and Ethereum specifically
+* Ben: strong opinions from DeFi people: they strongly oppose going for the proposal; higher complexity; gains in functionality do not outweight the costs
+  * How elegant the implementation is should bear no weight on which semantics we implement as we are doing a standard; the user perspective is important; this proposal makes it more difficult to use
+  * Roman: Does not think there is significant increase of implementation complexity
+  * Ben motivates the opposition as he thinks that the backend needs the id of approvals to use them and it is more complex for the backend than using the current semantics
+  * Mario: there is no alternative approach for services; need to try to do transfer_from
+  * Ben: Then nobody would be spending per approval id?
+  * Levi: Yes, that's not even possible; when you make a transfer from, the ledger uses approvals starting with the ones expiring soonest, sorting in ascending order by expiry
+  * No added complexity for backend canister to use the proposed mechanism
+  * Proposed approach
+    * Pros of proposal: extra functionality; feels more natural
+    * Cons: more memory consumtion
+  * Mario thinks that the current approach of changing expiration date of old approvals with new approvals is not what one wants to do
+  * If there's no difference on the spender side
+  * People think that current and proposed approach are equally doable in terms of formal modelling; model might be cleaner with the new proposal, however
+  * Roman's main concern is that people would assume it works like the proposed approach; that's a problem if we implement the current approach
+  * Timo: Thinks it's hard to say what is natural; the proposal may be more complicated for the user; if careful, can cover new use cases, but if you are not careful, you can mess up; need to carefully track what you have done
+    * Roman: There will be an endpoint where you can query all approvals
+    * Timo: Yes, but the response is more complicated than getting back a single approval
+    * Roman: The proposal gives you exactly what you asked for: series of approvals as user defined them; feels more natural; original reason for using additive semantics was that multiple concurrent transactions don't interfere with each other; with the current semantics, they interfere with each other, in the proposed semantics they don't as they are independent
+    * Timo: current approach is like a step function
+  * Ben: Are we over engineering the system?
+    * Roman: Removing expiration dates completely would be much simpler; if we have expiration dates, we should do them correctly
+  * Dieter: 2 questions to answer: (1) Do we want to keep the expiration date? (2) If so, how to implement it?
+    * Dan: What about approving something that should be valid only during a range of time?
+    * Dieter: That's possible with the extension of the proposal: Approvals have a starting and ending time
+      * This does not substantially increase implementation complexity
+    * Dieter asks the group who is in favour of not having expiration date
+    * Roman: we should ask the community through a forum post on what they think about having expiration dates
+      * Roman or Dieter will take care of this
+    * No one in this group raised their hands in favour of removing expiration dates
+  * Timo asks for clarification on semantics of proposal if multiple approvals are open
+    * Levi clarifies: [PR101](https://github.com/dfinity/ICRC-1/pull/101) explains it
+      * Ledger takes all current available approvals (after start date if there is one, before expiration date if there is one)
+      * Sorts approvals by expiring soonest to expiring latest
+      * Sums up remaining allowances of those approvals, makes sure amount to be transferred is less than or equal to this sum
+      * Goes through sorted allowances list and starts deducting transfer amount and fee until transfer is covered
+  * Levi: Should ICRC-2 approve have its own fee? Separate from ICRC-1 transfer function, different fee
+    * Roman: no strong opinion, from storage point of view there is no big difference, we charge the same
+    * Mario: ideally, we may want a different fee per operation
+    * Roman: implementers are free to decide the fee
+    * Mario: indeed, it would be best to not have the fee in the standard
+    * Roman: send message to ledger with fee proposal; if ledger does not agree, it sends an error with its fee requirements; 1 extra hop to talk to ledger
+    * Ben: this should not be in the standard as the fee is optional; should be up to implementation to decide
+    * Levi: yes, that's a decent way forward; we have the fee error
+  * Levi: Any comments on allowances args; get back earliest approval id and list of approvals
+    * Roman: if we limit number to, e.g., 100, we don't need paging for retrieval; main issue with large amount of approvals between two entities is computation; 100 approvals easily fit into max response size; could use paging mechanism for future proofness
+    * Levi: id also needed for cancelling approvals by id
+    * Outcome of discussion: we should cap number of approvals
+  * Levi: Comments on cancelling approvals
+    * Ben, Roman: if cancelled, would return approval not found error; otherwise we need to keep the information on all cancelled approvals
+  * Roman: Let's draft a post in the forum to get feedback on the proposal; Roman or Dieter
+    * Ask what people want, for example:
+      * Abandon expiration dates?
+      * Which semantics to have?
+* We continue the discussion on this item in the next meeting
+
+**Action items**
+* Roman / Dieter making a forum post to ask the community what they prefer
+
+
 ## 2023-03-07
 [Slide deck](https://docs.google.com/presentation/d/11QcNtl8QFNg2LL1BrahDU559Uy7LoSXXPGJz_vDxKTk/edit?usp=share_link), [recording](https://drive.google.com/file/d/1jpwUIQgkDl_M-IVdKLOBMzXfoPA8j6Ad/view?usp=share_link)
 
