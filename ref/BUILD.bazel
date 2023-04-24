@@ -6,6 +6,18 @@ motoko_library(
     srcs = ["@motoko_base//:sources"],
 )
 
+motoko_library(
+    name = "account",
+    srcs = ["Account.mo"],
+    deps = [":base"],
+)
+
+motoko_test(
+    name = "account_test",
+    entry = "AccountTest.mo",
+    deps = [":account"],
+)
+
 motoko_binary(
     name = "icrc1_ref",
     entry = "ICRC1.mo",
