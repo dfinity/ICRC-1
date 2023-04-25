@@ -1,18 +1,50 @@
+import Array "mo:base/Array";
 import Blob "mo:base/Blob";
+import Char "mo:base/Char";
 import Text "mo:base/Text";
+import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import Nat8 "mo:base/Nat8";
 import Nat32 "mo:base/Nat32";
 import Principal "mo:base/Principal";
+import Option "mo:base/Option";
+import Result "mo:base/Result";
 
 module {
   public type Account = { owner : Principal; subaccount : ?Blob };
+  public type ParseError = {
+    #malformed : Text;
+    #not_canonical;
+    #bad_checksum;
+  };
 
   // prettier-ignore
-  let hexDigits = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
+  let hexDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
 
-  func hexDigit(n : Nat) : Text {
-    hexDigits[n]
+  func hexDigit(n : Nat8) : Char {
+    hexDigits[Nat8.toNat(n)];
+  };
+
+  func decodeHexDigit(c : Char) : ?Nat8 {
+    switch (c) {
+      case ('0') { ?0 };
+      case ('1') { ?1 };
+      case ('2') { ?2 };
+      case ('3') { ?3 };
+      case ('4') { ?4 };
+      case ('5') { ?5 };
+      case ('6') { ?6 };
+      case ('7') { ?7 };
+      case ('8') { ?8 };
+      case ('9') { ?9 };
+      case ('a') { ?10 };
+      case ('b') { ?11 };
+      case ('c') { ?12 };
+      case ('d') { ?13 };
+      case ('e') { ?14 };
+      case ('f') { ?15 };
+      case _ { null };
+    };
   };
 
   // prettier-ignore
@@ -65,10 +97,6 @@ module {
   // prettier-ignore
   let base32Alphabet = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "2", "3", "4", "5", "6", "7"];
 
-  func base32Digit(n : Nat) : Text {
-    base32Alphabet[n];
-  };
-
   func updateCrc(crc : Nat32, byte : Nat8) : Nat32 {
     crc32Table[Nat32.toNat(crc ^ Nat32.fromNat(Nat8.toNat(byte)) & 0xff)] ^ (crc >> 8);
   };
@@ -85,42 +113,27 @@ module {
     let sum = crc ^ seed;
 
     let d = func(shift : Nat) : Text {
-      base32Digit(Nat32.toNat((sum >> Nat32.fromNat(shift)) & 0x1f));
+      base32Alphabet[Nat32.toNat((sum >> Nat32.fromNat(shift)) & 0x1f)];
     };
 
-    d(27) # d(22) # d(17) # d(12) # d(7) # d(2) # base32Digit(Nat32.toNat((sum & 0x03) << 3));
+    d(27) # d(22) # d(17) # d(12) # d(7) # d(2) # base32Alphabet[Nat32.toNat((sum & 0x03) << 3)];
   };
 
   // Hex-encodes a subaccount, skipping the leading zeros.
   func displaySubaccount(subaccount : [Nat8]) : Text {
-    var acc = "";
-    var i = 0;
-    // Hex-encode, skipping leading zero characters.
-    label l loop {
-      let b = subaccount[i];
-      i += 1;
-      let hi = b / 16;
-      let lo = b % 16;
-      if (hi != 0) {
-        acc #= hexDigit(Nat8.toNat(hi));
-        acc #= hexDigit(Nat8.toNat(lo));
-        break l;
-      };
-      if (lo != 0) {
-        acc #= hexDigit(Nat8.toNat(lo));
-        break l;
-      };
-      if (i == 32) {
-        break l;
-      };
+    func nibbles(b : Nat8) : Iter.Iter<Nat8> {
+      iterChain(iterOnce(b / 16), iterOnce(b % 16));
     };
-    // Hex-encode the rest of the subaccount normally.
-    while (i < 32) {
-      acc #= hexDigit(Nat8.toNat(subaccount[i] / 16));
-      acc #= hexDigit(Nat8.toNat(subaccount[i] % 16));
-      i += 1;
-    };
-    acc;
+
+    Text.fromIter(
+      Iter.map(
+        iterSkipWhile(
+          iterFlatMap(Iter.fromArray(subaccount), nibbles),
+          func(b : Nat8) : Bool { b == 0 },
+        ),
+        hexDigit,
+      )
+    );
   };
 
   public func toText({ owner; subaccount } : Account) : Text {
@@ -136,6 +149,196 @@ module {
         } else {
           ownerText # "-" # checkSum(owner, subaccount) # "." # suffix;
         };
+      };
+    };
+  };
+
+  public func fromText(text : Text) : Result.Result<Account, ParseError> {
+    let n = text.size();
+
+    if (n == 0) {
+      return #err(#malformed("empty"));
+    };
+
+    let charsIter = text.chars();
+    let chars = Array.tabulate(n, func(_ : Nat) : Char { Option.get(charsIter.next(), ' ') });
+
+    var lastDash = n;
+    var dot = n;
+
+    // Find the last dash and the dot.
+    label l for (i in Iter.range(0, n - 1)) {
+      if (chars[i] == '-') { lastDash := i };
+      if (chars[i] == '.') { dot := i; break l };
+    };
+
+    if (lastDash == n) {
+      return #err(#malformed("expected at least one dash ('-') character"));
+    };
+
+    if (dot == n) {
+      // No subaccount separator: the principal case.
+      return #ok({ owner = Principal.fromText(text); subaccount = null });
+    };
+
+    let numSubaccountDigits = (n - dot - 1) : Nat;
+
+    if (numSubaccountDigits > 64) {
+      return #err(#malformed("the subaccount is too long (expected at most 64 characters)"));
+    };
+
+    if (dot < lastDash) {
+      return #err(#malformed("the subaccount separator does not follow the checksum separator"));
+    };
+
+    // The encoding ends with a dot, the subaccount is empty.
+    if (dot == (n - 1 : Nat)) {
+      return #err(#not_canonical);
+    };
+
+    // The first digit after the dot must not be a zero.
+    if (chars[dot + 1] == '0') {
+      return #err(#not_canonical);
+    };
+
+    let principalText = Text.fromIter(iterSlice(chars, 0, lastDash - 1 : Nat));
+    let owner = Principal.fromText(principalText);
+
+    var subaccountMut = Array.init<Nat8>(32, 0);
+
+    let subaccountDigits = iterChain(
+      iterReplicate('0', 64 - numSubaccountDigits : Nat),
+      iterSlice(chars, dot + 1, n - 1 : Nat),
+    );
+
+    // Decode hex backwards into the subaccount array.
+    for ((i, c) in iterEnumerate(subaccountDigits)) {
+      let value = switch (decodeHexDigit(c)) {
+        case (?v) { v };
+        case (null) {
+          return #err(#malformed("invalid hex char: '" # Text.fromChar(c) # "'"));
+        };
+      };
+      if (i % 2 == 0) {
+        subaccountMut[i / 2] += value << 4;
+      } else {
+        subaccountMut[i / 2] += value;
+      };
+    };
+
+    // Check that the subaccount is not the default.
+    if (iterAll<Nat8>(subaccountMut.vals(), func(x : Nat8) : Bool { x == 0 })) {
+      return #err(#not_canonical);
+    };
+
+    let subaccount = Blob.fromArrayMut(subaccountMut);
+
+    if (not iterEqual<Char>(checkSum(owner, subaccount).chars(), iterSlice(chars, lastDash + 1, dot - 1 : Nat), Char.equal)) {
+      return #err(#bad_checksum);
+    };
+
+    #ok({ owner = owner; subaccount = ?subaccount });
+  };
+
+  // Helper functions to deal with iterators
+
+  func iterSlice<T>(a : [T], from : Nat, to : Nat) : Iter.Iter<T> {
+    Iter.map(Iter.range(from, to), func(i : Nat) : T { a[i] });
+  };
+
+  func iterEqual<T>(xs : Iter.Iter<T>, ys : Iter.Iter<T>, eq : (T, T) -> Bool) : Bool {
+    loop {
+      switch ((xs.next(), ys.next())) {
+        case ((null, null)) { return true };
+        case ((null, _)) { return false };
+        case ((_, null)) { return false };
+        case ((?x, ?y)) { if (not eq(x, y)) { return false } };
+      };
+    };
+  };
+
+  func iterAll<T>(xs : Iter.Iter<T>, predicate : (T) -> Bool) : Bool {
+    loop {
+      switch (xs.next()) {
+        case (null) { return true };
+        case (?x) { if (not predicate(x)) { return false } };
+      };
+    };
+  };
+
+  func iterSkipWhile<T>(xs : Iter.Iter<T>, predicate : (T) -> Bool) : Iter.Iter<T> {
+    loop {
+      switch (xs.next()) {
+        case (null) { return xs };
+        case (?x) {
+          if (not predicate(x)) {
+            return iterChain(iterOnce(x), xs);
+          };
+        };
+      };
+    };
+  };
+
+  func iterEnumerate<T>(xs : Iter.Iter<T>) : Iter.Iter<(Nat, T)> = object {
+    var counter = 0;
+
+    public func next() : ?(Nat, T) {
+      switch (xs.next()) {
+        case (?x) {
+          let count = counter;
+          counter += 1;
+          ?(count, x);
+        };
+        case (null) { null };
+      };
+    };
+  };
+
+  func iterFlatMap<T, S>(xs : Iter.Iter<T>, f : (T) -> Iter.Iter<S>) : Iter.Iter<S> = object {
+    var it = iterEmpty<S>();
+
+    public func next() : ?S {
+      loop {
+        switch (it.next()) {
+          case (?s) { return ?s };
+          case (null) {
+            switch (xs.next()) {
+              case (null) { return null };
+              case (?x) { it := f(x) };
+            };
+          };
+        };
+      };
+    };
+  };
+
+  func iterReplicate<T>(x : T, times : Nat) : Iter.Iter<T> = object {
+    var left = times;
+
+    public func next() : ?T {
+      if (left == 0) { null } else { left -= 1; ?x };
+    };
+  };
+
+  func iterEmpty<T>() : Iter.Iter<T> = object {
+    public func next() : ?T = null;
+  };
+
+  func iterOnce<T>(x : T) : Iter.Iter<T> = object {
+    var value = ?x;
+
+    public func next() : ?T {
+      let old_value = value;
+      value := null;
+      old_value;
+    };
+  };
+
+  func iterChain<T>(xs : Iter.Iter<T>, ys : Iter.Iter<T>) : Iter.Iter<T> = object {
+    public func next() : ?T {
+      switch (xs.next()) {
+        case (null) { ys.next() };
+        case (?x) { ?x };
       };
     };
   };
