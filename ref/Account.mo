@@ -219,11 +219,7 @@ module {
           return #err(#malformed("invalid hex char: '" # Text.fromChar(c) # "'"));
         };
       };
-      if (i % 2 == 0) {
-        subaccountMut[i / 2] += value << 4;
-      } else {
-        subaccountMut[i / 2] += value;
-      };
+      subaccountMut[i / 2] += value << (4 * Nat8.fromNat(1 - i % 2));
     };
 
     // Check that the subaccount is not the default.
