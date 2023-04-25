@@ -94,6 +94,8 @@ module {
   , 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
   ];
 
+  let crc32Seed : Nat32 = 0xffffffff;
+
   // prettier-ignore
   let base32Alphabet = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "2", "3", "4", "5", "6", "7"];
 
@@ -102,25 +104,17 @@ module {
   };
 
   func checkSum(owner : Principal, subaccount : Blob) : Text {
-    let seed : Nat32 = 0xffffffff;
-    var crc = seed;
-    for (b in Principal.toBlob(owner).vals()) {
-      crc := updateCrc(crc, b);
-    };
-    for (b in subaccount.vals()) {
-      crc := updateCrc(crc, b);
-    };
-    let sum = crc ^ seed;
+    let crc = crc32Seed ^ iterFold(iterChain(Principal.toBlob(owner).vals(), subaccount.vals()), updateCrc, crc32Seed);
 
     let d = func(shift : Nat) : Text {
-      base32Alphabet[Nat32.toNat((sum >> Nat32.fromNat(shift)) & 0x1f)];
+      base32Alphabet[Nat32.toNat((crc >> Nat32.fromNat(shift)) & 0x1f)];
     };
 
-    d(27) # d(22) # d(17) # d(12) # d(7) # d(2) # base32Alphabet[Nat32.toNat((sum & 0x03) << 3)];
+    d(27) # d(22) # d(17) # d(12) # d(7) # d(2) # base32Alphabet[Nat32.toNat((crc & 0x03) << 3)];
   };
 
   // Hex-encodes a subaccount, skipping the leading zeros.
-  func displaySubaccount(subaccount : [Nat8]) : Text {
+  func displaySubaccount(subaccount : Blob) : Text {
     func nibbles(b : Nat8) : Iter.Iter<Nat8> {
       iterChain(iterOnce(b / 16), iterOnce(b % 16));
     };
@@ -128,7 +122,7 @@ module {
     Text.fromIter(
       Iter.map(
         iterSkipWhile(
-          iterFlatMap(Iter.fromArray(subaccount), nibbles),
+          iterFlatMap(subaccount.vals(), nibbles),
           func(b : Nat8) : Bool { b == 0 },
         ),
         hexDigit,
@@ -141,13 +135,11 @@ module {
     switch (subaccount) {
       case (null) { ownerText };
       case (?subaccount) {
-        let subaccountBytes = Blob.toArray(subaccount);
-        assert (subaccountBytes.size() == 32);
-        let suffix = displaySubaccount(subaccountBytes);
-        if (suffix.size() == 0) {
+        assert (subaccount.size() == 32);
+        if (iterAll(subaccount.vals(), func(b : Nat8) : Bool { b == 0 })) {
           ownerText;
         } else {
-          ownerText # "-" # checkSum(owner, subaccount) # "." # suffix;
+          ownerText # "-" # checkSum(owner, subaccount) # "." # displaySubaccount(subaccount);
         };
       };
     };
@@ -335,6 +327,16 @@ module {
       switch (xs.next()) {
         case (null) { ys.next() };
         case (?x) { ?x };
+      };
+    };
+  };
+
+  func iterFold<T, A>(xs : Iter.Iter<T>, f : (A, T) -> A, seed : A) : A {
+    var acc = seed;
+    loop {
+      switch (xs.next()) {
+        case (null) { return acc };
+        case (?x) { acc := f(acc, x) };
       };
     };
   };
