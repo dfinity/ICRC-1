@@ -18,6 +18,110 @@ module {
     #bad_checksum;
   };
 
+  /// Converts an account to text.
+  public func toText({ owner; subaccount } : Account) : Text {
+    let ownerText = Principal.toText(owner);
+    switch (subaccount) {
+      case (null) { ownerText };
+      case (?subaccount) {
+        assert (subaccount.size() == 32);
+        if (iterAll(subaccount.vals(), func(b : Nat8) : Bool { b == 0 })) {
+          ownerText;
+        } else {
+          ownerText # "-" # checkSum(owner, subaccount) # "." # displaySubaccount(subaccount);
+        };
+      };
+    };
+  };
+
+  /// Parses account from its textual representation.
+  public func fromText(text : Text) : Result.Result<Account, ParseError> {
+    let n = text.size();
+
+    if (n == 0) {
+      return #err(#malformed("empty"));
+    };
+
+    let charsIter = text.chars();
+    let chars = Array.tabulate(n, func(_ : Nat) : Char { Option.get(charsIter.next(), ' ') });
+
+    var lastDash = n;
+    var dot = n;
+
+    // Find the last dash and the dot.
+    label l for (i in Iter.range(0, n - 1)) {
+      if (chars[i] == '-') { lastDash := i };
+      if (chars[i] == '.') { dot := i; break l };
+    };
+
+    if (lastDash == n) {
+      return #err(#malformed("expected at least one dash ('-') character"));
+    };
+
+    if (dot == n) {
+      // No subaccount separator: the principal case.
+      return #ok({ owner = Principal.fromText(text); subaccount = null });
+    };
+
+    let numSubaccountDigits = (n - dot - 1) : Nat;
+
+    if (numSubaccountDigits > 64) {
+      return #err(#malformed("the subaccount is too long (expected at most 64 characters)"));
+    };
+
+    if (dot < lastDash) {
+      return #err(#malformed("the subaccount separator does not follow the checksum separator"));
+    };
+
+    if (dot - lastDash - 1 : Nat != 7) {
+      return #err(#bad_checksum);
+    };
+
+    // The encoding ends with a dot, the subaccount is empty.
+    if (dot == (n - 1 : Nat)) {
+      return #err(#not_canonical);
+    };
+
+    // The first digit after the dot must not be a zero.
+    if (chars[dot + 1] == '0') {
+      return #err(#not_canonical);
+    };
+
+    let principalText = Text.fromIter(iterSlice(chars, 0, lastDash - 1 : Nat));
+    let owner = Principal.fromText(principalText);
+
+    var subaccountMut = Array.init<Nat8>(32, 0);
+
+    let subaccountDigits = iterChain(
+      iterReplicate('0', 64 - numSubaccountDigits : Nat),
+      iterSlice(chars, dot + 1, n - 1 : Nat),
+    );
+
+    // Decode hex backwards into the subaccount array.
+    for ((i, c) in iterEnumerate(subaccountDigits)) {
+      let value = switch (decodeHexDigit(c)) {
+        case (?v) { v };
+        case (null) {
+          return #err(#malformed("invalid hex char: '" # Text.fromChar(c) # "'"));
+        };
+      };
+      subaccountMut[i / 2] += value << (4 * Nat8.fromNat(1 - i % 2));
+    };
+
+    // Check that the subaccount is not the default.
+    if (iterAll<Nat8>(subaccountMut.vals(), func(x : Nat8) : Bool { x == 0 })) {
+      return #err(#not_canonical);
+    };
+
+    let subaccount = Blob.fromArrayMut(subaccountMut);
+
+    if (not iterEqual<Char>(checkSum(owner, subaccount).chars(), iterSlice(chars, lastDash + 1, dot - 1 : Nat), Char.equal)) {
+      return #err(#bad_checksum);
+    };
+
+    #ok({ owner = owner; subaccount = ?subaccount });
+  };
+
   // prettier-ignore
   let hexDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
 
@@ -103,7 +207,7 @@ module {
     crc32Table[Nat32.toNat(crc ^ Nat32.fromNat(Nat8.toNat(byte)) & 0xff)] ^ (crc >> 8);
   };
 
-  func checkSum(owner : Principal, subaccount : Blob) : Text {
+  public func checkSum(owner : Principal, subaccount : Blob) : Text {
     let crc = crc32Seed ^ iterFold(iterChain(Principal.toBlob(owner).vals(), subaccount.vals()), updateCrc, crc32Seed);
 
     let d = func(shift : Nat) : Text {
@@ -128,104 +232,6 @@ module {
         hexDigit,
       )
     );
-  };
-
-  public func toText({ owner; subaccount } : Account) : Text {
-    let ownerText = Principal.toText(owner);
-    switch (subaccount) {
-      case (null) { ownerText };
-      case (?subaccount) {
-        assert (subaccount.size() == 32);
-        if (iterAll(subaccount.vals(), func(b : Nat8) : Bool { b == 0 })) {
-          ownerText;
-        } else {
-          ownerText # "-" # checkSum(owner, subaccount) # "." # displaySubaccount(subaccount);
-        };
-      };
-    };
-  };
-
-  public func fromText(text : Text) : Result.Result<Account, ParseError> {
-    let n = text.size();
-
-    if (n == 0) {
-      return #err(#malformed("empty"));
-    };
-
-    let charsIter = text.chars();
-    let chars = Array.tabulate(n, func(_ : Nat) : Char { Option.get(charsIter.next(), ' ') });
-
-    var lastDash = n;
-    var dot = n;
-
-    // Find the last dash and the dot.
-    label l for (i in Iter.range(0, n - 1)) {
-      if (chars[i] == '-') { lastDash := i };
-      if (chars[i] == '.') { dot := i; break l };
-    };
-
-    if (lastDash == n) {
-      return #err(#malformed("expected at least one dash ('-') character"));
-    };
-
-    if (dot == n) {
-      // No subaccount separator: the principal case.
-      return #ok({ owner = Principal.fromText(text); subaccount = null });
-    };
-
-    let numSubaccountDigits = (n - dot - 1) : Nat;
-
-    if (numSubaccountDigits > 64) {
-      return #err(#malformed("the subaccount is too long (expected at most 64 characters)"));
-    };
-
-    if (dot < lastDash) {
-      return #err(#malformed("the subaccount separator does not follow the checksum separator"));
-    };
-
-    // The encoding ends with a dot, the subaccount is empty.
-    if (dot == (n - 1 : Nat)) {
-      return #err(#not_canonical);
-    };
-
-    // The first digit after the dot must not be a zero.
-    if (chars[dot + 1] == '0') {
-      return #err(#not_canonical);
-    };
-
-    let principalText = Text.fromIter(iterSlice(chars, 0, lastDash - 1 : Nat));
-    let owner = Principal.fromText(principalText);
-
-    var subaccountMut = Array.init<Nat8>(32, 0);
-
-    let subaccountDigits = iterChain(
-      iterReplicate('0', 64 - numSubaccountDigits : Nat),
-      iterSlice(chars, dot + 1, n - 1 : Nat),
-    );
-
-    // Decode hex backwards into the subaccount array.
-    for ((i, c) in iterEnumerate(subaccountDigits)) {
-      let value = switch (decodeHexDigit(c)) {
-        case (?v) { v };
-        case (null) {
-          return #err(#malformed("invalid hex char: '" # Text.fromChar(c) # "'"));
-        };
-      };
-      subaccountMut[i / 2] += value << (4 * Nat8.fromNat(1 - i % 2));
-    };
-
-    // Check that the subaccount is not the default.
-    if (iterAll<Nat8>(subaccountMut.vals(), func(x : Nat8) : Bool { x == 0 })) {
-      return #err(#not_canonical);
-    };
-
-    let subaccount = Blob.fromArrayMut(subaccountMut);
-
-    if (not iterEqual<Char>(checkSum(owner, subaccount).chars(), iterSlice(chars, lastDash + 1, dot - 1 : Nat), Char.equal)) {
-      return #err(#bad_checksum);
-    };
-
-    #ok({ owner = owner; subaccount = ?subaccount });
   };
 
   // Helper functions to deal with iterators

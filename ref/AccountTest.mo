@@ -106,6 +106,16 @@ checkDecode(
 );
 
 checkDecode(
+  "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae-6cc627i.01",
+  #err(#not_canonical),
+);
+
+checkDecode(
+  "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae.1",
+  #err(#bad_checksum),
+);
+
+checkDecode(
   "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae-6cc627j.1",
   #err(#bad_checksum),
 );
@@ -113,4 +123,9 @@ checkDecode(
 checkDecode(
   "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae-7cc627i.1",
   #err(#bad_checksum),
+);
+
+checkDecode(
+  "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae-q6bn32y.",
+  #err(#not_canonical),
 );
