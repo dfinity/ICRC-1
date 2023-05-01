@@ -4,7 +4,7 @@
 
 [Slide deck](https://docs.google.com/presentation/d/1LpfMQsfJRJczmthUVxWBCbpDKVJv-JvDtG22HNJXMI4/edit?usp=share_link), [recording](https://drive.google.com/file/d/1ukhkNrgfAODLyaY7OGxVR3BA5tyu7wv7/view?usp=share_link)
 
-**ICRC-2: Recurring payments**
+**ICRC-2: Semantics for approvals**
 
 * Questions to answer: Do we want expiry semantics and, if so, which?
   * Is the additional complexity worth it?
