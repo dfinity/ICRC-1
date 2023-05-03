@@ -22,6 +22,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
 
   public type Value = { #Nat : Nat; #Int : Int; #Blob : Blob; #Text : Text };
 
+  let maxMemoSize = 32;
   let permittedDriftNanos : Duration = 60_000_000_000;
   let transactionWindowNanos : Duration = 24 * 60 * 60 * 1_000_000_000;
   let defaultSubaccount : Subaccount = Blob.fromArrayMut(Array.init(32, 0 : Nat8));
@@ -41,8 +42,8 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
 
   public type Approve = CommonFields and {
     from : Account;
-    spender : Principal;
-    amount : Int;
+    spender : Account;
+    amount : Nat;
     expires_at : ?Nat64;
   };
 
@@ -53,7 +54,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
   };
 
   public type Transfer = CommonFields and {
-    spender : Principal;
+    spender : Account;
     source : TransferSource;
     to : Account;
     from : Account;
@@ -88,6 +89,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
 
   public type ApproveError = DeduplicationError or CommonError or {
     #Expired : { ledger_time : Nat64 };
+    #AllowanceChanged : { current_allowance : Nat };
   };
 
   public type TransferFromError = TransferError or {
@@ -173,9 +175,9 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
   };
 
   // Computes allowance of the spender for the specified account.
-  func allowance(account : Account, spender : Principal, now : Nat64) : Allowance {
+  func allowance(account : Account, spender : Account, now : Nat64) : Allowance {
     var i = 0;
-    var allowance : Int = 0;
+    var allowance : Nat = 0;
     var lastApprovalTs : ?Nat64 = null;
 
     for (tx in log.vals()) {
@@ -193,12 +195,13 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
       switch (tx.operation) {
         case (#Approve(args)) {
           if (args.from == account and args.spender == spender) {
-            allowance := Int.max(0, allowance + args.amount);
+            allowance := args.amount;
             lastApprovalTs := args.expires_at;
           };
         };
         case (#Transfer(args)) {
           if (args.from == account and args.spender == spender) {
+            assert (allowance > args.amount + tx.fee);
             allowance -= args.amount + tx.fee;
           };
         };
@@ -215,7 +218,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
           };
         };
       };
-      case (null) { { allowance = Int.abs(allowance); expires_at = null } };
+      case (null) { { allowance = allowance; expires_at = null } };
     };
   };
 
@@ -234,7 +237,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
       validateSubaccount(account.subaccount);
       let tx : Transaction = {
         operation = #Mint({
-          spender = init.minting_account.owner;
+          spender = init.minting_account;
           source = #Init;
           from = init.minting_account;
           to = account;
@@ -260,7 +263,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
   func validateMemo(m : ?Memo) {
     switch (m) {
       case (null) {};
-      case (?memo) { assert (memo.size() <= 32) };
+      case (?memo) { assert (memo.size() <= maxMemoSize) };
     };
   };
 
@@ -380,13 +383,14 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     memo : ?Memo;
     created_at_time : ?Timestamp;
   }) : async Result<TxIndex, TransferError> {
+    let from = {
+      owner = caller;
+      subaccount = from_subaccount;
+    };
     applyTransfer({
-      spender = caller;
+      spender = from;
       source = #Icrc1Transfer;
-      from = {
-        owner = caller;
-        subaccount = from_subaccount;
-      };
+      from = from;
       to = to;
       amount = amount;
       fee = fee;
@@ -450,9 +454,10 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
 
   public shared ({ caller }) func icrc2_approve({
     from_subaccount : ?Subaccount;
-    spender : Principal;
-    amount : Int;
+    spender : Account;
+    amount : Nat;
     expires_at : ?Nat64;
+    expected_allowance : ?Nat;
     memo : ?Memo;
     fee : ?Tokens;
     created_at_time : ?Timestamp;
@@ -498,6 +503,16 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
       return #Err(#BadFee({ expected_fee = effectiveFee }));
     };
 
+    switch (expected_allowance) {
+      case (?expected_allowance) {
+        let currentAllowance = allowance(approverAccount, spender, now);
+        if (currentAllowance.allowance != expected_allowance) {
+          return #Err(#AllowanceChanged({ current_allowance = currentAllowance.allowance }));
+        };
+      };
+      case (null) {};
+    };
+
     let approverBalance = balance(approverAccount, log);
     if (approverBalance < init.transfer_fee) {
       return #Err(#InsufficientFunds { balance = approverBalance });
@@ -515,6 +530,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
   };
 
   public shared ({ caller }) func icrc2_transfer_from({
+    spender_subaccount : ?Subaccount;
     from : Account;
     to : Account;
     amount : Tokens;
@@ -522,8 +538,14 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
     memo : ?Memo;
     created_at_time : ?Timestamp;
   }) : async Result<TxIndex, TransferFromError> {
+    validateSubaccount(spender_subaccount);
+    validateSubaccount(from.subaccount);
+    validateSubaccount(to.subaccount);
+    validateMemo(memo);
+
+    let spender = { owner = caller; subaccount = spender_subaccount };
     let transfer : Transfer = {
-      spender = caller;
+      spender = spender;
       source = #Icrc2TransferFrom;
       from = from;
       to = to;
@@ -537,10 +559,6 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
       return applyTransfer(transfer);
     };
 
-    validateSubaccount(from.subaccount);
-    validateSubaccount(to.subaccount);
-    validateMemo(memo);
-
     let now = Nat64.fromNat(Int.abs(Time.now()));
 
     switch (checkTxTime(created_at_time, now)) {
@@ -553,7 +571,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
       case (#Err(err)) { return #Err(err) };
     };
 
-    let preTransferAllowance = allowance(from, caller, now);
+    let preTransferAllowance = allowance(from, spender, now);
     if (preTransferAllowance.allowance < amount + effectiveFee) {
       return #Err(#InsufficientAllowance { allowance = preTransferAllowance.allowance });
     };
@@ -564,13 +582,13 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
       timestamp = now;
     });
 
-    let postTransferAllowance = allowance(from, caller, now);
+    let postTransferAllowance = allowance(from, spender, now);
     assert (postTransferAllowance.allowance == overflowOk(preTransferAllowance.allowance - (amount + effectiveFee)));
 
     #Ok(txid);
   };
 
-  public query func icrc2_allowance({ account : Account; spender : Principal }) : async Allowance {
+  public query func icrc2_allowance({ account : Account; spender : Account }) : async Allowance {
     allowance(account, spender, Nat64.fromNat(Int.abs(Time.now())));
   };
 };
