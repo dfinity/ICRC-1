@@ -197,7 +197,7 @@ icrc1_supported_standards : () -> (vec record { name : text; url : text }) query
 
 1. Canister C wants to transfer 100 tokens on an `ICRC-2` ledger from Alice's account to Bob's account.
 2. Alice previously approved canister C to transfer tokens on her behalf by calling `icrc2_approve` with `spender` set to the canister's default account (`{ owner = C; subaccount = null }`) and `amount` set to the token amount she wants to allow (100) plus the transfer fee.
-3. During some update call, the canister can now call `icrc2_transfer_from` with `from` set to Alice's account, `to` set to Bob's account, and `amount` set to the token amount she wants to transfer (100 plus the transfer fee).
+3. During some update call, the canister can now call `icrc2_transfer_from` with `from` set to Alice's account, `to` set to Bob's account, and `amount` set to the token amount she wants to transfer (100).
 4. Once the call completes successfully, Bob has 100 extra tokens on his account, and Alice has 100 (plus the fee) tokens less in her account.
 
 ### Alice removes her allowance for canister C
