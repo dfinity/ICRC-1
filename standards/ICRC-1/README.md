@@ -127,7 +127,7 @@ If the caller does not set the `fee` argument, the ledger applies the default tr
 If the `fee` argument does not agree with the ledger fee, the ledger MUST return `variant { BadFee = record { expected_fee = ... } }` error.
 
 The `memo` parameter is an arbitrary blob that has no meaning to the ledger.
-The ledger SHOULD allow memos of at least 32 bytes in length.
+The ledger SHOULD allow memos of at least 32 bytes in length (see also the `icrc1:max_memo_length` [metadata](#metadata) attribute).
 The ledger SHOULD use the `memo` argument for [transaction deduplication](#transaction_deduplication).
 
 The `created_at_time` parameter indicates the time (as nanoseconds since the UNIX epoch in the UTC timezone) at which the client constructed the transaction.
@@ -172,7 +172,7 @@ All the metadata entries are optional.
 The metadata keys are arbitrary Unicode strings and must follow the pattern `<namespace>:<key>`, where `<namespace>` is a string not containing colons.
 Namespace `icrc1` is reserved for keys defined in this standard.
 
-### Standard metadata entries
+### Standard metadata entries <span id="metadata"></span>
 | Key | Semantics | Example value
 | --- | ------------- | --------- |
 | `icrc1:symbol` | The token currency code (see [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)). When present, should be the same as the result of the [`icrc1_symbol`](#symbol_method) query call. | `variant { Text = "XTKN" }` | 
@@ -180,6 +180,7 @@ Namespace `icrc1` is reserved for keys defined in this standard.
 | `icrc1:decimals` |  The number of decimals the token uses. For example, 8 means to divide the token amount by 10<sup>8</sup> to get its user representation. When present, should be the same as the result of the [`icrc1_decimals`](#decimals_method) query call. | `variant { Nat = 8 }` |
 | `icrc1:fee` | The default transfer fee. When present, should be the same as the result of the [`icrc1_fee`](#fee_method) query call. |  `variant { Nat = 10_000 }` |
 | `icrc1:logo` | The URL of the token logo. The value can contain the actual image if it's a [Data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs).  | `variant { Text = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InJlZCIvPjwvc3ZnPg==" }` | 
+| `icrc1:max_fee_length` | The maximum length of the `memo` field the ledger would accept. | `variant { Nat = 32 }` |
 
 
 ## Transaction deduplication <span id="transfer_deduplication"></span>
