@@ -53,7 +53,7 @@ The number of transfers the `spender` can initiate from the caller's account is 
 The caller does not need to have the full token `amount` on the specified account for the approval to succeed, just enough tokens to pay the approval fee.
 The call resets the allowance and the expiration date for the `spender` account to the given values.
 
-The ledger SHOULD reject the call if the spender account is equal to the source account (`{ owner = caller; subaccount = from_subaccount } == spender`).
+The ledger SHOULD reject the call if the spender account owner is equal to the source account owner.
 
 If the `expected_allowance` field is set, the ledger MUST ensure that the current allowance for the `spender` from the caller's account is equal to the given value and return the `AllowanceChanged` error otherwise.
 
