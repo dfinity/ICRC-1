@@ -128,7 +128,7 @@ If the `fee` argument does not agree with the ledger fee, the ledger MUST return
 
 The `memo` parameter is an arbitrary blob that has no meaning to the ledger.
 The ledger SHOULD allow memos of at least 32 bytes in length.
-The ledger SHOULD use the `memo` argument for [transaction deduplication](#transaction-deduplication-).
+The ledger SHOULD use the `memo` argument for [transaction deduplication](#transaction_deduplication).
 
 The `created_at_time` parameter indicates the time (as nanoseconds since the UNIX epoch in the UTC timezone) at which the client constructed the transaction.
 The ledger SHOULD reject transactions that have `created_at_time` argument too far in the past or the future, returning `variant { TooOld }` and `variant { CreatedInFuture = record { ledger_time = ... } }` errors correspondingly.
@@ -182,7 +182,7 @@ Namespace `icrc1` is reserved for keys defined in this standard.
 | `icrc1:logo` | The URL of the token logo. The value can contain the actual image if it's a [Data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs).  | `variant { Text = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InJlZCIvPjwvc3ZnPg==" }` | 
 
 
-## Transaction deduplication <span id="transfer_deduplication"></span>
+## Transaction deduplication <span id="transaction_deduplication"></span>
 
 Consider the following scenario:
 
