@@ -1,5 +1,94 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2023-04-18
+
+[Slide deck](https://docs.google.com/presentation/d/1LpfMQsfJRJczmthUVxWBCbpDKVJv-JvDtG22HNJXMI4/edit?usp=share_link), [recording](https://drive.google.com/file/d/1ukhkNrgfAODLyaY7OGxVR3BA5tyu7wv7/view?usp=share_link)
+
+**ICRC-2: Semantics for approvals**
+
+* Questions to answer: Do we want expiry semantics and, if so, which?
+  * Is the additional complexity worth it?
+* Didn't receive much input from the community on this in response to our post
+* Mario: Technically, don't need expiration, can remove approvals manually
+* Ben: feedback from ICLighthouse
+  * OK with expirations, but no separate approval id for this
+  * Approvals should be account based, not principal based: as we are using accounts as first-class citizen, we should stick to this scheme everywhere; approve_to would be to an account; signer would be a principal
+    * The spender must spend as canister id / subaccount pair, although subaccount is not part of signature; still part of parameters you use in the transfer_from; making a distinction between subaccounts
+  * ICLighthouse think a lot about use cases where both parties are canisters; this would remove need for separate approvals, can approve to different subaccounts of principal
+  * Levi: Expiration is an orthogonal problem
+  * Ben: Expiration is two things:
+    * Ability to set different expiration for different approvals; this is included in approval to pair of principal / subaccount
+    * Semantics of expiration, which is orthogonal to what has been discussed here
+  * Levi clarifies that in his proposal, spender does not need to know about approval id
+* Use cases
+  * Better security for user and better control is key to Levi's approval approach
+  * Expiration particularly important for IC as canisters are mutable; that's why mandatory on ICP; trust model is different
+    * Expirations can limit exposure to risks to shorter time; mitigation, not a guarantee
+  * Buying stuff; only approve until end of a sale
+  * Buy chat tokens, know purchases and approve only for limited time
+  * Main difference to cancelling is that the latter requires remembering doing it; better if canister does it by expirations
+* Andre from Decentralized Trade introduces himself as a new WG member and presents their use case
+  * Building wallet on IC, solving real-world trade issue
+  * Tokenizing cargo, anything B2B transactions
+  * Using stablecoins for settlement
+  * Cargo tx / money tx via stablecoins; everything done on chain
+  * Use case:
+    * Currently implemented as escrow: buyer deposits into escrow; when ownership transfer of cargo happens, withdraw to seller
+    * Might be doable without the escrow: buyer would approve deposit, money would be withdrawn from account; security of seller: money should be blocked at buyer's account until tx happens
+  * Roman: Locking of the funds is currently not part of the approval mechanims; tricky; it is not even clear who funds belong to while they are locked
+  * Ben: Could lock without revealing subaccount you have approved for; when unlocking, send message to approved party which subaccount you have approved to; Roman: does not work: can just look at the chain for seeing the approval
+  * Roman: timeouts and expirations do not solve this problem; expirations are nice for UX, but don't solve fundamental problem
+* Question on whether we should have expirations
+  * Mario thinks expirations are not really needed, but make it easier for the user
+    * Is it worth the additional complexity?
+    * Cannot think how user can know how long to set expiration date for
+  * Levi: expiration helps whole flow; if expiration is there, user can approve for a given time
+  * Roman: not convinced the complexity is worth it in terms of UX benefits
+  * Matthew gives another security-based motivation for approvals
+  * Ben: most use cases would not be that canister asks to withdraw; rather, make approval to avoid 2-step transfers; but when making approval, want better security semantics than max-amount blanket approvals; this would be 90% of use cases
+  * Mario: likely hard to set the proper expiration time
+  * Ben: approvals are UX improvement, in practice no one remembers to cancel approvals manually
+  * Mario: probably wallets would need to perform cancellation of approvals
+  * Ben: none of the wallets have this functionality currently
+  * Mario reiterates that he is not fully convinced we need expiration
+  * Matthew: the more time attacker has to harvest wallets, the stronger an attack they can make; expirations reduce exposure
+    * Think of someone with a multi-year attack plan, harvesting open approved amounts
+  * Ben: could set default value to e.g. 30 days
+  * Roman: also thinks that we could have a default expiration, if you want to expire earlier, need to specify; this would not add a lot of complexity; other use cases: expiration is maybe not best way to implement them; maybe focus on specific use case of safer payment flow and have expiration as extra feature
+  * Roman: Wouldn't pre-signed transactions be a replacement for approve and transfer_from?
+  * Ben: No, is still a 2-step transfer; having pre-signed tx is no guarantee that tx will go through
+  * Discussion on pre-signed transactions as a new feature
+  * Dieter summarizes that the potential feature of signed tx is not an exact replacement for approve / transfer_from: with signed tx, the precise transfer amount is specified upfront, with transfer_from only at the point when the transfer is made
+  * Roman: agrees, not equivalent
+    * Likes expiration, but maybe should limit scope to have it as simple as possible
+  * Levi: not having expirations is also that approvals can build up over time and spender having huge allowance without approver catching up with the fact that this happens
+  * Mario: we could expire all approvals after 30 days
+  * Roman: that still does not solve the problem; could keep it one global approval, remove additive semantics; most do not need the additive semantics; was required for canisters making approvals in the context of concurrent requests; if we want to keep it simple, we should keep same semantics as Ethereum network; set amount and expiration, overwrite previously set values; if keep additive semantics, need to do same complexity with approvals; we could use this simpler overwrite semantics and design different system for canisters; limit scope of this feature to interaction of frontend and canister
+  * Mario agrees with Roman that is is crucial to to keep things simple; lots of discussion so far, complex to implement
+  * Levi: would be OK with overwrite semantics; thinks that pre-signed tx is very cool idea
+  * Mario: pre-signed tx: important, but not full replacement for approve / transfer_from
+* Overwrite semantics would be much simpler to implement
+  * No negative approavals
+  * Not multiple approvals, but only a single approval, to consider when transferring
+  * Overwrite is like ERC-20 semantics
+  * Same model as Ethereum
+* Roman: Main downside of previous model of additive semantics with overwriting expiration is that it is confusing; approve one amount, approve again, extend expiration to the future, amount can build up; unexpected behaviour; as developer, would expect independence in all dimensions: amount and expiration; confusing to have overwrite for expiration but not amount
+  * The subaccounts requested by ICLighthouse can help solve not having additive semantics
+  * Subaccount makes code cleaner as we use account ids everywhere; in blocks have account ids
+  * Extra subaccount would be helpful to keep the block model clean
+* Roman: If we use overwrite semantics for amount and expiration and approve to principal / subaccount, approvals to different subaccounts of a principal woult be independent approvals with their own expirations
+  * Removing additive semantics is more bearable with the approval being for principal / subaccount
+* Mario: Could add optional field that is checked when changing approval; change approval from 10 to 5 with new optional field; if field is set, additional check against the value of current approval
+* **Following the discussion, Roman proposes**
+  * Overwrite semantics for both amount and expiration
+  * Subaccount feature of ICLighthouse, as this reduces problems of not having additive semantics
+  * Optional field for realizing compare and swap semantics by checking against this when changing approval
+* Next steps
+  * Roman drafts the proposal
+  * People think about it until the next meeting
+  * We come to a conclusion in the next meeting
+
+
 ## 2023-03-21
 [Slide deck](https://docs.google.com/presentation/d/1sOj9HEcnn_p9m1Xh1jlLfOFMB0KIUs9Lvy1XBwFE3qk/edit?usp=share_link), [recording](https://drive.google.com/file/d/1YNzDNZFlGcqcaGabXAClXqnYrZsHLigi/view?usp=share_link)
 
