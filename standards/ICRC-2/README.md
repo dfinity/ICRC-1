@@ -101,7 +101,7 @@ type ApproveError = variant {
 
 #### Postconditions
 
-* The `spender`'s allowance for the `{ owner = caller; subaccount = from_subaccount }` increases by the `amount` (or decreases if the `amount` is negative).
+* The `spender`'s allowance for the `{ owner = caller; subaccount = from_subaccount }` is equal to the given `amount`.
 
 ### icrc2_transfer_from
 
