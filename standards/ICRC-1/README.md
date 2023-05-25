@@ -182,7 +182,7 @@ Namespace `icrc1` is reserved for keys defined in this standard.
 | `icrc1:logo` | The URL of the token logo. The value can contain the actual image if it's a [Data URL](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URLs).  | `variant { Text = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InJlZCIvPjwvc3ZnPg==" }` | 
 
 
-## Transaction deduplication <span id="transfer_deduplication"></span>
+## Transaction deduplication <span id="transaction_deduplication"></span>
 
 Consider the following scenario:
 
