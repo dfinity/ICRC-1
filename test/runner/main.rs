@@ -1,5 +1,5 @@
 use ic_agent::agent::http_transport::ReqwestHttpReplicaV2Transport;
-use ic_agent::identity::BasicIdentity;
+use ic_agent::identity::Secp256k1Identity;
 use ic_agent::Agent;
 use ic_types::Principal;
 use icrc1_test_env::LedgerEnv;
@@ -52,7 +52,7 @@ async fn main() {
             std::process::exit(1);
         });
 
-    let identity = BasicIdentity::from_pem_file(&key_path).unwrap_or_else(|e| {
+    let identity = Secp256k1Identity::from_pem_file(&key_path).unwrap_or_else(|e| {
         panic!(
             "failed to parse secret key PEM from file {}: {}",
             key_path.display(),
