@@ -1,5 +1,189 @@
 # Ledger & Tokenization Working Group Charters
 
+
+## 2023-05-16
+[Slide deck](https://docs.google.com/presentation/d/1nQ7oWeb9Xk8CW1aXyP1vqMFMxI3xZRvovXu1SVN6lPo/edit#slide=id.g125c3b1bfa8_0_0), [recording](https://drive.google.com/file/d/1fv7W6Ibw6OlpRE5vcF1rZmd4hO44QVkW/view?usp=share_link)
+
+**ICRC-3: A standard for accessing the transaction log**
+* Mario presents thoughts on ICRC-3
+* Resuming discussion that has been started some time back
+* ICRC-3 has been evolving since the discussion of January 10
+* Originally a standard for canister to query ledger and find blocks
+* Meanwhile, ICRC ledger has been developed and focus has changed for tx log of ledger
+* Use cases for a ledger's transaction log
+  * Validate payments: notify recipient and give them the block id of transfer; they can fetch the block and validate the payment
+  * Wallet apps: visualize information; main use case
+  * Block explorer: visualize information
+  * Ledger validation off chain: e.g., Rosetta node must fetch blocks of ledger to validate all transactions
+  * ...
+* Challenges
+  * Support future standards: must be able to extend tx log with new transaction types
+  * Different block formats of different ledgers
+    * Additional fields
+    * Additional data
+    * ICRC-3 should not prevent this, but support it
+  * Indexing: historically tx log is list of tx, but in reality we need also some indexing (e.g., for wallet app)
+* Scope of ICRC-3
+  * Tx log that only canisters can consume is not enough
+  * Raw blocks API (one of the two main topics)
+    * Access to blocks via block index
+      * Range or set of blocks?
+      * If have index canister that stores index of tx, but not the tx: can use set queries on ledger to query multiple blocks in one call
+  * Index API
+    * Could be addressed by ICRC3 as well
+    * Raw blocks API is not enough for wallets and block explorers
+    * Need some form of indexing to be useful
+    * How to find indices of ICRC ledger?
+      * Canister ids in metadata
+      * New endpoints
+    * Different fields by which one can index
+      * E.g., also memo
+      * Should the standard address this as well? Might be important to get tooling interoperable
+* What is currently being implemented for the ICRC ledger?
+  * How blocks are served
+    * Blocks are represented as generic JSON-like structure
+    * get_blocks: use generic JSON-like structure; client receives all info from server, regardless of fields; client receives full data when it receives a block
+    * If fetch block, calculate hash, can verify without decoding
+    * Works particularly well with off-chain applications, e.g., the Rosetta API
+    * Endpoint takes starting point and length
+    * Response is vector of blocks
+    * Block data type is variant that is never changing; contains all fields ever required by using generic vector of values and a map
+    * Nice for off-chain applications, not for canisters; canisters don't need to verify
+  * Get transactions
+    * For canisters
+    * Serves a list of transactions, targeted at canisters
+    * Defined as record that has a type; optional fields, only one to be defined; records are extensible, so new blocks can be added
+    * For new tx types in the future, can add new field to record
+* DFINITY's ICRC Ledger's index
+  * Deployed together with ledger
+  * Syncs blocks with ledger periodically
+  * Basically is archive canister, but implements index also
+  * Used by wallets; wallets don't use the ledger, but the index
+  * Index is required to work with ICRC-1 ledger
+  * Fetch transactions for account
+  * Can imagine to add more indices
+
+Discussion
+* Roman: Should get to the point where we can implement reasonable wallet app; this should be outcome of the whole ICRC-3 discussion
+* Ben: another use case: payments that can be easily validated on chain; unique, predictable tx hash, predictable before tx is submitted
+  * ICRC-1 cannot guarantee that tx is unique because of fields; may have two tx with the same fields
+  * Can have clash of hashes: can not guarantee that timestamp is always included, canisters usually don't include the timestamp
+    * Is predictable, but not unique; can send the same transfer twice and get the same tx hash
+    * Rosetta specifies that tx hash mush be predictable; we cannot populate any fields, as then it would not be predictable
+  * Ben concludes that we have to live without uniqueness
+* Levi
+  * Basics / main point: see transactions
+  * Indexing as additional feature is great; hard to see how to standardize this in a generic way; only for some simple use cases, e.g., indexing by account
+* Matt: Who would be able to access the tx log? Concern if everyone can see all transactions
+  * Tx data is public; need to make public for verifiability of ledger
+  * ICRC ledger allows for everyone to query ledger; otherwise, it would be unverifiable; could not integrate with Rosetta either
+* Blocks are hashed together, most recent block hash (the chain tip) is certified by the canister
+  * Rosetta would fetch tip of chain with certified hash, verify it, and then fetch blocks backwards
+  * Can get tip of chain with update call and all other blocks with query call for better efficiency
+  * Could standardize this way to verify the blocks
+  * Want to have wallet compatible with as many ICRC implementations as possbible
+  * Want all ICRC tokens integratable with Rosetta
+  * Hash: compute hash in predictable way; should discuss to have this in the standard
+  * Scope of ICRC-3 is huge when including indexing and hashing
+* Proposal to put forum post with concrete proposal up
+* Bogdan: Can we split the scope into smaller pieces?
+  * Design space for indexing is probably large
+* Wallet integration is important to be considered
+  * Especially indexing relevant here to have interoperability
+* Roman thinks it's important to have the big picture when it comes to doing a wallet app; to not have a surprise that the block retrieval API makes indexing hard
+* Need to move forward with the individual steps
+  * Get blocks API, get tx API
+  * Indexing API
+  * Could be part of the same ICRC-3 standard
+* Roman: huge issue
+  * Block format and encoding decided by the implementations
+  * If we decide on something now, we have those implementations around; not practically feasible to consolidate current implementations to new standard (theoretically possible, but would be a massive effort)
+  * Tradeoff
+    * Can come up with any format we want, will be compatible with data, but won't be verifiable
+    * Or have verifiable format, but no one can implement it because they have come up with a different format already
+  * Standardizing afterwards is too late; either use verifiable format or stick with what people already have
+  * Migration is insane amount of work and coordination
+  * Levi: is there something missing from what we have
+    * Roman: Expects that other ledgers are different, and they will never be compatible; all existing players would be disadvantaged
+  * We could also opt to not standardize the hashing
+* Risk of canister controller modifying blocks
+  * Blackholed canister
+  * Modification history of canister (partially implemented)
+  * People can sync the block chain and keep the history
+
+
+## 2023-05-02
+
+[Slide deck](https://docs.google.com/presentation/d/1rtYDv_fxUfg08oDx8SKaaBVHyGj8WOksR95QXeVB7po/edit?usp=share_link), [recording](https://drive.google.com/file/d/168t4RI3c1pQSO16AUnQgQQRTuDjPwR5L/view?usp=share_link)
+
+**ICRC-2: Semantics for approvals**
+
+Roman made a proposal as agreed in the recent meeting ([PR-109](https://github.com/dfinity/ICRC-1/pull/109))
+* Dieter runs through the proposal of PR-109
+  * Semantics of approvals closer to ERC-20
+  * Override semantics for approvals instead of additive semantics or individual approvals
+    * Advantages over previous approaches
+      * Individual approvals are rather complicated to implement
+      * Additive semantics was confusing: semantics for value was additive, but for expiration it was overriding; this is not intuitive
+  * Allowance based on account ids, not principals, as proposed by ICLighthouse
+    * Nicer implementation as account ids are used in all places in the ledger implementation anyway
+  * Add compare and swap semantics for better facilitating concurrency of requests
+* Levi recaps that his original proposal [Issue-93](https://github.com/dfinity/ICRC-1/issues/93) came from additive semantics: allowance was additive, expiration was override semantics: confusing; allowance can build up over time and lead to bigger allowance than wanted; needed to be solved
+  * Proposal PR-109 solves those problems; allowance overwritten, not additive
+  * Happy with proposal
+* Matthew likes the proposed solution as well
+* Austin finds the proposal fine as well
+  * Biggest concern is that people can approve more than is in their account; but they cannot double spend, so it's OK
+  * That's a general problem of the ERC-20 approve model
+* Discussion on race conditions
+  * Should not be an issue if the ledger is properly done
+* Austin: likes the idea of going with the account id for approvals
+* **Group consensus is reached on adopting the proposal PR-109**
+  * **ICRC-2 is now finalized**
+  * Next steps
+    * Vote by WG on proposal
+    * NNS vote
+
+**ICRC method naming**
+* Discussion on the naming of methods in ICRC-1 standard
+  * Ben: Challenges whether methods should be prefixed with their standard name, e.g., icrc-2_approve; this requires everyone to know which standards each method comes from; rather use the base standard name, e.g., icrc-1, to prefix all methods of the standard
+  * Austin things it is nice to have this separation done that each method is prefixed with its standard name, so you can pick and choose
+  * Namespacing was a main driver to have the std name as prefix
+  * Ben finds current situation confusing for people using the ledger
+  * Ben: Substandards extending ICRC-1 could have ICRC-1 naming scheme
+  * Austin: Could have icrc-1 function for each icrc-2 function that calls the icrc-2 function
+  * Reason for current situation is namespacing
+  * Levi: ICRC-1 is set, no going back; current situation is best that we can do as we cannot anticipate what is coming in the future; thus, new standards follow their own naming scheme; ICRC-1 is set, no new icrc-1-prefixed functions can be added
+    * Having new icrc-1 methods coming later is confusing
+  * Austin: namespacing functions is instructive in teaching people; likes that ICRC-2 functions are prefixed with icrc-2, sees this as an educational and conceptual feature
+    * Having developers not know about extensions confuses them even more
+  * Ben: wants to avoid that people need to know the prefix for each function as this is additional mental overhead
+  * Timo: there could be a different allowance standard in the future, then it needs its own naming scheme
+    * This was one of the main reasons to have the current approach
+  * **Decision: rough consensus on keeping the naming as is**
+
+**Upcoming meetings**
+* Next meeting
+  * ICRC-3
+* Future work
+  * ICRC-4
+    * Austin: ICDevs has approval for exploratory work on ICRC-4 batch payments; want people actively participating in this group; bounty: create implementation in Rust that resolves many issues we would need to talk about so we can have speedier discussions on this
+* Matt: additional functionality: lend function, also for fungible tokens; e.g., for gated communities
+  * Use case, e.g.: access some service when holding certain amount of tokens
+  * Discussion
+    * This would mean that we differentiate between *holdership* and *ownership* of fungible tokens; currently, we only have ownership which implies holdership
+      * Retain ownership, but give holdership to someone so they can use tokens for some purpose; would be more long-term than a flash loan is
+    * Could potentially be solved with wallet canister
+    * Matt thinks there are plenty of use cases for having the holdership status for tokens; essentially loaning
+    * Austin: if we have this generically, one may eliminate tokenomics where exclusive ownerhship is the driving force
+    Matt: Could have lend function that returns tokens after some time
+    * Escrow can solve this (Matt thinks this mutates ownership, which is not what is intended)
+    * Would need distinction between is_owner and is_borrower
+    * Austin: problem of infinitely reducing time frame
+      * But apps can mandate that lending be for min time
+  * Ben suggests that Matt propose this as standard if he thinks that it is generically applicable
+
+
 ## 2023-04-18
 
 [Slide deck](https://docs.google.com/presentation/d/1LpfMQsfJRJczmthUVxWBCbpDKVJv-JvDtG22HNJXMI4/edit?usp=share_link), [recording](https://drive.google.com/file/d/1ukhkNrgfAODLyaY7OGxVR3BA5tyu7wv7/view?usp=share_link)
