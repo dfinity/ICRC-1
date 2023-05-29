@@ -1,5 +1,78 @@
 # Ledger & Tokenization Working Group Charters
 
+
+## 2023-05-02
+
+[Slide deck](https://docs.google.com/presentation/d/1rtYDv_fxUfg08oDx8SKaaBVHyGj8WOksR95QXeVB7po/edit?usp=share_link), [recording](https://drive.google.com/file/d/168t4RI3c1pQSO16AUnQgQQRTuDjPwR5L/view?usp=share_link)
+
+**ICRC-2: Semantics for approvals**
+
+Roman made a proposal as agreed in the recent meeting ([PR-109](https://github.com/dfinity/ICRC-1/pull/109))
+* Dieter runs through the proposal of PR-109
+  * Semantics of approvals closer to ERC-20
+  * Override semantics for approvals instead of additive semantics or individual approvals
+    * Advantages over previous approaches
+      * Individual approvals are rather complicated to implement
+      * Additive semantics was confusing: semantics for value was additive, but for expiration it was overriding; this is not intuitive
+  * Allowance based on account ids, not principals, as proposed by ICLighthouse
+    * Nicer implementation as account ids are used in all places in the ledger implementation anyway
+  * Add compare and swap semantics for better facilitating concurrency of requests
+* Levi recaps that his original proposal [Issue-93](https://github.com/dfinity/ICRC-1/issues/93) came from additive semantics: allowance was additive, expiration was override semantics: confusing; allowance can build up over time and lead to bigger allowance than wanted; needed to be solved
+  * Proposal PR-109 solves those problems; allowance overwritten, not additive
+  * Happy with proposal
+* Matthew likes the proposed solution as well
+* Austin finds the proposal fine as well
+  * Biggest concern is that people can approve more than is in their account; but they cannot double spend, so it's OK
+  * That's a general problem of the ERC-20 approve model
+* Discussion on race conditions
+  * Should not be an issue if the ledger is properly done
+* Austin: likes the idea of going with the account id for approvals
+* **Group consensus is reached on adopting the proposal PR-109**
+  * **ICRC-2 is now finalized**
+  * Next steps
+    * Vote by WG on proposal
+    * NNS vote
+
+**ICRC method naming**
+* Discussion on the naming of methods in ICRC-1 standard
+  * Ben: Challenges whether methods should be prefixed with their standard name, e.g., icrc-2_approve; this requires everyone to know which standards each method comes from; rather use the base standard name, e.g., icrc-1, to prefix all methods of the standard
+  * Austin things it is nice to have this separation done that each method is prefixed with its standard name, so you can pick and choose
+  * Namespacing was a main driver to have the std name as prefix
+  * Ben finds current situation confusing for people using the ledger
+  * Ben: Substandards extending ICRC-1 could have ICRC-1 naming scheme
+  * Austin: Could have icrc-1 function for each icrc-2 function that calls the icrc-2 function
+  * Reason for current situation is namespacing
+  * Levi: ICRC-1 is set, no going back; current situation is best that we can do as we cannot anticipate what is coming in the future; thus, new standards follow their own naming scheme; ICRC-1 is set, no new icrc-1-prefixed functions can be added
+    * Having new icrc-1 methods coming later is confusing
+  * Austin: namespacing functions is instructive in teaching people; likes that ICRC-2 functions are prefixed with icrc-2, sees this as an educational and conceptual feature
+    * Having developers not know about extensions confuses them even more
+  * Ben: wants to avoid that people need to know the prefix for each function as this is additional mental overhead
+  * Timo: there could be a different allowance standard in the future, then it needs its own naming scheme
+    * This was one of the main reasons to have the current approach
+  * **Decision: rough consensus on keeping the naming as is**
+
+**Upcoming meetings**
+* Next meeting
+  * ICRC-3
+* Future work
+  * ICRC-4
+    * Austin: ICDevs has approval for exploratory work on ICRC-4 batch payments; want people actively participating in this group; bounty: create implementation in Rust that resolves many issues we would need to talk about so we can have speedier discussions on this
+* Matt: additional functionality: lend function, also for fungible tokens; e.g., for gated communities
+  * Use case, e.g.: access some service when holding certain amount of tokens
+  * Discussion
+    * This would mean that we differentiate between *holdership* and *ownership* of fungible tokens; currently, we only have ownership which implies holdership
+      * Retain ownership, but give holdership to someone so they can use tokens for some purpose; would be more long-term than a flash loan is
+    * Could potentially be solved with wallet canister
+    * Matt thinks there are plenty of use cases for having the holdership status for tokens; essentially loaning
+    * Austin: if we have this generically, one may eliminate tokenomics where exclusive ownerhship is the driving force
+    Matt: Could have lend function that returns tokens after some time
+    * Escrow can solve this (Matt thinks this mutates ownership, which is not what is intended)
+    * Would need distinction between is_owner and is_borrower
+    * Austin: problem of infinitely reducing time frame
+      * But apps can mandate that lending be for min time
+  * Ben suggests that Matt propose this as standard if he thinks that it is generically applicable
+
+
 ## 2023-04-18
 
 [Slide deck](https://docs.google.com/presentation/d/1LpfMQsfJRJczmthUVxWBCbpDKVJv-JvDtG22HNJXMI4/edit?usp=share_link), [recording](https://drive.google.com/file/d/1ukhkNrgfAODLyaY7OGxVR3BA5tyu7wv7/view?usp=share_link)
