@@ -6,7 +6,6 @@ import Option "mo:base/Option";
 import Error "mo:base/Error";
 import Time "mo:base/Time";
 import Int "mo:base/Int";
-import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
 import Nat64 "mo:base/Nat64";
 
@@ -127,7 +126,11 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
           };
           if (accountsEqual(args.to, account)) { sum += args.amount };
         };
-        case (#Approve(_)) {};
+        case (#Approve(args)) {
+          if (accountsEqual(args.from, account)) {
+            sum -= tx.fee;
+          }
+        };
       };
     };
     sum;
@@ -525,7 +528,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
       timestamp = now;
     });
 
-    assert (Nat.sub(balance(approverAccount, log), effectiveFee) == overflowOk(approverBalance - effectiveFee));
+    assert (balance(approverAccount, log) == overflowOk(approverBalance - effectiveFee));
 
     #Ok(txid);
   };
