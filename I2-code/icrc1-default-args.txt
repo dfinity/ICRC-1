@@ -1,0 +1,19 @@
+( record {               
+    name = "<Insert Token Name>";                         
+    symbol = "<Insert Symbol>";                           
+    decimals = 6;                                           
+    fee = 1_000_000;                                        
+    max_supply = 1_000_000_000_000;                         
+    initial_balances = vec {                                
+        record {                                            
+            record {                                        
+                owner = principal "r7inp-6aaaa-aaaaa-aaabq-cai";   
+                subaccount = null;                          
+            };                                              
+            100_000_000                                     
+        }                                                   
+    };                                                             
+    min_burn_amount = 10_000;
+    minting_account = null;
+    advanced_settings = null;
+})

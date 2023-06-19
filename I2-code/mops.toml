@@ -1,0 +1,13 @@
+[dependencies]
+base = "https://github.com/dfinity/motoko-base#moc-0.7.4"
+array = "https://github.com/aviate-labs/array.mo#v0.2.0"
+StableTrieMap = "https://github.com/NatLabs/StableTrieMap#main"
+StableBuffer = "https://github.com/canscale/StableBuffer#v0.2.0"
+itertools = "0.1.1"
+
+[package]
+name = "icrc1"
+version = "0.0.1"
+description = "A full implementation of the ICRC-1 fungible token standard"
+repository = "https://github.com/NatLabs/icrc1"
+keywords = [ "icrc1", "fungible", "token", "standard", "dfinity" ]
