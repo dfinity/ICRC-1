@@ -1,5 +1,137 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2023-05-30
+[Slide deck](https://docs.google.com/presentation/d/1_UJIXPJF31LchhQjX1LMEMNA2OptnXkME8f7ZVPhaZ8/edit?usp=drive_link), [recording](https://drive.google.com/file/d/1zfTqWyQrIQeZ6_lmpDeLR-eQTZ7FbztT/view?usp=drive_link)
+
+**ICRC-3: A standard for accessing the transaction log**
+Proposal link?? is presented
+* Terminology
+  * Transaction
+  * Submitted transaction: arguments provided by the user for a tx
+  * Settled transaction: what is recorded on the ledger
+    * Ledger may result additional information, e.g., record timestamp or record a fee that has not been provided by the user
+* Transaction hash: hash of settled tx
+  * Usually unique, only 1 tx in log with specific hash
+  * Submitted tx not necessarily unique; we can have twice the same tx arguments
+* Transaction log
+  * Sequence of transactions, linked through hash chain
+  * Allows 3rd parties to verify the ledger
+  * Newest block in ledger is certified though a certified variable; client can fetch all blocks and verify the chain starting from the newest block
+* Scope of ICRC-3
+  * Access to tx log (main purpose)
+  * Indexing
+* Flexibility
+  * Future, new block types to come
+  * Need to support new block types in the future
+    * "Untyped", JSON-like structure
+  * Use this format to send block to client
+  * Can define hash function generically for this structure
+  * ICRC-16 about unstructured data interoperability relevant in this context
+    * Could piggyback on this standard
+* Main endpoints
+  * icrc3_get_transactions
+    * Returns vec of generic transactions (each generic tx has an id and value)
+    * Archiving considered
+  * icrc3_decoder
+    * This is more controversial probably
+    * Need to consider different implementations of the ledger
+    * Decoder: each field of properly constructed tx can be found from value
+      * Have well-structured type of a standard, e.g., ICRC-1
+      * Have unstructured values, e.g., ICRC-16
+      * Need mapping from unstructured to structured tx
+      * Decoder takes input path for unstructured value and maps it to structured value
+      * Anybody can write decoder that takes as input this data and decodes from unstructured to structured
+      * Main issue: fairly complex
+* Proposal to not use the term block, but transaction
+* Levi: likes the genericity, but needs decoder clarified
+  * Client (e.g., dashboard) needs to convert generic type to something that can be interpreted
+  * Need to go from abstract value to a proper Rust or Motoko structure to be able work with data
+  * Don't know how ledger will represent the value; different fields
+  * Leave open; ledger defines its own decoder
+  * Advantage over having ledger convert its own internal representation into the standard target?
+    * Client may have different version, e.g., different fields; client does not yet know about a new field the ledger has
+    * Decoding would have different hash than what ledger has
+    * E.g., ledger has field called expiration_date, added to new blocks; client does not know; client can still decode when ignoring, but gets different hash than ledger because of field missing
+    * With proposal, can guarantee that client always can compute correct hash
+    * ICRC-1 does not even specify how to compute the transaction hash
+  * ICRC-1 describes representation of blocks etc.
+  * ICRC-3 specifies how the hash is computed on the data the ledger has
+    * For this, introduce concept of unstructured data
+    * Structure never changes, allows for encoding arbitrary structures
+  * Roman's clarification
+    * Have some ledgers already that use the values already internally and also a hashing scheme
+      * Have way of validating the chain via checking hashes
+    * Other ledgers have different representation
+    * 3 Options
+      * Take SNS or ckBTC ledger approach and put it in standard
+      * Map existing blocks to new blocks without changing hash
+      * Agree on better representation without changing meaning
+    * Why we need schema: Need to be able to find data in generic data structure
+  * Austin
+    * Opportunity to build real interoperability infrastructure here
+    * Exchange of unstructured data between canisters; can build on top of it
+    * Not only trying to indicate fields that are necessary
+    * If want to self-verify ledger, need to know data and hash function
+  * Hash is generic hash over the value structure
+  * For external integration, e.g., CEX, always used approach of verifying ledger backwards, starting from a certified chain tip
+    * Go through hash chain
+    * Query calls are much faster than update calls (reason for this approach)
+  * Reason we need a this mapping is that ledgers can realize things differently
+    * E.g., use different keys to store value (`from` ke yor `f` key in different ledgers)
+    * Have no control over what ledger uses internally
+    * If write dashboard for ICRC ledgers, it must work for all those
+    * Need translation from internal representation to canonical representation
+    * Only ledger can give us this mapping
+    * E.g., `from` of transfer: need to know where to find this field in ledger's internal representation; different ledgers may have different values
+    * Ledger calculates hash over internal representation (non-canonical value)
+      * Is intermediate data needed to verify that
+      * Once have verified correctness, convert to own representation and use it
+    * If one would not have everything, dishonest client could inject any data
+      * Need to hash everything that is stored
+* For SNS ledger, went with following approach
+  * get_transaction: returns well-structured txs, cannot be verified
+  * get_blocks: returns hash structure
+  * If someone does not need to verify, can get well-structured data
+  * Both return kind of the same data, canonical that cannot be verified / non-canonical that can be verified; is definitely an approach as well
+* Austin: Looks like there is a transform language comprising a hash function
+  * Could have a query endpoint where you can download the program to populate hash
+  * Program defines how to calculate hash oneself
+  * As long as have library to run program, should be able to interpret data
+* Need to think of how ICRC-3 is used (wallets, dashboards etc.; everything off chain)
+  * Even if we split the API, clients still need to verify
+  * Without verification, limited use, e.g., only verify payment
+  * Splitting it is twice the work, duplicated get_transaction; two endpoints with same data
+  * Rather propose this, can derive canonical data out of this
+* Helix wants tx hashes to identity tx, also inside of canister
+  * Even canisters might want to get the same data in different formats
+  * Would be great to come up with one endpoint to verify structured or semi-structured data
+  * Most useful for the ecosystem; schema for block in standard; how to hash block
+  * Might also need to map values, not only paths
+  * E.g., for type of tx: no list of standardized values
+* If a single replica sends wrong result, client can detect this
+  * Solved by the approach
+* What if values are all in well-defined place and ledger can add new fields
+  * Would break backward compatibility
+* If have ICRC-1 transfer, must be unified for all the ledgers
+  * Client can use that regardless of the ledger
+* Even if ledger representation is standardized, what about people experimenting with new ops not explained in the standard?
+  * Probably namespace those variants
+  * If client does not understand operation, still gets a transaction, but don't understand
+  * This might work in the end
+* Keno
+  * Working on an ICRC_2 and ICRC_3 implementation
+  * Valuable to make more extensible, so we can have different ledgers supporting different tx types
+  * But still want to compromise
+  * But if want to extend canonical mint, burn, transfer, should not compromise how ICRC-1 and 2 canonicals are working
+  * Rather customized tx type, added on to it and not throwing away canonicals
+* Schema is map between structured and unstructured value
+  * Ledger telling you that for icrc1_mint, you can find the amount in a specific field
+  * Proposal is convoluted, but not too much
+* Maybe have generic structure for backwards compatibility, but impose constraints for new ledgers
+* Next steps
+  * Improve proposal write up
+  * Give people time to think about it until the next meeting
+
 
 ## 2023-05-16
 [Slide deck](https://docs.google.com/presentation/d/1nQ7oWeb9Xk8CW1aXyP1vqMFMxI3xZRvovXu1SVN6lPo/edit#slide=id.g125c3b1bfa8_0_0), [recording](https://drive.google.com/file/d/1fv7W6Ibw6OlpRE5vcF1rZmd4hO44QVkW/view?usp=share_link)
