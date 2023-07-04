@@ -1,5 +1,92 @@
 # Ledger & Tokenization Working Group Charters
 
+
+## 2023-06-13
+[Slide deck](https://docs.google.com/presentation/d/1tIvXbGAHoqwUtCt4AbhbJ2gzCalBzO73vquk6Ld69Ek/edit?usp=drive_link), [recording](https://drive.google.com/file/d/1ccyPjpj9q8pcKR7nSblWJYqS8-sSoRl-/view?usp=drive_link)
+
+* Idea: Each ICRC standard can define their own transactions
+  * In addition to what they define, they would specify how tx should look like
+  * E.g., ICRC1_Transfer with its specified fields and values; new standard like ICRC-2 has its own new transactions like this one
+  * The transactions that can appear in a given ledger is the union of the transaction types of all the supported standards
+* Accessing tx log from another canister is easy
+  * Argument: ranges of tx
+  * Response: transactions themselves
+* Accessing of transactions from outside the IC is harder
+  * Making icrc3_get_transactions a query: efficient; but must be safe so that data is validatable
+    * This makes ICRC-3 complex
+  * Historically, ledgers on the IC work as follows
+    * Ledger always certifies hash of most recent tx on the chain
+    * Transactions are hashed together
+    * Client can verify ledger by hashing each block (tx) and verify the certification on the most recent one
+    * Challenges
+      * How certification happens
+      * How client knows how data is hashed and what is hashed
+  * Hash is computed on data that the ledger stores; this is not necessarily the data in the ICRC-3 representation of the tx
+    * Internal representation is optimized for space
+    * ICRC-3 representation is optimized for usage
+    * Internal representation can contain non-standard fields, e.g., for the fee collector which is one additional field to the transfer block
+    * In ICRC-3 representation only the fields of the ICRC-3 standard may appear so that everyone can use it in the same way; clients work on all ledger implementations the same way
+    * When calling icrc3_get_transactions, the ledger transforms its internal representation of a block to the standard ICRC-3 representation
+  * **Proposal from 2 weeks ago**
+    * Represent internal representation as a `value`
+    * Value is type that never evolves or changes
+    * Ledger should calculate hash of the blocks over this value in a standard way
+    * Returns blocks to the user in the form of the value
+    * This adds complexity to ICRC-3
+    * Complicated schema that allows the ledger to declare how a block (generic transaction) looks like and how to map it to ICRC-3 transactions
+    * Mapping from internal storage of the ledger to ICRC-3 representation
+    * Ledger would need to describe how to perform such a mapping
+    * Would make clients much more complex
+    * **New proposal**
+    * Still use the generic value
+    * Instead of flexible scheme, some fields for each tx are fixed; those fields must always be there for an implementation
+    * E.g., burn tx: hash and tx record; tx record comprises necessary fields: to, amount and op tag that indicates this is a burn operation
+    * Proposal: all burn blocks of all ICRC-3 ledgers must have those fields in those places
+    * Reason: makes it very easy to make a decoder; schema not variable any more
+    * Still have ability to fetch transactions from outside IC and validate them
+* Discussion
+  * Transactions vs. blocks
+    * Proposal
+      * Should certify last block of the chain
+      * Link together blocks with hashes
+      * Think of batch transactions; much easier if we have blocks
+      * Need to further look into this, not sure whether it is more efficient
+    * Reason why not using block terminology: moving away from it
+  * Main problem with proposal
+    * Existing ledgers that don't follow this schema would need to do something else
+      * E.g., have companion canister that stores the tx in this format so that the ledger can return this type of transactions
+      * This should not be a big problem as there are not many ledgers out there
+  * Note: proposal of schema is based on Dfinity's ICRC ledger implementation
+  * We conclude that the very generic approach of the last meeting may not even work in practice, unless it is so generic that you can express essentially anything
+  * Current proposal is a simple way forward
+  * Is any user input included in the data structure?
+    * This is up to the ledger
+    * Should always have it, but not mandated anywhere
+    * Tx hash would be calculated from this data; Rosetta mandates that tx hashes should be predictable
+    * Tx hashes will be predictable, but not hashes of the blocks
+    * If used in hash calculation, should be in tx input
+  * Replayability
+    * Ben: at least all relevant fields should be included in tx data structure
+    * Anything that affects how you replay the tx should be in data structure
+    * Logic used for replay is arbitrary
+      *E.g., fee collector: can set fee collector to constant and have rules in logic how fee collection is done, but is out of scope of standard
+    * Standard just says that some logic exists for replaying
+    * Good ledger should do something like this anyway, without specifying how
+    * Thinks that ledgers compliant to ICRC-3 should have replayability
+      * Logical guarantees for anyone who is using the ledger
+    * Implication: Fee collector is not part of tx, not in hash; if cannot be changed, replayability is fine; if it might vary, it should be part of the block data
+    * Currently: Most ledgers don't store the init block, thus configuration is not part of the blockchain
+    * This would require a separation of block data from tx data
+  * This proposal is already very far progressed as it is based on existing implementation
+    * Could be much faster with ICRC-3 if we go this route
+  * If did not specify data type of account, ICP ledger could be compatible
+    * But this would not be very useful as ICP is not compatible with ICRC block format
+    * Account-id-based ledger can never fulfill ICRC-3
+    * Could hash subaccounts of ICRC ledger as in ICP ledger and might become compatible with the ICP ledger; technically possible
+  * Next steps
+    * People look at the proposal and discuss more details next time
+
+
 ## 2023-05-30
 [Slide deck](https://docs.google.com/presentation/d/1_UJIXPJF31LchhQjX1LMEMNA2OptnXkME8f7ZVPhaZ8/edit?usp=drive_link), [recording](https://drive.google.com/file/d/1zfTqWyQrIQeZ6_lmpDeLR-eQTZ7FbztT/view?usp=drive_link)
 
