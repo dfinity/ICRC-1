@@ -87,6 +87,7 @@ pub async fn start_replica(
         .arg("critical")
         .arg("--subnet-type")
         .arg("system")
+        .arg("--subnet-features")
         .arg("canister_sandboxing")
         .arg("--http-port-file")
         .arg(&port_file)
