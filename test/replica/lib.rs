@@ -36,7 +36,12 @@ oSMDIQCJuBJPWt2WWxv0zQmXcXMjY+fP0CJSsB80ztXpOFd2ZQ==
     .expect("failed to parse identity from PEM")
 }
 
-pub async fn start_replica(replica_bin: &Path, ic_starter_bin: &Path) -> (Agent, ReplicaContext) {
+pub async fn start_replica(
+    replica_bin: &Path,
+    ic_starter_bin: &Path,
+    sandbox_launcher_bin: &Path,
+    canister_sandbox_bin: &Path,
+) -> (Agent, ReplicaContext) {
     let state = tempfile::TempDir::new().expect("failed to create a temporary directory");
 
     let port_file = state.path().join("replica.port");
@@ -51,27 +56,49 @@ pub async fn start_replica(replica_bin: &Path, ic_starter_bin: &Path) -> (Agent,
         "replica path {} does not exist",
         replica_bin.display(),
     );
+    assert!(
+        sandbox_launcher_bin.exists(),
+        "sandbox_launcher path {} does not exist",
+        sandbox_launcher_bin.display(),
+    );
+    assert!(
+        canister_sandbox_bin.exists(),
+        "canister_sandbox path {} does not exist",
+        canister_sandbox_bin.display(),
+    );
+
+    let replica_path = format!(
+        "{}:{}{}",
+        sandbox_launcher_bin.parent().unwrap().display(),
+        canister_sandbox_bin.parent().unwrap().display(),
+        std::env::var("PATH").map_or("".into(), |s| format!(":{}", s)),
+    );
+
+    let mut cmd = Command::new(ic_starter_bin);
+    cmd.env("RUST_MIN_STACK", "8192000")
+        .env("PATH", replica_path)
+        .arg("--replica-path")
+        .arg(replica_bin)
+        .arg("--state-dir")
+        .arg(state.path())
+        .arg("--create-funds-whitelist")
+        .arg("*")
+        .arg("--log-level")
+        .arg("critical")
+        .arg("--subnet-type")
+        .arg("system")
+        .arg("--subnet-features")
+        .arg("canister_sandboxing")
+        .arg("--http-port-file")
+        .arg(&port_file)
+        .arg("--initial-notary-delay-millis")
+        .arg("600");
+
+    #[cfg(target_os = "macos")]
+    cmd.args(["--consensus-pool-backend", "rocksdb"]);
 
     let _proc = KillOnDrop(
-        Command::new(ic_starter_bin)
-            .env("RUST_MIN_STACK", "8192000")
-            .arg("--replica-path")
-            .arg(replica_bin)
-            .arg("--state-dir")
-            .arg(state.path())
-            .arg("--consensus-pool-backend")
-            .arg("rocksdb")
-            .arg("--create-funds-whitelist")
-            .arg("*")
-            .arg("--log-level")
-            .arg("critical")
-            .arg("--subnet-type")
-            .arg("system")
-            .arg("--http-port-file")
-            .arg(&port_file)
-            .arg("--initial-notary-delay-millis")
-            .arg("600")
-            .stdout(std::process::Stdio::inherit())
+        cmd.stdout(std::process::Stdio::inherit())
             .stderr(std::process::Stdio::inherit())
             .spawn()
             .unwrap_or_else(|e| {
