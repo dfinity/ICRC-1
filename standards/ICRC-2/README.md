@@ -2,7 +2,7 @@
 
 | Status |
 |:------:|
-| Draft  |
+| [Accepted](https://dashboard.internetcomputer.org/proposal/122613)  |
 
 ## Abstract
 
