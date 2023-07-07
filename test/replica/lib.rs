@@ -81,8 +81,6 @@ pub async fn start_replica(
         .arg(replica_bin)
         .arg("--state-dir")
         .arg(state.path())
-        .arg("--consensus-pool-backend")
-        .arg("rocksdb")
         .arg("--create-funds-whitelist")
         .arg("*")
         .arg("--log-level")
