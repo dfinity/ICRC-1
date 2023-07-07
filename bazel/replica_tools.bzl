@@ -9,14 +9,14 @@ def _replica_impl(repository_ctx):
     os_name = repository_ctx.os.name
     if os_name == "linux":
         repository_ctx.download(
-            url = "https://download.dfinity.systems/blessed/ic/d004accc3904e24dddb13a11d93451523e1a8a5f/sdk-release/x86_64-linux/ic-starter.gz",
-            sha256 = "972ee8bac0e7f1e7e73c21899411671193dbb0c0b911d19a51f8f68e469853bc",
+            url = "https://download.dfinity.systems/ic/02138563741c87cefed2b223e31f25b59623307a/binaries/x86_64-linux/ic-starter.gz",
+            sha256 = "b491c82cae8ebed2e1dc39dbc884c82ce2b4b5a3b67514e37c4edcaca65f296a",
             output = "ic-starter.gz",
         )
     elif os_name == "mac os x":
         repository_ctx.download(
-            url = "https://download.dfinity.systems/blessed/ic/d004accc3904e24dddb13a11d93451523e1a8a5f/sdk-release/x86_64-darwin/ic-starter.gz",
-            sha256 = "61d647fc196c38352510d079ca0482de54abab4df4b13bd4d0ce301ed024c1e1",
+            url = "https://download.dfinity.systems/ic/02138563741c87cefed2b223e31f25b59623307a/binaries/x86_64-darwin/ic-starter.gz",
+            sha256 = "7f690883abeca846c29a84fd77340ce1812abeb2e23a48f30dcc961603cffd49",
             output = "ic-starter.gz",
         )
     else:
@@ -29,14 +29,14 @@ def _replica_impl(repository_ctx):
     repository_ctx.report_progress("Fetching replica")
     if os_name == "linux":
         repository_ctx.download(
-            url = "https://download.dfinity.systems/blessed/ic/d004accc3904e24dddb13a11d93451523e1a8a5f/sdk-release/x86_64-linux/replica.gz",
-            sha256 = "6e95796ebbeecf74916a56633fdceb56d9575b698fdf40984d35c674454b96a8",
+            url = "https://download.dfinity.systems/ic/02138563741c87cefed2b223e31f25b59623307a/binaries/x86_64-linux/replica.gz",
+            sha256 = "12d1e52f240ec5c6c4a1b78c01e0dddcd05de93bcbec18c6d9b3fdbc5b5a713c",
             output = "replica.gz",
         )
     elif os_name == "mac os x":
         repository_ctx.download(
-            url = "https://download.dfinity.systems/blessed/ic/d004accc3904e24dddb13a11d93451523e1a8a5f/sdk-release/x86_64-darwin/replica.gz",
-            sha256 = "000d30a2720cb87fdd1114b50cf60dcb2246102ce66a59a53e3a8694733f1710",
+            url = "https://download.dfinity.systems/ic/02138563741c87cefed2b223e31f25b59623307a/binaries/x86_64-darwin/replica.gz",
+            sha256 = "757def96a7efdbe05fb4291a8f8a9fda194965cfc5cec2edabb82fa825119b22",
             output = "replica.gz",
         )
     else:
