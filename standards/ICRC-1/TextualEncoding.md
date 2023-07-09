@@ -2,7 +2,7 @@
 
 | Status |
 |:------:|
-| Draft  |
+| Accepted |
 
 This document specifies the canonical textual representation of ICRC-1 accounts.
 
