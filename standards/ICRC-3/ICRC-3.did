@@ -1,0 +1,36 @@
+type Value = variant { 
+    Blob : blob; 
+    Text : text; 
+    Nat : nat; // do we need this or can we just use Int?
+    Int : int;
+    Array : vec Value; 
+    Map : vec record { text; Value }; 
+};
+
+type GetTransactionsArgs = vec record { start : nat; length : nat };
+
+// A function for fetching archived transactions.
+type GetTransactionsFn = func (GetTransactionsArgs) -> (GetTransactionsResult) query;
+
+type GetTransactionsResult = record {
+    // Total number of transactions in the
+    // transaction log
+    log_length : nat;
+    
+    // System certificate for the hash of the
+    // latest transaction in the chain.
+    // Only present if `icrc3_get_transactions`
+    // is called in a non-replicated query context.
+    certificate : opt blob;
+
+    transactions : vec record { id : nat; transaction: Value };
+
+    archived_transactions : vec record {
+        args : GetTransactionsArgs;
+        callback : GetTransactionsFn;
+    };
+};
+
+service : {
+    icrc3_get_transactions : GetTransactionsFn;
+};
