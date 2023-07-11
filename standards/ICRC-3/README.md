@@ -61,9 +61,11 @@ The hash function works is the [representation-independent hashing of structured
 
 ## Standards Transactions
 
-Each standard that adheres to `ICRC-3` must define the list of transactions types they define and/or extend together with the function that converts a [`Value`](#value) to that type.
+Each standard that adheres to `ICRC-3` must define the list of transactions types they define and/or extend together with the function that converts a [`Value`](#value) to that type. Transaction types are well-typed records that are easy to consume by clients.
 
-Transaction types are well-typed records that are easy to consume by clients.
+`Value`s representing transactions must have the following properties:
+1. they must be of type `Map`
+2. all transactions with index >0 must have a top-level field called `phash: Blob` which contains the [hash](#value-hash) of the previous transactions. 
 
 For instance, [`ICRC-1`](https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1) should define three transactions types - `ICRC1_Mint`, `ICRC1_Burn` and `ICRC1_Transfer` - and the function to convert a `Value` to them in order to adhere to the `ICRC-3` standard.
 
