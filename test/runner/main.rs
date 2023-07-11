@@ -2,7 +2,6 @@ use ic_agent::agent::http_transport::ReqwestHttpReplicaV2Transport;
 use ic_agent::identity::BasicIdentity;
 use ic_agent::Agent;
 use ic_types::Principal;
-use icrc1_test_env::LedgerEnv;
 use icrc1_test_env::LedgerEnvReplica;
 use pico_args::Arguments;
 use std::path::PathBuf;

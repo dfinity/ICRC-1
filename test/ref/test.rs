@@ -1,7 +1,6 @@
 use candid::{CandidType, Decode, Encode, Nat};
 use ic_agent::Agent;
 use ic_types::Principal;
-use icrc1_test_env::LedgerEnv;
 use icrc1_test_env::LedgerEnvReplica;
 use icrc1_test_replica::start_replica;
 use serde::{Deserialize, Serialize};

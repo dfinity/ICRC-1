@@ -150,7 +150,6 @@ impl Transfer {
 
 #[async_trait(?Send)]
 pub trait LedgerEnv {
-    fn new(agent: Agent, canister_id: Principal) -> Self;
     fn fork(&self) -> Self;
     async fn transfer(&self, arg: Transfer) -> anyhow::Result<Result<Nat, TransferError>>;
     fn principal(&self) -> Principal;
@@ -184,14 +183,6 @@ fn waiter() -> garcon::Delay {
 
 #[async_trait(?Send)]
 impl LedgerEnv for LedgerEnvReplica {
-    fn new(agent: Agent, canister_id: Principal) -> Self {
-        Self {
-            rand: Arc::new(Mutex::new(SystemRandom::new())),
-            agent: Arc::new(agent),
-            canister_id,
-        }
-    }
-
     fn fork(&self) -> Self {
         let mut agent = Arc::clone(&self.agent);
         Arc::make_mut(&mut agent).set_identity({
@@ -289,5 +280,15 @@ impl LedgerEnv for LedgerEnvReplica {
                 hex::encode(bytes)
             )
         })
+    }
+}
+
+impl LedgerEnvReplica {
+    pub fn new(agent: Agent, canister_id: Principal) -> Self {
+        Self {
+            rand: Arc::new(Mutex::new(SystemRandom::new())),
+            agent: Arc::new(agent),
+            canister_id,
+        }
     }
 }
