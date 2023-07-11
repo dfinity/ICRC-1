@@ -1,5 +1,19 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2023-07-11
+[Slide deck](https://docs.google.com/presentation/d/17h_7w3_yK2SdM2wOHW7Wkz8pCIxNN9AV7iioZNy0_iE/edit?usp=sharing)
+
+* ICRC-3 draft published [https://github.com/dfinity/ICRC-1/pull/128](https://github.com/dfinity/ICRC-1/pull/128)
+* Working group agreed on the draft
+* Next steps
+  * Forum post about the final draft
+  * Next meeting the WG will vote the proposal
+  * Topics for next WG meetings
+    * [ICRC-22](https://github.com/dfinity/ICRC/issues/22) Payment format for QR code
+    * [ICRC-4](https://github.com/dfinity/ICRC/issues/4) Batch
+    * ICRC-5 Indexing
+    * [ICRC-23](https://github.com/dfinity/ICRC/issues/23) URL Namespacing
+    * [ICRC-24](https://github.com/dfinity/ICRC/issues/24) Presigned transactions
 
 ## 2023-06-13
 [Slide deck](https://docs.google.com/presentation/d/1tIvXbGAHoqwUtCt4AbhbJ2gzCalBzO73vquk6Ld69Ek/edit?usp=drive_link), [recording](https://drive.google.com/file/d/1ccyPjpj9q8pcKR7nSblWJYqS8-sSoRl-/view?usp=drive_link)
