@@ -1,4 +1,5 @@
 use anyhow::Context;
+use async_trait::async_trait;
 use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
 use candid::{CandidType, Decode, Encode, Int, Nat};
 use ic_agent::identity::BasicIdentity;
@@ -147,8 +148,28 @@ impl Transfer {
     }
 }
 
+#[async_trait(?Send)]
+pub trait LedgerEnv {
+    fn new(agent: Agent, canister_id: Principal) -> Self;
+    fn fork(&self) -> Self;
+    async fn transfer(&self, arg: Transfer) -> anyhow::Result<Result<Nat, TransferError>>;
+    fn principal(&self) -> Principal;
+    async fn balance_of(&self, account: impl Into<Account>) -> anyhow::Result<Nat>;
+    async fn supported_standards(&self) -> anyhow::Result<Vec<SupportedStandard>>;
+    async fn metadata(&self) -> anyhow::Result<Vec<(String, Value)>>;
+    async fn minting_account(&self) -> anyhow::Result<Option<Account>>;
+    async fn token_name(&self) -> anyhow::Result<String>;
+    async fn token_symbol(&self) -> anyhow::Result<String>;
+    async fn token_decimals(&self) -> anyhow::Result<u8>;
+    async fn transfer_fee(&self) -> anyhow::Result<Nat>;
+    async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
+    where
+        Input: ArgumentEncoder + std::fmt::Debug,
+        Output: for<'a> ArgumentDecoder<'a>;
+}
+
 #[derive(Clone)]
-pub struct LedgerEnv {
+pub struct LedgerEnvReplica {
     rand: Arc<Mutex<SystemRandom>>,
     agent: Arc<Agent>,
     canister_id: Principal,
@@ -161,8 +182,9 @@ fn waiter() -> garcon::Delay {
         .build()
 }
 
-impl LedgerEnv {
-    pub fn new(agent: Agent, canister_id: Principal) -> Self {
+#[async_trait(?Send)]
+impl LedgerEnv for LedgerEnvReplica {
+    fn new(agent: Agent, canister_id: Principal) -> Self {
         Self {
             rand: Arc::new(Mutex::new(SystemRandom::new())),
             agent: Arc::new(agent),
@@ -170,7 +192,7 @@ impl LedgerEnv {
         }
     }
 
-    pub fn fork(&self) -> Self {
+    fn fork(&self) -> Self {
         let mut agent = Arc::clone(&self.agent);
         Arc::make_mut(&mut agent).set_identity({
             let r = self.rand.lock().expect("failed to grab a lock");
@@ -184,7 +206,7 @@ impl LedgerEnv {
         }
     }
 
-    pub async fn transfer(&self, arg: Transfer) -> anyhow::Result<Result<Nat, TransferError>> {
+    async fn transfer(&self, arg: Transfer) -> anyhow::Result<Result<Nat, TransferError>> {
         let bytes = self
             .agent
             .update(&self.canister_id, "icrc1_transfer")
@@ -196,49 +218,49 @@ impl LedgerEnv {
             .context("Failed to decode icrc1_transfer response as a Result<Nat, TransferError>")
     }
 
-    pub fn principal(&self) -> Principal {
+    fn principal(&self) -> Principal {
         self.agent
             .get_principal()
             .expect("failed to get agent principal")
     }
 
-    pub async fn balance_of(&self, account: impl Into<Account>) -> anyhow::Result<Nat> {
+    async fn balance_of(&self, account: impl Into<Account>) -> anyhow::Result<Nat> {
         self.query("icrc1_balance_of", (account.into(),))
             .await
             .map(|(t,)| t)
     }
 
-    pub async fn supported_standards(&self) -> anyhow::Result<Vec<SupportedStandard>> {
+    async fn supported_standards(&self) -> anyhow::Result<Vec<SupportedStandard>> {
         self.query("icrc1_supported_standards", ())
             .await
             .map(|(t,)| t)
     }
 
-    pub async fn metadata(&self) -> anyhow::Result<Vec<(String, Value)>> {
+    async fn metadata(&self) -> anyhow::Result<Vec<(String, Value)>> {
         self.query("icrc1_metadata", ()).await.map(|(t,)| t)
     }
 
-    pub async fn minting_account(&self) -> anyhow::Result<Option<Account>> {
+    async fn minting_account(&self) -> anyhow::Result<Option<Account>> {
         self.query("icrc1_minting_account", ()).await.map(|(t,)| t)
     }
 
-    pub async fn token_name(&self) -> anyhow::Result<String> {
+    async fn token_name(&self) -> anyhow::Result<String> {
         self.query("icrc1_name", ()).await.map(|(t,)| t)
     }
 
-    pub async fn token_symbol(&self) -> anyhow::Result<String> {
+    async fn token_symbol(&self) -> anyhow::Result<String> {
         self.query("icrc1_symbol", ()).await.map(|(t,)| t)
     }
 
-    pub async fn token_decimals(&self) -> anyhow::Result<u8> {
+    async fn token_decimals(&self) -> anyhow::Result<u8> {
         self.query("icrc1_decimals", ()).await.map(|(t,)| t)
     }
 
-    pub async fn transfer_fee(&self) -> anyhow::Result<Nat> {
+    async fn transfer_fee(&self) -> anyhow::Result<Nat> {
         self.query("icrc1_fee", ()).await.map(|(t,)| t)
     }
 
-    pub async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
+    async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
     where
         Input: ArgumentEncoder + std::fmt::Debug,
         Output: for<'a> ArgumentDecoder<'a>,

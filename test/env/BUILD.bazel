@@ -5,6 +5,10 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files(["Cargo.toml"])
 
+MACRO_DEPENDENCIES = [
+    "@crate_index//:async-trait",
+]
+
 rust_library(
     name = "env",
     srcs = ["lib.rs"],
@@ -12,4 +16,5 @@ rust_library(
     deps = all_crate_deps(
         normal = True,
     ),
+    proc_macro_deps = MACRO_DEPENDENCIES,
 )
