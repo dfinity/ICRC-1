@@ -57,7 +57,7 @@ The hash function works is the [representation-independent hashing of structured
 - the hash of a `Nat` is the [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128) encoding of the number
 - the hash of an `Int` is the [`sleb128`](https://en.wikipedia.org/wiki/LEB128#Signed_LEB128) encoding of the number
 - the hash of an `Array` is the hash of the concatenation of the hashes of all the elements of the array
-- the hash of a `Map` is the hash of the concatenation of all the hashed items of the map sorted. An hashed item is the tuple composed by the hash of the key and the hash of the value.
+- the hash of a `Map` is the hash of the concatenation of all the hashed items of the map sorted. A hashed item is the tuple composed by the hash of the key and the hash of the value.
 
 ## Standards Transactions
 
