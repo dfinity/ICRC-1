@@ -16,13 +16,13 @@
 The transaction log is a list of transactions where each transaction contains the hash of its parent (`phash`). The parent of a transaction `i` is transaction `i-1` for `i>0` and `null` for `i=0`.
 
 ```
-┌────────────────┐          ┌─────────────────┐          ┌─────────────────┐
-│                │◄─────────┤phash = hash(i)  │◄─────────┤phash = hash(i+1)│
-├────────────────┤          ├─────────────────┤          ├─────────────────┤
-│                │          │                 │          │                 │
-│ Transaction i  │          │ Transaction i+1 │          │ Transaction i+2 │
-│                │          │                 │          │                 │
-└────────────────┘          └─────────────────┘          └─────────────────┘
+   ┌──────────────────────┐          ┌──────────────────────┐
+   |         Tx i         |          |         Tx i+1       |
+   ├──────────────────────┤          ├──────────────────────┤
+◄──| phash = hash(Tx i-1) |◄─────────| phash = hash(Tx i)   |
+   | ...                  |          | ...                  |
+   └──────────────────────┘          └──────────────────────┘
+
 ```
 
 ## Value
@@ -65,7 +65,10 @@ Each standard that adheres to `ICRC-3` must define the list of transactions type
 
 `Value`s representing transactions must have the following properties:
 1. they must be of type `Map`
-2. all transactions with index >0 must have a top-level field called `phash: Blob` which contains the [hash](#value-hash) of the previous transactions. 
+1. they must have a field `tx: Map` which describes the transaction
+1. they must have a field `op: Text` inside `tx` which describes the type of transactions, e.g. "ICRC1_Burn" for `ICRC1_Burn` transactions
+1. they must have a field `fee: opt Nat`
+1. all transactions with index >0 must have a top-level field called `phash: Blob` which contains the [hash](#value-hash) of the previous transactions. 
 
 For instance, [`ICRC-1`](https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1) should define three transactions types - `ICRC1_Mint`, `ICRC1_Burn` and `ICRC1_Transfer` - and the function to convert a `Value` to them in order to adhere to the `ICRC-3` standard.
 
@@ -83,17 +86,15 @@ type Value = variant {
     Map : vec record { text; Value }; 
 };
 
-type GetTransactionsArgs = vec record { start : Nat; length : Nat };
-
-type Transactions = vec record { id : Nat; transaction: Value };
+type GetTransactionsArgs = vec record { start : nat; length : nat };
 
 // A function for fetching archived transactions.
-type GetArchivedTransactionsFn = func (GetTransactionsArgs) -> (Transactions) query;
+type GetTransactionsFn = func (GetTransactionsArgs) -> (GetTransactionsResult) query;
 
 type GetTransactionsResult = record {
     // Total number of transactions in the
     // transaction log
-    log-length : Nat;
+    log_length : nat;
     
     // System certificate for the hash of the
     // latest transaction in the chain.
@@ -101,15 +102,15 @@ type GetTransactionsResult = record {
     // is called in a non-replicated query context.
     certificate : opt blob;
 
-    transactions : vec record { id : Nat; transaction: Value };
+    transactions : vec record { id : nat; transaction: Value };
 
     archived_transactions : vec record {
         args : GetTransactionsArgs;
-        callback : GetArchivedTransactionsFn;
+        callback : GetTransactionsFn;
     };
 };
 
-service {
-    icrc3_get_transactions : (GetTransactionsArgs) -> (GetTransactionsResult) query;
+service : {
+    icrc3_get_transactions : GetTransactionsFn;
 };
 ```
