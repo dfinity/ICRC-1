@@ -59,7 +59,7 @@ The hash function works is the [representation-independent hashing of structured
 - the hash of an `Array` is the hash of the concatenation of the hashes of all the elements of the array
 - the hash of a `Map` is the hash of the concatenation of all the hashed items of the map sorted. A hashed item is the tuple composed by the hash of the key and the hash of the value.
 
-## Standards Transactions
+## Interaction with other standards
 
 Each standard that adheres to `ICRC-3` must define the list of transactions types they define and/or extend together with the function that converts a [`Value`](#value) to that type. Transaction types are well-typed records that are easy to consume by clients.
 
