@@ -149,9 +149,7 @@ impl Transfer {
 }
 
 #[async_trait(?Send)]
-pub trait LedgerEnv {
-    fn fork(&self) -> Self;
-    fn principal(&self) -> Principal;
+pub trait Ledger {
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
     where
         Input: ArgumentEncoder + std::fmt::Debug,
@@ -162,17 +160,9 @@ pub trait LedgerEnv {
         Output: for<'a> ArgumentDecoder<'a>;
 }
 
-#[async_trait(?Send)]
-pub trait LedgerEndpoint: LedgerEnv {
-    async fn transfer(&self, arg: Transfer) -> anyhow::Result<Result<Nat, TransferError>>;
-    async fn balance_of(&self, account: impl Into<Account>) -> anyhow::Result<Nat>;
-    async fn supported_standards(&self) -> anyhow::Result<Vec<SupportedStandard>>;
-    async fn metadata(&self) -> anyhow::Result<Vec<(String, Value)>>;
-    async fn minting_account(&self) -> anyhow::Result<Option<Account>>;
-    async fn token_name(&self) -> anyhow::Result<String>;
-    async fn token_symbol(&self) -> anyhow::Result<String>;
-    async fn token_decimals(&self) -> anyhow::Result<u8>;
-    async fn transfer_fee(&self) -> anyhow::Result<Nat>;
+pub trait LedgerEnv {
+    fn fork(&self) -> Self;
+    fn principal(&self) -> Principal;
 }
 
 #[derive(Clone)]
@@ -208,6 +198,10 @@ impl LedgerEnv for ReplicaLedger {
             .get_principal()
             .expect("failed to get agent principal")
     }
+}
+
+#[async_trait(?Send)]
+impl Ledger for ReplicaLedger {
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
     where
         Input: ArgumentEncoder + std::fmt::Debug,
@@ -271,49 +265,6 @@ impl LedgerEnv for ReplicaLedger {
     }
 }
 
-#[async_trait(?Send)]
-impl LedgerEndpoint for ReplicaLedger {
-    async fn transfer(&self, arg: Transfer) -> anyhow::Result<Result<Nat, TransferError>> {
-        self.update("icrc1_transfer", (arg,)).await.map(|(t,)| t)
-    }
-
-    async fn balance_of(&self, account: impl Into<Account>) -> anyhow::Result<Nat> {
-        self.query("icrc1_balance_of", (account.into(),))
-            .await
-            .map(|(t,)| t)
-    }
-
-    async fn supported_standards(&self) -> anyhow::Result<Vec<SupportedStandard>> {
-        self.query("icrc1_supported_standards", ())
-            .await
-            .map(|(t,)| t)
-    }
-
-    async fn metadata(&self) -> anyhow::Result<Vec<(String, Value)>> {
-        self.query("icrc1_metadata", ()).await.map(|(t,)| t)
-    }
-
-    async fn minting_account(&self) -> anyhow::Result<Option<Account>> {
-        self.query("icrc1_minting_account", ()).await.map(|(t,)| t)
-    }
-
-    async fn token_name(&self) -> anyhow::Result<String> {
-        self.query("icrc1_name", ()).await.map(|(t,)| t)
-    }
-
-    async fn token_symbol(&self) -> anyhow::Result<String> {
-        self.query("icrc1_symbol", ()).await.map(|(t,)| t)
-    }
-
-    async fn token_decimals(&self) -> anyhow::Result<u8> {
-        self.query("icrc1_decimals", ()).await.map(|(t,)| t)
-    }
-
-    async fn transfer_fee(&self) -> anyhow::Result<Nat> {
-        self.query("icrc1_fee", ()).await.map(|(t,)| t)
-    }
-}
-
 impl ReplicaLedger {
     pub fn new(agent: Agent, canister_id: Principal) -> Self {
         Self {
@@ -322,4 +273,52 @@ impl ReplicaLedger {
             canister_id,
         }
     }
+}
+
+pub async fn transfer(
+    ledger: &impl Ledger,
+    arg: Transfer,
+) -> anyhow::Result<Result<Nat, TransferError>> {
+    ledger.update("icrc1_transfer", (arg,)).await.map(|(t,)| t)
+}
+
+pub async fn balance_of(ledger: &impl Ledger, account: impl Into<Account>) -> anyhow::Result<Nat> {
+    ledger
+        .query("icrc1_balance_of", (account.into(),))
+        .await
+        .map(|(t,)| t)
+}
+
+pub async fn supported_standards(ledger: &impl Ledger) -> anyhow::Result<Vec<SupportedStandard>> {
+    ledger
+        .query("icrc1_supported_standards", ())
+        .await
+        .map(|(t,)| t)
+}
+
+pub async fn metadata(ledger: &impl Ledger) -> anyhow::Result<Vec<(String, Value)>> {
+    ledger.query("icrc1_metadata", ()).await.map(|(t,)| t)
+}
+
+pub async fn minting_account(ledger: &impl Ledger) -> anyhow::Result<Option<Account>> {
+    ledger
+        .query("icrc1_minting_account", ())
+        .await
+        .map(|(t,)| t)
+}
+
+pub async fn token_name(ledger: &impl Ledger) -> anyhow::Result<String> {
+    ledger.query("icrc1_name", ()).await.map(|(t,)| t)
+}
+
+pub async fn token_symbol(ledger: &impl Ledger) -> anyhow::Result<String> {
+    ledger.query("icrc1_symbol", ()).await.map(|(t,)| t)
+}
+
+pub async fn token_decimals(ledger: &impl Ledger) -> anyhow::Result<u8> {
+    ledger.query("icrc1_decimals", ()).await.map(|(t,)| t)
+}
+
+pub async fn transfer_fee(ledger: &impl Ledger) -> anyhow::Result<Nat> {
+    ledger.query("icrc1_fee", ()).await.map(|(t,)| t)
 }
