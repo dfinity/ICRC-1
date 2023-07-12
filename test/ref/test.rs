@@ -110,7 +110,23 @@ async fn main() {
     )
     .unwrap();
 
-    let (agent, _replica_context) = start_replica(&replica_path, &ic_starter_path).await;
+    let sandbox_launcher_path = std::fs::canonicalize(
+        std::env::var_os("SANDBOX_LAUNCHER").expect("missing sandbox_launcher"),
+    )
+    .unwrap();
+
+    let canister_sandbox_path = std::fs::canonicalize(
+        std::env::var_os("CANISTER_SANDBOX").expect("missing canister_sandbox"),
+    )
+    .unwrap();
+
+    let (agent, _replica_context) = start_replica(
+        &replica_path,
+        &ic_starter_path,
+        &sandbox_launcher_path,
+        &canister_sandbox_path,
+    )
+    .await;
 
     let init_arg = Encode!(&RefInitArg {
         initial_mints: vec![],
