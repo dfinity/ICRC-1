@@ -1,7 +1,7 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
-use candid::{CandidType, Decode, Encode, Int, Nat};
+use candid::{CandidType, Int, Nat};
 use ic_agent::identity::BasicIdentity;
 use ic_agent::Agent;
 use ic_types::Principal;
@@ -94,7 +94,7 @@ impl fmt::Display for TransferError {
 
 impl std::error::Error for TransferError {}
 
-#[derive(CandidType)]
+#[derive(CandidType, Debug)]
 pub struct Transfer {
     from_subaccount: Option<Subaccount>,
     amount: Nat,
@@ -151,8 +151,20 @@ impl Transfer {
 #[async_trait(?Send)]
 pub trait LedgerEnv {
     fn fork(&self) -> Self;
-    async fn transfer(&self, arg: Transfer) -> anyhow::Result<Result<Nat, TransferError>>;
     fn principal(&self) -> Principal;
+    async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
+    where
+        Input: ArgumentEncoder + std::fmt::Debug,
+        Output: for<'a> ArgumentDecoder<'a>;
+    async fn update<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
+    where
+        Input: ArgumentEncoder + std::fmt::Debug,
+        Output: for<'a> ArgumentDecoder<'a>;
+}
+
+#[async_trait(?Send)]
+pub trait LedgerEndpoint: LedgerEnv {
+    async fn transfer(&self, arg: Transfer) -> anyhow::Result<Result<Nat, TransferError>>;
     async fn balance_of(&self, account: impl Into<Account>) -> anyhow::Result<Nat>;
     async fn supported_standards(&self) -> anyhow::Result<Vec<SupportedStandard>>;
     async fn metadata(&self) -> anyhow::Result<Vec<(String, Value)>>;
@@ -161,14 +173,10 @@ pub trait LedgerEnv {
     async fn token_symbol(&self) -> anyhow::Result<String>;
     async fn token_decimals(&self) -> anyhow::Result<u8>;
     async fn transfer_fee(&self) -> anyhow::Result<Nat>;
-    async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
-    where
-        Input: ArgumentEncoder + std::fmt::Debug,
-        Output: for<'a> ArgumentDecoder<'a>;
 }
 
 #[derive(Clone)]
-pub struct LedgerEnvReplica {
+pub struct ReplicaLedger {
     rand: Arc<Mutex<SystemRandom>>,
     agent: Arc<Agent>,
     canister_id: Principal,
@@ -182,37 +190,91 @@ fn waiter() -> garcon::Delay {
 }
 
 #[async_trait(?Send)]
-impl LedgerEnv for LedgerEnvReplica {
+impl LedgerEnv for ReplicaLedger {
     fn fork(&self) -> Self {
         let mut agent = Arc::clone(&self.agent);
         Arc::make_mut(&mut agent).set_identity({
             let r = self.rand.lock().expect("failed to grab a lock");
             fresh_identity(&r)
         });
-
         Self {
             rand: Arc::clone(&self.rand),
             agent,
             canister_id: self.canister_id,
         }
     }
-
-    async fn transfer(&self, arg: Transfer) -> anyhow::Result<Result<Nat, TransferError>> {
-        let bytes = self
-            .agent
-            .update(&self.canister_id, "icrc1_transfer")
-            .with_arg(Encode!(&arg).unwrap())
-            .call_and_wait(waiter())
-            .await
-            .context("Failed to call icrc1_transfer")?;
-        Decode!(&bytes, Result<Nat, TransferError>)
-            .context("Failed to decode icrc1_transfer response as a Result<Nat, TransferError>")
-    }
-
     fn principal(&self) -> Principal {
         self.agent
             .get_principal()
             .expect("failed to get agent principal")
+    }
+    async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
+    where
+        Input: ArgumentEncoder + std::fmt::Debug,
+        Output: for<'a> ArgumentDecoder<'a>,
+    {
+        let debug_inputs = format!("{:?}", input);
+        let in_bytes = encode_args(input)
+            .with_context(|| format!("Failed to encode arguments {}", debug_inputs))?;
+        let bytes = self
+            .agent
+            .query(&self.canister_id, method)
+            .with_arg(in_bytes)
+            .call()
+            .await
+            .with_context(|| {
+                format!(
+                    "failed to call method {} on {} with args {}",
+                    method, self.canister_id, debug_inputs
+                )
+            })?;
+
+        decode_args(&bytes).with_context(|| {
+            format!(
+                "Failed to decode method {} response into type {}, bytes: {}",
+                method,
+                std::any::type_name::<Output>(),
+                hex::encode(bytes)
+            )
+        })
+    }
+
+    async fn update<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
+    where
+        Input: ArgumentEncoder + std::fmt::Debug,
+        Output: for<'a> ArgumentDecoder<'a>,
+    {
+        let debug_inputs = format!("{:?}", input);
+        let in_bytes = encode_args(input)
+            .with_context(|| format!("Failed to encode arguments {}", debug_inputs))?;
+        let bytes = self
+            .agent
+            .update(&self.canister_id, method)
+            .with_arg(in_bytes)
+            .call_and_wait(waiter())
+            .await
+            .with_context(|| {
+                format!(
+                    "failed to call method {} on {} with args {}",
+                    method, self.canister_id, debug_inputs
+                )
+            })?;
+
+        decode_args(&bytes).with_context(|| {
+            format!(
+                "Failed to decode method {} response into type {}, bytes: {}",
+                method,
+                std::any::type_name::<Output>(),
+                hex::encode(bytes)
+            )
+        })
+    }
+}
+
+#[async_trait(?Send)]
+impl LedgerEndpoint for ReplicaLedger {
+    async fn transfer(&self, arg: Transfer) -> anyhow::Result<Result<Nat, TransferError>> {
+        self.update("icrc1_transfer", (arg,)).await.map(|(t,)| t)
     }
 
     async fn balance_of(&self, account: impl Into<Account>) -> anyhow::Result<Nat> {
@@ -250,40 +312,9 @@ impl LedgerEnv for LedgerEnvReplica {
     async fn transfer_fee(&self) -> anyhow::Result<Nat> {
         self.query("icrc1_fee", ()).await.map(|(t,)| t)
     }
-
-    async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
-    where
-        Input: ArgumentEncoder + std::fmt::Debug,
-        Output: for<'a> ArgumentDecoder<'a>,
-    {
-        let debug_inputs = format!("{:?}", input);
-        let in_bytes = encode_args(input)
-            .with_context(|| format!("Failed to encode arguments {}", debug_inputs))?;
-        let bytes = self
-            .agent
-            .query(&self.canister_id, method)
-            .with_arg(in_bytes)
-            .call()
-            .await
-            .with_context(|| {
-                format!(
-                    "failed to call method {} on {} with args {}",
-                    method, self.canister_id, debug_inputs
-                )
-            })?;
-
-        decode_args(&bytes).with_context(|| {
-            format!(
-                "Failed to decode method {} response into type {}, bytes: {}",
-                method,
-                std::any::type_name::<Output>(),
-                hex::encode(bytes)
-            )
-        })
-    }
 }
 
-impl LedgerEnvReplica {
+impl ReplicaLedger {
     pub fn new(agent: Agent, canister_id: Principal) -> Self {
         Self {
             rand: Arc::new(Mutex::new(SystemRandom::new())),
