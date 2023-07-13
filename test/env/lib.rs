@@ -3,7 +3,8 @@ use async_trait::async_trait;
 use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
 use candid::{CandidType, Int, Nat};
 use ic_agent::identity::BasicIdentity;
-use ic_agent::Agent;
+use ic_agent::{Agent, Identity};
+use ic_test_state_machine_client::StateMachine;
 use ic_types::Principal;
 use ring::rand::SystemRandom;
 use serde::Deserialize;
@@ -265,6 +266,97 @@ impl ReplicaLedger {
             rand: Arc::new(Mutex::new(SystemRandom::new())),
             agent: Arc::new(agent),
             canister_id,
+        }
+    }
+}
+
+pub struct SMLedger {
+    rand: Arc<Mutex<SystemRandom>>,
+    sm: StateMachine,
+    sender: Principal,
+    canister_id: Principal,
+}
+
+impl LedgerEnv for SMLedger {
+    fn fork(&self) -> Self {
+        Self {
+            rand: self.rand,
+            sm: self.sm,
+            sender: fresh_identity(&self.rand.lock().expect("failed to grab a lock")).sender(),
+            canister_id: self.canister_id,
+        }
+    }
+    fn principal(&self) -> Principal {
+        self.sender
+    }
+
+    async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
+    where
+        Input: ArgumentEncoder + std::fmt::Debug,
+        Output: for<'a> ArgumentDecoder<'a>,
+    {
+        let debug_inputs = format!("{:?}", input);
+        let in_bytes = encode_args(input)
+            .with_context(|| format!("Failed to encode arguments {}", debug_inputs))?;
+        match self
+            .sm
+            .query_call(canister_id, self.sender, method, in_bytes)
+            .with_context(|| {
+                format!(
+                    "failed to call method {} on {} with args {}",
+                    method, self.canister_id, debug_inputs
+                )
+            })? {
+            ic_test_state_machine_client::WasmResult::Reply(bytes) => decode_args(&bytes)
+                .with_context(|| {
+                    format!(
+                        "Failed to decode method {} response into type {}, bytes: {}",
+                        method,
+                        std::any::type_name::<Output>(),
+                        hex::encode(bytes)
+                    )
+                }),
+            ic_test_state_machine_client::WasmResult::Reject(msg) => {
+                return Err(anyhow::Error::msg(format!(
+                    "Query call to ledger {:?} was rejected: {}",
+                    self.canister_id, msg
+                )))
+            }
+        }
+    }
+
+    async fn update<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
+    where
+        Input: ArgumentEncoder + std::fmt::Debug,
+        Output: for<'a> ArgumentDecoder<'a>,
+    {
+        let debug_inputs = format!("{:?}", input);
+        let in_bytes = encode_args(input)
+            .with_context(|| format!("Failed to encode arguments {}", debug_inputs))?;
+        match self
+            .sm
+            .update_call(canister_id, self.sender, method, in_bytes)
+            .with_context(|| {
+                format!(
+                    "failed to call method {} on {} with args {}",
+                    method, self.canister_id, debug_inputs
+                )
+            })? {
+            ic_test_state_machine_client::WasmResult::Reply(bytes) => decode_args(&bytes)
+                .with_context(|| {
+                    format!(
+                        "Failed to decode method {} response into type {}, bytes: {}",
+                        method,
+                        std::any::type_name::<Output>(),
+                        hex::encode(bytes)
+                    )
+                }),
+            ic_test_state_machine_client::WasmResult::Reject(msg) => {
+                return Err(anyhow::Error::msg(format!(
+                    "Query call to ledger {:?} was rejected: {}",
+                    self.canister_id, msg
+                )))
+            }
         }
     }
 }
