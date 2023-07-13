@@ -1,9 +1,12 @@
 use candid::{CandidType, Decode, Encode, Nat};
 use ic_agent::Agent;
+use ic_test_state_machine_client::StateMachine;
 use ic_types::Principal;
 use icrc1_test_env::ReplicaLedger;
 use icrc1_test_replica::start_replica;
 use serde::{Deserialize, Serialize};
+use std::env;
+use std::path::Path;
 use std::time::Duration;
 
 const REF_WASM: &[u8] = include_bytes!(env!("REF_WASM_PATH"));
@@ -97,6 +100,33 @@ async fn install_canister(agent: &Agent, wasm: &[u8], init_arg: &[u8]) -> Princi
         .await
         .expect("failed to install canister");
     canister_id
+}
+
+pub static STATE_MACHINE_BINARY: &str = "../../ic-test-state-machine";
+pub fn sm_env() -> StateMachine {
+    let path = match env::var_os("STATE_MACHINE_BINARY") {
+        None => STATE_MACHINE_BINARY.to_string(),
+        Some(path) => path
+            .clone()
+            .into_string()
+            .unwrap_or_else(|_| panic!("Invalid string path for {path:?}")),
+    };
+
+    if !Path::new(&path).exists() {
+        println!("
+        Could not find state machine binary to run canister integration tests.
+
+        I looked for it at {:?}. You can specify another path with the environment variable STATE_MACHINE_BINARY (note that I run from {:?}).
+
+        Run the following command to get the binary:
+            curl -sLO https://download.dfinity.systems/ic/$commit/binaries/$platform/ic-test-state-machine.gz
+            gzip -d ic-test-state-machine.gz
+            chmod +x ic-test-state-machine
+        where $commit can be read from `.ic-commit` and $platform is 'x86_64-linux' for Linux and 'x86_64-darwin' for Intel/rosetta-enabled Darwin.
+        ", &path, &env::current_dir().map(|x| x.display().to_string()).unwrap_or_else(|_| "an unknown directory".to_string()));
+    }
+
+    StateMachine::new(&path, false)
 }
 
 #[tokio::main]
