@@ -149,7 +149,9 @@ impl Transfer {
 }
 
 #[async_trait(?Send)]
-pub trait Ledger {
+pub trait LedgerEnv {
+    fn fork(&self) -> Self;
+    fn principal(&self) -> Principal;
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
     where
         Input: ArgumentEncoder + std::fmt::Debug,
@@ -158,11 +160,6 @@ pub trait Ledger {
     where
         Input: ArgumentEncoder + std::fmt::Debug,
         Output: for<'a> ArgumentDecoder<'a>;
-}
-
-pub trait LedgerEnv {
-    fn fork(&self) -> Self;
-    fn principal(&self) -> Principal;
 }
 
 #[derive(Clone)]
@@ -198,10 +195,7 @@ impl LedgerEnv for ReplicaLedger {
             .get_principal()
             .expect("failed to get agent principal")
     }
-}
 
-#[async_trait(?Send)]
-impl Ledger for ReplicaLedger {
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
     where
         Input: ArgumentEncoder + std::fmt::Debug,
@@ -275,50 +269,60 @@ impl ReplicaLedger {
     }
 }
 
-pub async fn transfer(
-    ledger: &impl Ledger,
-    arg: Transfer,
-) -> anyhow::Result<Result<Nat, TransferError>> {
-    ledger.update("icrc1_transfer", (arg,)).await.map(|(t,)| t)
-}
+pub mod icrc1 {
+    use crate::{Account, LedgerEnv, SupportedStandard, Transfer, TransferError, Value};
+    use candid::Nat;
 
-pub async fn balance_of(ledger: &impl Ledger, account: impl Into<Account>) -> anyhow::Result<Nat> {
-    ledger
-        .query("icrc1_balance_of", (account.into(),))
-        .await
-        .map(|(t,)| t)
-}
+    pub async fn transfer(
+        ledger: &impl LedgerEnv,
+        arg: Transfer,
+    ) -> anyhow::Result<Result<Nat, TransferError>> {
+        ledger.update("icrc1_transfer", (arg,)).await.map(|(t,)| t)
+    }
 
-pub async fn supported_standards(ledger: &impl Ledger) -> anyhow::Result<Vec<SupportedStandard>> {
-    ledger
-        .query("icrc1_supported_standards", ())
-        .await
-        .map(|(t,)| t)
-}
+    pub async fn balance_of(
+        ledger: &impl LedgerEnv,
+        account: impl Into<Account>,
+    ) -> anyhow::Result<Nat> {
+        ledger
+            .query("icrc1_balance_of", (account.into(),))
+            .await
+            .map(|(t,)| t)
+    }
 
-pub async fn metadata(ledger: &impl Ledger) -> anyhow::Result<Vec<(String, Value)>> {
-    ledger.query("icrc1_metadata", ()).await.map(|(t,)| t)
-}
+    pub async fn supported_standards(
+        ledger: &impl LedgerEnv,
+    ) -> anyhow::Result<Vec<SupportedStandard>> {
+        ledger
+            .query("icrc1_supported_standards", ())
+            .await
+            .map(|(t,)| t)
+    }
 
-pub async fn minting_account(ledger: &impl Ledger) -> anyhow::Result<Option<Account>> {
-    ledger
-        .query("icrc1_minting_account", ())
-        .await
-        .map(|(t,)| t)
-}
+    pub async fn metadata(ledger: &impl LedgerEnv) -> anyhow::Result<Vec<(String, Value)>> {
+        ledger.query("icrc1_metadata", ()).await.map(|(t,)| t)
+    }
 
-pub async fn token_name(ledger: &impl Ledger) -> anyhow::Result<String> {
-    ledger.query("icrc1_name", ()).await.map(|(t,)| t)
-}
+    pub async fn minting_account(ledger: &impl LedgerEnv) -> anyhow::Result<Option<Account>> {
+        ledger
+            .query("icrc1_minting_account", ())
+            .await
+            .map(|(t,)| t)
+    }
 
-pub async fn token_symbol(ledger: &impl Ledger) -> anyhow::Result<String> {
-    ledger.query("icrc1_symbol", ()).await.map(|(t,)| t)
-}
+    pub async fn token_name(ledger: &impl LedgerEnv) -> anyhow::Result<String> {
+        ledger.query("icrc1_name", ()).await.map(|(t,)| t)
+    }
 
-pub async fn token_decimals(ledger: &impl Ledger) -> anyhow::Result<u8> {
-    ledger.query("icrc1_decimals", ()).await.map(|(t,)| t)
-}
+    pub async fn token_symbol(ledger: &impl LedgerEnv) -> anyhow::Result<String> {
+        ledger.query("icrc1_symbol", ()).await.map(|(t,)| t)
+    }
 
-pub async fn transfer_fee(ledger: &impl Ledger) -> anyhow::Result<Nat> {
-    ledger.query("icrc1_fee", ()).await.map(|(t,)| t)
+    pub async fn token_decimals(ledger: &impl LedgerEnv) -> anyhow::Result<u8> {
+        ledger.query("icrc1_decimals", ()).await.map(|(t,)| t)
+    }
+
+    pub async fn transfer_fee(ledger: &impl LedgerEnv) -> anyhow::Result<Nat> {
+        ledger.query("icrc1_fee", ()).await.map(|(t,)| t)
+    }
 }

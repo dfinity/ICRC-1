@@ -1,10 +1,11 @@
 use anyhow::{bail, Context};
 use candid::Nat;
 use futures::StreamExt;
-use icrc1_test_env::{
+use icrc1_test_env::icrc1::{
     balance_of, metadata, minting_account, supported_standards, token_decimals, token_name,
-    token_symbol, transfer, transfer_fee, Account, Ledger, LedgerEnv, Transfer, Value,
+    token_symbol, transfer, transfer_fee,
 };
+use icrc1_test_env::{Account, LedgerEnv, Transfer, Value};
 use std::future::Future;
 use std::pin::Pin;
 
@@ -43,7 +44,7 @@ fn assert_equal<T: PartialEq + std::fmt::Debug>(lhs: T, rhs: T) -> anyhow::Resul
 }
 
 async fn assert_balance(
-    ledger: &impl Ledger,
+    ledger: &impl LedgerEnv,
     account: impl Into<Account>,
     expected: impl Into<Nat>,
 ) -> anyhow::Result<()> {
@@ -64,7 +65,7 @@ async fn assert_balance(
 
 /// Checks whether the ledger supports token transfers and handles
 /// default sub accounts correctly.
-pub async fn test_transfer(ledger_env: impl Ledger + LedgerEnv) -> TestResult {
+pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerEnv) -> TestResult {
     let receiver_env = ledger_env.fork();
     let receiver = receiver_env.principal();
 
@@ -93,7 +94,7 @@ pub async fn test_transfer(ledger_env: impl Ledger + LedgerEnv) -> TestResult {
 
 /// Checks whether the ledger supports token burns.
 /// Skips the checks if the ledger does not have a minting account.
-pub async fn test_burn(ledger_env: impl Ledger + LedgerEnv) -> TestResult {
+pub async fn test_burn(ledger_env: impl LedgerEnv + LedgerEnv) -> TestResult {
     let minting_account = match minting_account(&ledger_env).await? {
         Some(account) => account,
         None => {
@@ -134,7 +135,7 @@ pub async fn test_burn(ledger_env: impl Ledger + LedgerEnv) -> TestResult {
 }
 
 /// Checks whether the ledger metadata entries agree with named methods.
-pub async fn test_metadata(ledger: impl Ledger) -> TestResult {
+pub async fn test_metadata(ledger: impl LedgerEnv) -> TestResult {
     let mut metadata = metadata(&ledger).await?;
     metadata.sort_by(|l, r| l.0.cmp(&r.0));
 
@@ -165,7 +166,7 @@ pub async fn test_metadata(ledger: impl Ledger) -> TestResult {
 }
 
 /// Checks whether the ledger advertizes support for ICRC-1 standard.
-pub async fn test_supported_standards(ledger: impl Ledger) -> anyhow::Result<Outcome> {
+pub async fn test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let stds = supported_standards(&ledger).await?;
     if !stds.iter().any(|std| std.name == "ICRC-1") {
         bail!("The ledger does not claim support for ICRC-1: {:?}", stds);
@@ -175,7 +176,7 @@ pub async fn test_supported_standards(ledger: impl Ledger) -> anyhow::Result<Out
 }
 
 /// Returns the entire list of tests.
-pub fn test_suite(env: impl Ledger + LedgerEnv + 'static + Clone) -> Vec<Test> {
+pub fn test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
     vec![
         test("basic:transfer", test_transfer(env.clone())),
         test("basic:burn", test_burn(env.clone())),
