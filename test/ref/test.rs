@@ -1,7 +1,7 @@
 use candid::{CandidType, Decode, Encode, Nat};
 use ic_agent::Agent;
 use ic_types::Principal;
-use icrc1_test_env::LedgerEnv;
+use icrc1_test_env::ReplicaLedger;
 use icrc1_test_replica::start_replica;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -143,7 +143,7 @@ async fn main() {
 
     let canister_id = install_canister(&agent, REF_WASM, &init_arg).await;
 
-    let env = LedgerEnv::new(agent, canister_id);
+    let env = ReplicaLedger::new(agent, canister_id);
     let tests = icrc1_test_suite::test_suite(env);
 
     if !icrc1_test_suite::execute_tests(tests).await {
