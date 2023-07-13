@@ -1,15 +1,14 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
+use candid::Principal;
 use candid::{CandidType, Int, Nat};
 use ic_agent::identity::BasicIdentity;
 use ic_agent::Agent;
-use ic_types::Principal;
 use ring::rand::SystemRandom;
 use serde::Deserialize;
 use std::fmt;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 pub type Subaccount = [u8; 32];
 
@@ -149,7 +148,7 @@ impl Transfer {
 }
 
 #[async_trait(?Send)]
-pub trait Ledger {
+pub trait Canister {
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
     where
         Input: ArgumentEncoder + std::fmt::Debug,
@@ -165,18 +164,18 @@ pub trait LedgerEnv {
     fn principal(&self) -> Principal;
 }
 
+// #[async_trait(?Send)]
+// pub trait LedgerTransactions{
+//    async fn burn<F,Output,Input>(&self,ledger: &impl Canister, args:Input) -> Output
+//         where Input: ArgumentEncoder + std::fmt::Debug,
+//         Output: for<'a> ArgumentDecoder<'a>;
+//     };
+
 #[derive(Clone)]
 pub struct ReplicaLedger {
     rand: Arc<Mutex<SystemRandom>>,
     agent: Arc<Agent>,
     canister_id: Principal,
-}
-
-fn waiter() -> garcon::Delay {
-    garcon::Delay::builder()
-        .throttle(Duration::from_millis(500))
-        .timeout(Duration::from_secs(60 * 5))
-        .build()
 }
 
 #[async_trait(?Send)]
@@ -201,7 +200,7 @@ impl LedgerEnv for ReplicaLedger {
 }
 
 #[async_trait(?Send)]
-impl Ledger for ReplicaLedger {
+impl Canister for ReplicaLedger {
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
     where
         Input: ArgumentEncoder + std::fmt::Debug,
@@ -245,7 +244,7 @@ impl Ledger for ReplicaLedger {
             .agent
             .update(&self.canister_id, method)
             .with_arg(in_bytes)
-            .call_and_wait(waiter())
+            .call_and_wait()
             .await
             .with_context(|| {
                 format!(
@@ -276,49 +275,59 @@ impl ReplicaLedger {
 }
 
 pub async fn transfer(
-    ledger: &impl Ledger,
+    ledger: &Arc<impl Canister>,
     arg: Transfer,
 ) -> anyhow::Result<Result<Nat, TransferError>> {
     ledger.update("icrc1_transfer", (arg,)).await.map(|(t,)| t)
 }
 
-pub async fn balance_of(ledger: &impl Ledger, account: impl Into<Account>) -> anyhow::Result<Nat> {
+pub async fn balance_of(
+    ledger: &Arc<impl Canister>,
+    account: impl Into<Account>,
+) -> anyhow::Result<Nat> {
     ledger
         .query("icrc1_balance_of", (account.into(),))
         .await
         .map(|(t,)| t)
 }
 
-pub async fn supported_standards(ledger: &impl Ledger) -> anyhow::Result<Vec<SupportedStandard>> {
+pub async fn supported_standards(
+    ledger: &Arc<impl Canister>,
+) -> anyhow::Result<Vec<SupportedStandard>> {
     ledger
         .query("icrc1_supported_standards", ())
         .await
         .map(|(t,)| t)
 }
 
-pub async fn metadata(ledger: &impl Ledger) -> anyhow::Result<Vec<(String, Value)>> {
+pub async fn metadata(ledger: &Arc<impl Canister>) -> anyhow::Result<Vec<(String, Value)>> {
     ledger.query("icrc1_metadata", ()).await.map(|(t,)| t)
 }
 
-pub async fn minting_account(ledger: &impl Ledger) -> anyhow::Result<Option<Account>> {
+pub async fn minting_account(ledger: &Arc<impl Canister>) -> anyhow::Result<Option<Account>> {
     ledger
         .query("icrc1_minting_account", ())
         .await
         .map(|(t,)| t)
 }
 
-pub async fn token_name(ledger: &impl Ledger) -> anyhow::Result<String> {
+pub async fn token_name(ledger: &Arc<impl Canister>) -> anyhow::Result<String> {
     ledger.query("icrc1_name", ()).await.map(|(t,)| t)
 }
 
-pub async fn token_symbol(ledger: &impl Ledger) -> anyhow::Result<String> {
+pub async fn token_symbol(ledger: &Arc<impl Canister>) -> anyhow::Result<String> {
     ledger.query("icrc1_symbol", ()).await.map(|(t,)| t)
 }
 
-pub async fn token_decimals(ledger: &impl Ledger) -> anyhow::Result<u8> {
+pub async fn token_decimals(ledger: &Arc<impl Canister>) -> anyhow::Result<u8> {
     ledger.query("icrc1_decimals", ()).await.map(|(t,)| t)
 }
 
-pub async fn transfer_fee(ledger: &impl Ledger) -> anyhow::Result<Nat> {
+pub async fn transfer_fee(ledger: &Arc<impl Canister>) -> anyhow::Result<Nat> {
     ledger.query("icrc1_fee", ()).await.map(|(t,)| t)
 }
+
+// pub struct SMLedger {
+//     sm: ic_state_machine_tests::StateMachine,
+//     rand: Arc<Mutex<SystemRandom>>
+// }

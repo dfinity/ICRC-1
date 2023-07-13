@@ -56,8 +56,6 @@ go_binary(
 
 didc_repository(name = "didc")
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
 http_archive(
     name = "rules_rust",
     sha256 = "aaaa4b9591a5dad8d8907ae2dbe6e0eb49e6314946ce4c7149241648e56a1277",
@@ -99,3 +97,15 @@ crate_repositories()
 load("//bazel:replica_tools.bzl", "replica_tools_repository")
 
 replica_tools_repository(name = "replica_tools")
+
+# Needed for protobuf.
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "678d91d8a939a1ef9cb268e1f20c14cd55e40361dc397bb5881e4e1e532679b1",
+    strip_prefix = "protobuf-3.10.1",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.10.1.zip"],
+)
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()

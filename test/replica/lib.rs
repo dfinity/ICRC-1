@@ -153,9 +153,7 @@ pub async fn start_replica(
             Ok(status) => {
                 ok = status.replica_health_status == Some("healthy".to_string());
                 if let Some(root_key) = status.root_key.as_ref() {
-                    agent
-                        .set_root_key(root_key.clone())
-                        .expect("failed to set agent root key");
+                    agent.set_root_key(root_key.clone())
                 }
                 last_status = Some(status);
             }

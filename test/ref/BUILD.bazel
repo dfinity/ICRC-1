@@ -1,6 +1,7 @@
 load("@crate_index//:defs.bzl", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_test")
 load("//bazel:didc_test.bzl", "motoko_actor_wasm_file")
+load("@rules_rust//cargo:cargo_build_script.bzl", "cargo_build_script")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -22,8 +23,11 @@ rust_test(
         "@replica_tools//:replica",
 	"@replica_tools//:sandbox_launcher",
 	"@replica_tools//:canister_sandbox",
+        "@com_google_protobuf//:protoc",
+
     ],
     env = {
+        "PROTOC": "$(rootpath @com_google_protobuf//:protoc)",
         "IC_REPLICA_PATH": "$(rootpath @replica_tools//:replica)",
         "IC_STARTER_PATH": "$(rootpath @replica_tools//:ic-starter)",
         "SANDBOX_LAUNCHER": "$(rootpath @replica_tools//:sandbox_launcher)",
@@ -43,5 +47,17 @@ rust_test(
         "@crate_index//:ic-types",
         "@crate_index//:serde",
         "@crate_index//:tokio",
+    ],
+)
+
+
+cargo_build_script(
+    name = "build_script",
+    srcs = ["build.rs"],
+    build_script_env = {
+        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
+    },
+    data = [
+        "@com_google_protobuf//:protoc",
     ],
 )

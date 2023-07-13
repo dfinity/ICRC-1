@@ -8,7 +8,8 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0"
-candid = "0.7.16"
+candid = "0.9.1"
 futures = "0.3.24"
 icrc1-test-env = { path = "../env" }
-ic-types = "0.4.0"
+ic-types = "0.7.0"
+async-trait = "0.1.71"
