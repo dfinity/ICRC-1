@@ -42,9 +42,9 @@ rust_test(
         "@crate_index//:candid",
         "@crate_index//:garcon",
         "@crate_index//:ic-agent",
-        "@crate_index//:ic-types",
         "@crate_index//:serde",
         "@crate_index//:tokio",
-        "@crate_index//:ic-test-state-machine-client"
+        "@crate_index//:ic-test-state-machine-client",
+        "@crate_index//:ring",
     ],
 )

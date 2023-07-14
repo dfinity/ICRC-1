@@ -1,25 +1,35 @@
-use candid::{CandidType, Decode, Encode, Nat};
+use candid::{CandidType, Decode, Encode, Nat, Principal};
 use ic_agent::Agent;
+use ic_agent::Identity;
 use ic_test_state_machine_client::StateMachine;
-use ic_types::Principal;
+use icrc1_test_env::fresh_identity;
+use icrc1_test_env::standard_replica_burn_fn;
 use icrc1_test_env::ReplicaLedger;
 use icrc1_test_replica::start_replica;
+use ring::rand::SystemRandom;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 const REF_WASM: &[u8] = include_bytes!(env!("REF_WASM_PATH"));
 
-#[derive(CandidType)]
+#[derive(CandidType, Deserialize, Debug)]
 struct Account {
     owner: Principal,
     subaccount: Option<[u8; 32]>,
 }
 
 #[derive(CandidType)]
+struct Mints {
+    account: Account,
+    amount: Nat,
+}
+
+#[derive(CandidType)]
 struct RefInitArg {
-    initial_mints: Vec<(Account, Nat)>,
+    initial_mints: Vec<Mints>,
     minting_account: Account,
     token_name: String,
     token_symbol: String,
@@ -150,7 +160,7 @@ async fn main() {
     )
     .unwrap();
 
-    let (agent, _replica_context) = start_replica(
+    let (mut agent, _replica_context) = start_replica(
         &replica_path,
         &ic_starter_path,
         &sandbox_launcher_path,
@@ -158,8 +168,19 @@ async fn main() {
     )
     .await;
 
+    // We need a fresh identity to be used for the tests
+    // This identity simulates the identity a user would parse to the binary
+    let p1 = fresh_identity(&SystemRandom::new());
+
+    // The tests expect the parsed identity to have enough ICP to run the tests
     let init_arg = Encode!(&RefInitArg {
-        initial_mints: vec![],
+        initial_mints: vec![Mints {
+            account: Account {
+                owner: p1.sender().unwrap(),
+                subaccount: None
+            },
+            amount: Nat::from(100_000_000)
+        }],
         minting_account: Account {
             owner: agent.get_principal().unwrap(),
             subaccount: None
@@ -173,7 +194,13 @@ async fn main() {
 
     let canister_id = install_canister(&agent, REF_WASM, &init_arg).await;
 
-    let env = ReplicaLedger::new(agent, canister_id);
+    // We need to set the identity of the agent to that of what a user would parse
+    agent.set_identity(p1);
+    let env = Arc::new(ReplicaLedger::new(
+        agent,
+        canister_id,
+        standard_replica_burn_fn,
+    ));
     let tests = icrc1_test_suite::test_suite(env);
 
     if !icrc1_test_suite::execute_tests(tests).await {

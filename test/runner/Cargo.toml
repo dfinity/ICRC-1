@@ -10,8 +10,9 @@ path = "main.rs"
 [dependencies]
 icrc1-test-env = { path = "../env" }
 icrc1-test-suite = { path = "../suite" }
-ic-types = "0.4.0"
-ic-agent = "0.20.0"
+ic-agent = "0.22.0"
 pico-args = "0.5"
 reqwest = "0.11"
 tokio = { version = "1.20.1", features = ["macros"] }
+candid = "0.8"
+anyhow = "1.0"

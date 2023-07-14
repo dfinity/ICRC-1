@@ -1,14 +1,15 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
-use candid::{CandidType, Int, Nat};
+use candid::{CandidType, Decode, Encode, Int, Nat, Principal};
 use ic_agent::identity::BasicIdentity;
 use ic_agent::{Agent, Identity};
 use ic_test_state_machine_client::StateMachine;
-use ic_types::Principal;
+use icrc1::LedgerTransaction;
 use ring::rand::SystemRandom;
 use serde::Deserialize;
 use std::fmt;
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -105,7 +106,7 @@ pub struct Transfer {
     memo: Option<Vec<u8>>,
 }
 
-fn fresh_identity(rand: &SystemRandom) -> BasicIdentity {
+pub fn fresh_identity(rand: &SystemRandom) -> BasicIdentity {
     use ring::signature::Ed25519KeyPair as KeyPair;
 
     let doc = KeyPair::generate_pkcs8(rand).expect("failed to generate an ed25519 key pair");
@@ -163,14 +164,20 @@ pub trait LedgerEnv {
         Output: for<'a> ArgumentDecoder<'a>;
 }
 
+pub type BurnReturnType =
+    Pin<Box<dyn std::future::Future<Output = anyhow::Result<Result<Nat, TransferError>>>>>;
+
+pub type ReplicaBurnFn = fn(Arc<Agent>, Principal, Nat) -> BurnReturnType;
+
 #[derive(Clone)]
 pub struct ReplicaLedger {
     rand: Arc<Mutex<SystemRandom>>,
     agent: Arc<Agent>,
     canister_id: Principal,
+    burn_fn: ReplicaBurnFn,
 }
 
-fn waiter() -> garcon::Delay {
+pub fn waiter() -> garcon::Delay {
     garcon::Delay::builder()
         .throttle(Duration::from_millis(500))
         .timeout(Duration::from_secs(60 * 5))
@@ -189,9 +196,10 @@ impl LedgerEnv for ReplicaLedger {
             rand: Arc::clone(&self.rand),
             agent,
             canister_id: self.canister_id,
+            burn_fn: self.burn_fn,
         }
     }
-    fn principal(&self) -> Principal {
+    fn principal(&self) -> candid::Principal {
         self.agent
             .get_principal()
             .expect("failed to get agent principal")
@@ -261,29 +269,42 @@ impl LedgerEnv for ReplicaLedger {
 }
 
 impl ReplicaLedger {
-    pub fn new(agent: Agent, canister_id: Principal) -> Self {
+    pub fn new(agent: Agent, canister_id: Principal, burn_fn: ReplicaBurnFn) -> Self {
         Self {
             rand: Arc::new(Mutex::new(SystemRandom::new())),
             agent: Arc::new(agent),
             canister_id,
+            burn_fn,
         }
     }
 }
 
+#[async_trait(?Send)]
+impl LedgerTransaction for ReplicaLedger {
+    async fn burn(&self, amount: Nat) -> anyhow::Result<Result<Nat, TransferError>> {
+        (self.burn_fn)(self.agent.clone(), self.canister_id, amount).await
+    }
+}
+pub type SMBurnFn = fn(Arc<StateMachine>, Principal, Nat) -> BurnReturnType;
 pub struct SMLedger {
     rand: Arc<Mutex<SystemRandom>>,
-    sm: StateMachine,
+    sm: Arc<StateMachine>,
     sender: Principal,
     canister_id: Principal,
+    burn_fn: SMBurnFn,
 }
 
+#[async_trait(?Send)]
 impl LedgerEnv for SMLedger {
     fn fork(&self) -> Self {
         Self {
-            rand: self.rand,
-            sm: self.sm,
-            sender: fresh_identity(&self.rand.lock().expect("failed to grab a lock")).sender(),
+            rand: self.rand.clone(),
+            sm: self.sm.clone(),
+            sender: fresh_identity(&self.rand.lock().expect("failed to grab a lock"))
+                .sender()
+                .unwrap(),
             canister_id: self.canister_id,
+            burn_fn: self.burn_fn,
         }
     }
     fn principal(&self) -> Principal {
@@ -300,13 +321,14 @@ impl LedgerEnv for SMLedger {
             .with_context(|| format!("Failed to encode arguments {}", debug_inputs))?;
         match self
             .sm
-            .query_call(canister_id, self.sender, method, in_bytes)
-            .with_context(|| {
-                format!(
-                    "failed to call method {} on {} with args {}",
-                    method, self.canister_id, debug_inputs
-                )
-            })? {
+            .query_call(
+                Principal::from_slice(self.canister_id.as_slice()),
+                Principal::from_slice(self.sender.as_slice()),
+                method,
+                in_bytes,
+            )
+            .map_err(|err| anyhow::Error::msg(err.to_string()))?
+        {
             ic_test_state_machine_client::WasmResult::Reply(bytes) => decode_args(&bytes)
                 .with_context(|| {
                     format!(
@@ -335,13 +357,14 @@ impl LedgerEnv for SMLedger {
             .with_context(|| format!("Failed to encode arguments {}", debug_inputs))?;
         match self
             .sm
-            .update_call(canister_id, self.sender, method, in_bytes)
-            .with_context(|| {
-                format!(
-                    "failed to call method {} on {} with args {}",
-                    method, self.canister_id, debug_inputs
-                )
-            })? {
+            .update_call(
+                Principal::from_slice(self.canister_id.as_slice()),
+                Principal::from_slice(self.sender.as_slice()),
+                method,
+                in_bytes,
+            )
+            .map_err(|err| anyhow::Error::msg(err.to_string()))?
+        {
             ic_test_state_machine_client::WasmResult::Reply(bytes) => decode_args(&bytes)
                 .with_context(|| {
                     format!(
@@ -361,19 +384,50 @@ impl LedgerEnv for SMLedger {
     }
 }
 
+#[async_trait(?Send)]
+impl LedgerTransaction for SMLedger {
+    async fn burn(&self, amount: Nat) -> anyhow::Result<Result<Nat, TransferError>> {
+        (self.burn_fn)(self.sm.clone(), self.canister_id, amount).await
+    }
+}
+
+impl SMLedger {
+    pub fn new(sm: Arc<StateMachine>, canister_id: Principal, burn_fn: SMBurnFn) -> Self {
+        let rand = Arc::new(Mutex::new(SystemRandom::new()));
+        let x = Self {
+            rand: rand.clone(),
+            sm,
+            canister_id,
+            sender: fresh_identity(&rand.lock().expect("failed to grab a lock"))
+                .sender()
+                .unwrap(),
+            burn_fn,
+        };
+        x
+    }
+}
+
 pub mod icrc1 {
+    use std::sync::Arc;
+
     use crate::{Account, LedgerEnv, SupportedStandard, Transfer, TransferError, Value};
+    use async_trait::async_trait;
     use candid::Nat;
 
+    #[async_trait(?Send)]
+    pub trait LedgerTransaction {
+        async fn burn(&self, amount: Nat) -> anyhow::Result<Result<Nat, TransferError>>;
+    }
+
     pub async fn transfer(
-        ledger: &impl LedgerEnv,
+        ledger: &Arc<impl LedgerEnv>,
         arg: Transfer,
     ) -> anyhow::Result<Result<Nat, TransferError>> {
         ledger.update("icrc1_transfer", (arg,)).await.map(|(t,)| t)
     }
 
     pub async fn balance_of(
-        ledger: &impl LedgerEnv,
+        ledger: &Arc<impl LedgerEnv>,
         account: impl Into<Account>,
     ) -> anyhow::Result<Nat> {
         ledger
@@ -383,7 +437,7 @@ pub mod icrc1 {
     }
 
     pub async fn supported_standards(
-        ledger: &impl LedgerEnv,
+        ledger: &Arc<impl LedgerEnv>,
     ) -> anyhow::Result<Vec<SupportedStandard>> {
         ledger
             .query("icrc1_supported_standards", ())
@@ -391,30 +445,58 @@ pub mod icrc1 {
             .map(|(t,)| t)
     }
 
-    pub async fn metadata(ledger: &impl LedgerEnv) -> anyhow::Result<Vec<(String, Value)>> {
+    pub async fn metadata(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<Vec<(String, Value)>> {
         ledger.query("icrc1_metadata", ()).await.map(|(t,)| t)
     }
 
-    pub async fn minting_account(ledger: &impl LedgerEnv) -> anyhow::Result<Option<Account>> {
+    pub async fn minting_account(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<Option<Account>> {
         ledger
             .query("icrc1_minting_account", ())
             .await
             .map(|(t,)| t)
     }
 
-    pub async fn token_name(ledger: &impl LedgerEnv) -> anyhow::Result<String> {
+    pub async fn token_name(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<String> {
         ledger.query("icrc1_name", ()).await.map(|(t,)| t)
     }
 
-    pub async fn token_symbol(ledger: &impl LedgerEnv) -> anyhow::Result<String> {
+    pub async fn token_symbol(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<String> {
         ledger.query("icrc1_symbol", ()).await.map(|(t,)| t)
     }
 
-    pub async fn token_decimals(ledger: &impl LedgerEnv) -> anyhow::Result<u8> {
+    pub async fn token_decimals(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<u8> {
         ledger.query("icrc1_decimals", ()).await.map(|(t,)| t)
     }
 
-    pub async fn transfer_fee(ledger: &impl LedgerEnv) -> anyhow::Result<Nat> {
+    pub async fn transfer_fee(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<Nat> {
         ledger.query("icrc1_fee", ()).await.map(|(t,)| t)
     }
+}
+
+pub fn standard_replica_burn_fn(
+    agent: Arc<Agent>,
+    canister_id: Principal,
+    amount: Nat,
+) -> BurnReturnType {
+    // This method panics if it is called but burning is not supported by the given icrc1 ledger
+    Box::pin(async move {
+        let minting_account = Decode!(
+            agent
+                .query(&canister_id, "icrc1_minting_account")
+                .with_arg(Encode!(&()).unwrap())
+                .call()
+                .await?
+                .as_slice(),
+            Option<Account>
+        )
+        .unwrap()
+        .unwrap();
+        let res =
+            Decode!(agent.update(&canister_id, "icrc1_transfer").with_arg(Encode!(&Transfer::amount_to(amount,minting_account.owner)
+).unwrap())
+.call_and_wait(waiter())
+.await.unwrap().as_slice(),Result<Nat, TransferError>)
+            .unwrap();
+        Ok(res)
+    })
 }
