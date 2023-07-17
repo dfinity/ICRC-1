@@ -15,7 +15,6 @@ rust_library(
     crate_name = "icrc1_test_env",
     deps = all_crate_deps(
         normal = True,
-    )
-,
+    ),
     proc_macro_deps = MACRO_DEPENDENCIES,
 )

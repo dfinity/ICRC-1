@@ -392,7 +392,12 @@ impl LedgerTransaction for SMLedger {
 }
 
 impl SMLedger {
-    pub fn new(sm: Arc<StateMachine>, canister_id: Principal, sender:Principal, burn_fn: SMBurnFn) -> Self {
+    pub fn new(
+        sm: Arc<StateMachine>,
+        canister_id: Principal,
+        sender: Principal,
+        burn_fn: SMBurnFn,
+    ) -> Self {
         let rand = Arc::new(Mutex::new(SystemRandom::new()));
         let x = Self {
             rand: rand.clone(),
