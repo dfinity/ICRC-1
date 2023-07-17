@@ -398,15 +398,13 @@ impl SMLedger {
         sender: Principal,
         burn_fn: SMBurnFn,
     ) -> Self {
-        let rand = Arc::new(Mutex::new(SystemRandom::new()));
-        let x = Self {
-            rand: rand.clone(),
+        Self {
+            rand: Arc::new(Mutex::new(SystemRandom::new())),
             sm,
             canister_id,
             sender,
             burn_fn,
-        };
-        x
+        }
     }
 }
 
