@@ -46,5 +46,6 @@ rust_test(
         "@crate_index//:tokio",
         "@crate_index//:ic-test-state-machine-client",
         "@crate_index//:ring",
+        "@crate_index//:flate2",
     ],
 )

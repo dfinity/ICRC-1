@@ -285,7 +285,7 @@ impl LedgerTransaction for ReplicaLedger {
         (self.burn_fn)(self.agent.clone(), self.canister_id, amount).await
     }
 }
-pub type SMBurnFn = fn(Arc<StateMachine>, Principal, Nat) -> BurnReturnType;
+pub type SMBurnFn = fn(Arc<StateMachine>, Principal, Principal, Nat) -> BurnReturnType;
 pub struct SMLedger {
     rand: Arc<Mutex<SystemRandom>>,
     sm: Arc<StateMachine>,
@@ -387,20 +387,18 @@ impl LedgerEnv for SMLedger {
 #[async_trait(?Send)]
 impl LedgerTransaction for SMLedger {
     async fn burn(&self, amount: Nat) -> anyhow::Result<Result<Nat, TransferError>> {
-        (self.burn_fn)(self.sm.clone(), self.canister_id, amount).await
+        (self.burn_fn)(self.sm.clone(), self.sender, self.canister_id, amount).await
     }
 }
 
 impl SMLedger {
-    pub fn new(sm: Arc<StateMachine>, canister_id: Principal, burn_fn: SMBurnFn) -> Self {
+    pub fn new(sm: Arc<StateMachine>, canister_id: Principal, sender:Principal, burn_fn: SMBurnFn) -> Self {
         let rand = Arc::new(Mutex::new(SystemRandom::new()));
         let x = Self {
             rand: rand.clone(),
             sm,
             canister_id,
-            sender: fresh_identity(&rand.lock().expect("failed to grab a lock"))
-                .sender()
-                .unwrap(),
+            sender,
             burn_fn,
         };
         x
@@ -496,6 +494,51 @@ pub fn standard_replica_burn_fn(
 ).unwrap())
 .call_and_wait(waiter())
 .await.unwrap().as_slice(),Result<Nat, TransferError>)
+            .unwrap();
+        Ok(res)
+    })
+}
+
+pub fn standard_sm_burn_fn(
+    sm: Arc<StateMachine>,
+    sender: Principal,
+    canister_id: Principal,
+    amount: Nat,
+) -> BurnReturnType {
+    // This method panics if it is called but burning is not supported by the given icrc1 ledger
+    Box::pin(async move {
+        let minting_account = Decode!(
+            &match sm
+                .query_call(
+                    canister_id,
+                    sender,
+                    "icrc1_minting_account",
+                    Encode!(&()).unwrap()
+                )
+                .unwrap()
+            {
+                ic_test_state_machine_client::WasmResult::Reply(bytes) => bytes,
+                ic_test_state_machine_client::WasmResult::Reject(msg) => {
+                    return Err(anyhow::Error::msg(format!(
+                        "Query call to ledger {:?} was rejected: {}",
+                        canister_id, msg
+                    )));
+                }
+            },
+            Option<Account>
+        )
+        .unwrap()
+        .unwrap();
+        let res =
+            Decode!(&match sm.update_call(canister_id, sender,"icrc1_transfer",Encode!(&Transfer::amount_to(amount,minting_account.owner)
+        ).unwrap()).unwrap(){
+            ic_test_state_machine_client::WasmResult::Reply(bytes) => bytes,
+            ic_test_state_machine_client::WasmResult::Reject(msg) => {
+                return Err(anyhow::Error::msg(format!(
+                    "Query call to ledger {:?} was rejected: {}",
+                    canister_id, msg
+                )))
+            }},Result<Nat, TransferError>)
             .unwrap();
         Ok(res)
     })

@@ -1,14 +1,20 @@
 use candid::{CandidType, Decode, Encode, Nat, Principal};
+use flate2::read::GzDecoder;
 use ic_agent::Agent;
 use ic_agent::Identity;
 use ic_test_state_machine_client::StateMachine;
 use icrc1_test_env::fresh_identity;
 use icrc1_test_env::standard_replica_burn_fn;
+use icrc1_test_env::standard_sm_burn_fn;
 use icrc1_test_env::ReplicaLedger;
+use icrc1_test_env::SMLedger;
 use icrc1_test_replica::start_replica;
 use ring::rand::SystemRandom;
 use serde::{Deserialize, Serialize};
 use std::env;
+use std::fs;
+use std::fs::File;
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -112,8 +118,15 @@ async fn install_canister(agent: &Agent, wasm: &[u8], init_arg: &[u8]) -> Princi
     canister_id
 }
 
-pub static STATE_MACHINE_BINARY: &str = "../../ic-test-state-machine";
-pub fn sm_env() -> StateMachine {
+fn unzip_file(file_path: &str, output_path: &str) {
+    let file = File::open(file_path).unwrap();
+    let mut decoder = GzDecoder::new(file);
+    let mut output_file = File::create(output_path).unwrap();
+    std::io::copy(&mut decoder, &mut output_file).unwrap();
+}
+
+pub static STATE_MACHINE_BINARY: &str = "../ic-test-state-machine";
+fn sm_env() -> StateMachine {
     let path = match env::var_os("STATE_MACHINE_BINARY") {
         None => STATE_MACHINE_BINARY.to_string(),
         Some(path) => path
@@ -136,11 +149,25 @@ pub fn sm_env() -> StateMachine {
         ", &path, &env::current_dir().map(|x| x.display().to_string()).unwrap_or_else(|_| "an unknown directory".to_string()));
     }
 
-    StateMachine::new(&path, false)
+    let new_path = env::temp_dir().join("ic-test-state-machine");
+    unzip_file(
+        &path,
+        &new_path.clone().into_os_string().into_string().unwrap(),
+    );
+
+    // Get the current permissions
+    let mut permissions = fs::metadata(new_path.clone()).unwrap().permissions();
+
+    // Add the executable permission
+    permissions.set_mode(permissions.mode() | 0o111);
+
+    // Set the updated permissions
+    fs::set_permissions(new_path.clone(), permissions).unwrap();
+
+    StateMachine::new(&new_path.into_os_string().into_string().unwrap(), false)
 }
 
-#[tokio::main]
-async fn main() {
+async fn test_replica() {
     let replica_path =
         std::fs::canonicalize(std::env::var_os("IC_REPLICA_PATH").expect("missing replica binary"))
             .unwrap();
@@ -206,4 +233,61 @@ async fn main() {
     if !icrc1_test_suite::execute_tests(tests).await {
         std::process::exit(1);
     }
+}
+
+async fn test_state_machine() {
+    let sm_env = sm_env();
+
+    // We need a fresh identity to be used for the tests
+    // This identity simulates the identity a user would parse to the binary
+    let minter = fresh_identity(&SystemRandom::new());
+    let p1 = fresh_identity(&SystemRandom::new());
+
+    // The tests expect the parsed identity to have enough ICP to run the tests
+    let init_arg = Encode!(&RefInitArg {
+        initial_mints: vec![Mints {
+            account: Account {
+                owner: p1.sender().unwrap(),
+                subaccount: None
+            },
+            amount: Nat::from(100_000_000)
+        }],
+        minting_account: Account {
+            owner: minter.sender().unwrap(),
+            subaccount: None
+        },
+        token_name: "Test token".to_string(),
+        token_symbol: "XTK".to_string(),
+        decimals: 8,
+        transfer_fee: Nat::from(10_000),
+    })
+    .unwrap();
+    let canister_id = sm_env.create_canister(Some(minter.sender().unwrap()));
+
+    sm_env.install_canister(
+        canister_id,
+        (*REF_WASM).to_vec(),
+        init_arg,
+        Some(minter.sender().unwrap()),
+    );
+
+    let env = Arc::new(SMLedger::new(
+        Arc::new(sm_env),
+        canister_id,
+        p1.sender().unwrap(),
+        standard_sm_burn_fn,
+    ));
+
+    let tests = icrc1_test_suite::test_suite(env);
+
+    if !icrc1_test_suite::execute_tests(tests).await {
+        std::process::exit(1);
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    test_replica().await;
+
+    test_state_machine().await;
 }
