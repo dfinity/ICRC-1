@@ -223,11 +223,7 @@ async fn test_replica() {
 
     // We need to set the identity of the agent to that of what a user would parse
     agent.set_identity(p1);
-    let env = Arc::new(ReplicaLedger::new(
-        agent,
-        canister_id,
-        standard_replica_burn_fn,
-    ));
+    let env = ReplicaLedger::new(agent, canister_id, standard_replica_burn_fn);
     let tests = icrc1_test_suite::test_suite(env);
 
     if !icrc1_test_suite::execute_tests(tests).await {
@@ -271,12 +267,12 @@ async fn test_state_machine() {
         Some(minter.sender().unwrap()),
     );
 
-    let env = Arc::new(SMLedger::new(
+    let env = SMLedger::new(
         Arc::new(sm_env),
         canister_id,
         p1.sender().unwrap(),
         standard_sm_burn_fn,
-    ));
+    );
 
     let tests = icrc1_test_suite::test_suite(env);
 

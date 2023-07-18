@@ -286,6 +286,8 @@ impl LedgerTransaction for ReplicaLedger {
     }
 }
 pub type SMBurnFn = fn(Arc<StateMachine>, Principal, Principal, Nat) -> BurnReturnType;
+
+#[derive(Clone)]
 pub struct SMLedger {
     rand: Arc<Mutex<SystemRandom>>,
     sm: Arc<StateMachine>,
@@ -409,8 +411,6 @@ impl SMLedger {
 }
 
 pub mod icrc1 {
-    use std::sync::Arc;
-
     use crate::{Account, LedgerEnv, SupportedStandard, Transfer, TransferError, Value};
     use async_trait::async_trait;
     use candid::Nat;
@@ -421,14 +421,14 @@ pub mod icrc1 {
     }
 
     pub async fn transfer(
-        ledger: &Arc<impl LedgerEnv>,
+        ledger: &impl LedgerEnv,
         arg: Transfer,
     ) -> anyhow::Result<Result<Nat, TransferError>> {
         ledger.update("icrc1_transfer", (arg,)).await.map(|(t,)| t)
     }
 
     pub async fn balance_of(
-        ledger: &Arc<impl LedgerEnv>,
+        ledger: &impl LedgerEnv,
         account: impl Into<Account>,
     ) -> anyhow::Result<Nat> {
         ledger
@@ -438,7 +438,7 @@ pub mod icrc1 {
     }
 
     pub async fn supported_standards(
-        ledger: &Arc<impl LedgerEnv>,
+        ledger: &impl LedgerEnv,
     ) -> anyhow::Result<Vec<SupportedStandard>> {
         ledger
             .query("icrc1_supported_standards", ())
@@ -446,30 +446,30 @@ pub mod icrc1 {
             .map(|(t,)| t)
     }
 
-    pub async fn metadata(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<Vec<(String, Value)>> {
+    pub async fn metadata(ledger: &impl LedgerEnv) -> anyhow::Result<Vec<(String, Value)>> {
         ledger.query("icrc1_metadata", ()).await.map(|(t,)| t)
     }
 
-    pub async fn minting_account(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<Option<Account>> {
+    pub async fn minting_account(ledger: &impl LedgerEnv) -> anyhow::Result<Option<Account>> {
         ledger
             .query("icrc1_minting_account", ())
             .await
             .map(|(t,)| t)
     }
 
-    pub async fn token_name(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<String> {
+    pub async fn token_name(ledger: &impl LedgerEnv) -> anyhow::Result<String> {
         ledger.query("icrc1_name", ()).await.map(|(t,)| t)
     }
 
-    pub async fn token_symbol(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<String> {
+    pub async fn token_symbol(ledger: &impl LedgerEnv) -> anyhow::Result<String> {
         ledger.query("icrc1_symbol", ()).await.map(|(t,)| t)
     }
 
-    pub async fn token_decimals(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<u8> {
+    pub async fn token_decimals(ledger: &impl LedgerEnv) -> anyhow::Result<u8> {
         ledger.query("icrc1_decimals", ()).await.map(|(t,)| t)
     }
 
-    pub async fn transfer_fee(ledger: &Arc<impl LedgerEnv>) -> anyhow::Result<Nat> {
+    pub async fn transfer_fee(ledger: &impl LedgerEnv) -> anyhow::Result<Nat> {
         ledger.query("icrc1_fee", ()).await.map(|(t,)| t)
     }
 }

@@ -8,7 +8,6 @@ use icrc1_test_env::icrc1::{
 use icrc1_test_env::{Account, LedgerEnv, Transfer, Value};
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 
 pub enum Outcome {
     Passed,
@@ -45,7 +44,7 @@ fn assert_equal<T: PartialEq + std::fmt::Debug>(lhs: T, rhs: T) -> anyhow::Resul
 }
 
 async fn assert_balance(
-    ledger: &Arc<impl LedgerEnv>,
+    ledger: &impl LedgerEnv,
     account: impl Into<Account>,
     expected: impl Into<Nat>,
 ) -> anyhow::Result<()> {
@@ -65,16 +64,16 @@ async fn assert_balance(
 }
 
 async fn setup_test_accounts(
-    ledger_env: &Arc<impl LedgerEnv + LedgerTransaction>,
+    ledger_env: &(impl LedgerEnv + LedgerTransaction + std::clone::Clone),
     amount: Nat,
     acc_num: u64,
-) -> anyhow::Result<Vec<Arc<impl LedgerEnv + LedgerTransaction>>> {
+) -> anyhow::Result<Vec<impl LedgerEnv + LedgerTransaction + Clone>> {
     let mut res = vec![];
     assert!(acc_num > 0);
     let balance = balance_of(ledger_env, ledger_env.principal()).await?;
     assert!(balance >= amount.clone() + Nat::from(acc_num) * transfer_fee(ledger_env).await?);
     for _i in 0..acc_num {
-        let receiver_env = Arc::new(ledger_env.fork());
+        let receiver_env = ledger_env.fork();
         let receiver = receiver_env.principal();
         assert_balance(&receiver_env, receiver, 0).await?;
 
@@ -99,7 +98,7 @@ async fn setup_test_accounts(
 /// Checks whether the ledger supports token transfers and handles
 /// default sub accounts correctly.
 /// Expects the given account to have a balance of at least 2*Transfer_Fee
-pub async fn test_transfer(ledger_env: Arc<impl LedgerEnv + LedgerTransaction>) -> TestResult {
+pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerTransaction + Clone) -> TestResult {
     let envs = setup_test_accounts(&ledger_env, Nat::from(20_000), 2).await?;
     let p1_env = envs[0].clone();
     let p2_env = envs[1].clone();
@@ -147,7 +146,7 @@ pub async fn test_transfer(ledger_env: Arc<impl LedgerEnv + LedgerTransaction>) 
 
 /// Checks whether the ledger supports token burns.
 /// Expects the given account to have a balance of at least 2*Transfer_Fee
-pub async fn test_burn(ledger_env: Arc<impl LedgerEnv + LedgerTransaction>) -> TestResult {
+pub async fn test_burn(ledger_env: impl LedgerEnv + LedgerTransaction + Clone) -> TestResult {
     let burn_amount = Nat::from(10_000);
     let envs = setup_test_accounts(&ledger_env, burn_amount.clone(), 1).await?;
     let p1_env = envs[0].clone();
@@ -162,7 +161,7 @@ pub async fn test_burn(ledger_env: Arc<impl LedgerEnv + LedgerTransaction>) -> T
 }
 
 /// Checks whether the ledger metadata entries agree with named methods.
-pub async fn test_metadata(ledger: Arc<impl LedgerEnv>) -> TestResult {
+pub async fn test_metadata(ledger: impl LedgerEnv) -> TestResult {
     let mut metadata = metadata(&ledger).await?;
     metadata.sort_by(|l, r| l.0.cmp(&r.0));
 
@@ -193,7 +192,7 @@ pub async fn test_metadata(ledger: Arc<impl LedgerEnv>) -> TestResult {
 }
 
 /// Checks whether the ledger advertizes support for ICRC-1 standard.
-pub async fn test_supported_standards(ledger: Arc<impl LedgerEnv>) -> anyhow::Result<Outcome> {
+pub async fn test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let stds = supported_standards(&ledger).await?;
     if !stds.iter().any(|std| std.name == "ICRC-1") {
         bail!("The ledger does not claim support for ICRC-1: {:?}", stds);
@@ -203,7 +202,7 @@ pub async fn test_supported_standards(ledger: Arc<impl LedgerEnv>) -> anyhow::Re
 }
 
 /// Returns the entire list of tests.
-pub fn test_suite(env: Arc<impl LedgerEnv + LedgerTransaction + 'static>) -> Vec<Test> {
+pub fn test_suite(env: impl LedgerEnv + LedgerTransaction + 'static + Clone) -> Vec<Test> {
     vec![
         test("basic:transfer", test_transfer(env.clone())),
         test("basic:burn", test_burn(env.clone())),

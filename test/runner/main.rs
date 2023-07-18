@@ -80,11 +80,7 @@ async fn main() {
         .await
         .expect("agent failed to fetch the root key");
 
-    let env = Arc::new(ReplicaLedger::new(
-        agent,
-        canister_id,
-        standard_replica_burn_fn,
-    ));
+    let env = ReplicaLedger::new(agent, canister_id, standard_replica_burn_fn);
     let tests = icrc1_test_suite::test_suite(env);
 
     if !icrc1_test_suite::execute_tests(tests).await {
