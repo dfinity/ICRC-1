@@ -5,7 +5,7 @@ use icrc1_test_env::icrc1::{
     balance_of, metadata, supported_standards, token_decimals, token_name, token_symbol, transfer,
     transfer_fee, LedgerTransaction,
 };
-use icrc1_test_env::{Account, LedgerEnv, Transfer, TransferError, Value};
+use icrc1_test_env::{Account, LedgerEnv, Transfer, Value};
 use std::future::Future;
 use std::pin::Pin;
 
@@ -63,17 +63,16 @@ async fn assert_balance(
     Ok(())
 }
 
-async fn transfer_or_fail(
-    ledger_env: &impl LedgerEnv,
-    amount: Nat,
-    receiver: Principal,
-) -> Result<Nat, TransferError> {
+#[track_caller]
+async fn transfer_or_fail(ledger_env: &impl LedgerEnv, amount: Nat, receiver: Principal) -> Nat {
     transfer(ledger_env, Transfer::amount_to(amount.clone(), receiver))
         .await
         .with_context(|| format!("failed to transfer {} tokens to {}", amount, receiver))
         .unwrap()
+        .unwrap()
 }
 
+#[track_caller]
 async fn setup_test_account(
     ledger_env: &(impl LedgerEnv + LedgerTransaction + std::clone::Clone),
     amount: Nat,
@@ -84,9 +83,7 @@ async fn setup_test_account(
     let receiver = receiver_env.principal();
     assert_balance(&receiver_env, receiver, 0).await?;
 
-    let _tx = transfer_or_fail(ledger_env, amount.clone(), receiver)
-        .await
-        .unwrap();
+    let _tx = transfer_or_fail(ledger_env, amount.clone(), receiver).await;
 
     assert_balance(
         &receiver_env,
