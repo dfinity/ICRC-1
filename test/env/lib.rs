@@ -1,7 +1,7 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
-use candid::{CandidType, Decode, Encode, Int, Nat, Principal};
+use candid::{CandidType, Int, Nat, Principal};
 use ic_agent::identity::BasicIdentity;
 use ic_agent::{Agent, Identity};
 use ic_test_state_machine_client::StateMachine;
@@ -151,7 +151,7 @@ impl Transfer {
 }
 
 #[async_trait(?Send)]
-pub trait LedgerEnv {
+pub trait LedgerEnv: Clone {
     fn fork(&self) -> Self;
     fn principal(&self) -> Principal;
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
@@ -167,7 +167,7 @@ pub trait LedgerEnv {
 pub type BurnReturnType =
     Pin<Box<dyn std::future::Future<Output = anyhow::Result<Result<Nat, TransferError>>>>>;
 
-pub type ReplicaBurnFn = fn(Arc<Agent>, Principal, Nat) -> BurnReturnType;
+pub type ReplicaBurnFn = fn(Arc<ReplicaLedger>, Nat) -> BurnReturnType;
 
 #[derive(Clone)]
 pub struct ReplicaLedger {
@@ -282,10 +282,11 @@ impl ReplicaLedger {
 #[async_trait(?Send)]
 impl LedgerTransaction for ReplicaLedger {
     async fn burn(&self, amount: Nat) -> anyhow::Result<Result<Nat, TransferError>> {
-        (self.burn_fn)(self.agent.clone(), self.canister_id, amount).await
+        (self.burn_fn)(Arc::new(self.clone()), amount).await
     }
 }
-pub type SMBurnFn = fn(Arc<StateMachine>, Principal, Principal, Nat) -> BurnReturnType;
+
+pub type SMBurnFn = fn(Arc<SMLedger>, Nat) -> BurnReturnType;
 
 #[derive(Clone)]
 pub struct SMLedger {
@@ -389,7 +390,7 @@ impl LedgerEnv for SMLedger {
 #[async_trait(?Send)]
 impl LedgerTransaction for SMLedger {
     async fn burn(&self, amount: Nat) -> anyhow::Result<Result<Nat, TransferError>> {
-        (self.burn_fn)(self.sm.clone(), self.sender, self.canister_id, amount).await
+        (self.burn_fn)(Arc::new(self.clone()), amount).await
     }
 }
 
@@ -474,74 +475,43 @@ pub mod icrc1 {
     }
 }
 
-pub fn standard_replica_burn_fn(
-    agent: Arc<Agent>,
-    canister_id: Principal,
-    amount: Nat,
-) -> BurnReturnType {
+pub fn standard_replica_burn_fn(ledger_env: Arc<ReplicaLedger>, amount: Nat) -> BurnReturnType {
     // This method panics if it is called but burning is not supported by the given icrc1 ledger
     Box::pin(async move {
-        let minting_account = Decode!(
-            agent
-                .query(&canister_id, "icrc1_minting_account")
-                .with_arg(Encode!(&()).unwrap())
-                .call()
-                .await?
-                .as_slice(),
-            Option<Account>
-        )
-        .unwrap()
-        .unwrap();
-        let res =
-            Decode!(agent.update(&canister_id, "icrc1_transfer").with_arg(Encode!(&Transfer::amount_to(amount,minting_account.owner)
-).unwrap())
-.call_and_wait(waiter())
-.await.unwrap().as_slice(),Result<Nat, TransferError>)
+        let minting_account: Account = ledger_env
+            .query::<(), (Option<Account>,)>("icrc1_minting_account", ())
+            .await
+            .map(|(t,)| t)
+            .unwrap()
+            .unwrap();
+        let res = ledger_env
+            .update(
+                "icrc1_transfer",
+                (Transfer::amount_to(amount, minting_account.owner),),
+            )
+            .await
+            .map(|(t,)| t)
             .unwrap();
         Ok(res)
     })
 }
 
-pub fn standard_sm_burn_fn(
-    sm: Arc<StateMachine>,
-    sender: Principal,
-    canister_id: Principal,
-    amount: Nat,
-) -> BurnReturnType {
+pub fn standard_sm_burn_fn(ledger_env: Arc<SMLedger>, amount: Nat) -> BurnReturnType {
     // This method panics if it is called but burning is not supported by the given icrc1 ledger
     Box::pin(async move {
-        let minting_account = Decode!(
-            &match sm
-                .query_call(
-                    canister_id,
-                    sender,
-                    "icrc1_minting_account",
-                    Encode!(&()).unwrap()
-                )
-                .unwrap()
-            {
-                ic_test_state_machine_client::WasmResult::Reply(bytes) => bytes,
-                ic_test_state_machine_client::WasmResult::Reject(msg) => {
-                    return Err(anyhow::Error::msg(format!(
-                        "Query call to ledger {:?} was rejected: {}",
-                        canister_id, msg
-                    )));
-                }
-            },
-            Option<Account>
-        )
-        .unwrap()
-        .unwrap();
-        let res =
-            Decode!(&match sm.update_call(canister_id, sender,"icrc1_transfer",Encode!(&Transfer::amount_to(amount,minting_account.owner)
-        ).unwrap()).unwrap(){
-            ic_test_state_machine_client::WasmResult::Reply(bytes) => bytes,
-            ic_test_state_machine_client::WasmResult::Reject(msg) => {
-                return Err(anyhow::Error::msg(format!(
-                    "Query call to ledger {:?} was rejected: {}",
-                    canister_id, msg
-                )))
-            }},Result<Nat, TransferError>)
+        let minting_account: Account = ledger_env
+            .query::<(), (Option<Account>,)>("icrc1_minting_account", ())
+            .await
+            .map(|(t,)| t)
+            .unwrap()
+            .unwrap();
+        let res = ledger_env
+            .update(
+                "icrc1_transfer",
+                (Transfer::amount_to(amount, minting_account.owner),),
+            )
+            .await
+            .map(|(t,)| t)
             .unwrap();
         Ok(res)
     })

@@ -77,7 +77,7 @@ async fn transfer_or_fail(
 async fn setup_test_account(
     ledger_env: &(impl LedgerEnv + LedgerTransaction + std::clone::Clone),
     amount: Nat,
-) -> anyhow::Result<impl LedgerEnv + LedgerTransaction + Clone> {
+) -> anyhow::Result<impl LedgerEnv + LedgerTransaction> {
     let balance = balance_of(ledger_env, ledger_env.principal()).await?;
     assert!(balance >= amount.clone() + transfer_fee(ledger_env).await?);
     let receiver_env = ledger_env.fork();
@@ -103,7 +103,7 @@ async fn setup_test_account(
 /// Checks whether the ledger supports token transfers and handles
 /// default sub accounts correctly.
 /// Expects the given account to have a balance of at least 2*Transfer_Fee
-pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerTransaction + Clone) -> TestResult {
+pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerTransaction) -> TestResult {
     let p1_env = setup_test_account(&ledger_env, Nat::from(20_000)).await?;
     let p2_env = setup_test_account(&ledger_env, Nat::from(20_000)).await?;
     let transfer_amount = 10_000;
@@ -138,7 +138,7 @@ pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerTransaction + Clon
 
 /// Checks whether the ledger supports token burns.
 /// Expects the given account to have a balance of at least 2*Transfer_Fee
-pub async fn test_burn(ledger_env: impl LedgerEnv + LedgerTransaction + Clone) -> TestResult {
+pub async fn test_burn(ledger_env: impl LedgerEnv + LedgerTransaction) -> TestResult {
     let burn_amount = Nat::from(10_000);
     let p1_env = setup_test_account(&ledger_env, burn_amount.clone()).await?;
 
@@ -193,7 +193,7 @@ pub async fn test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<
 }
 
 /// Returns the entire list of tests.
-pub fn test_suite(env: impl LedgerEnv + LedgerTransaction + 'static + Clone) -> Vec<Test> {
+pub fn test_suite(env: impl LedgerEnv + LedgerTransaction + 'static) -> Vec<Test> {
     vec![
         test("basic:transfer", test_transfer(env.clone())),
         test("basic:burn", test_burn(env.clone())),
