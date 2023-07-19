@@ -67,26 +67,6 @@ def _replica_impl(repository_ctx):
     repository_ctx.execute(["/usr/bin/gunzip", ic_canister_sandbox_path])
     repository_ctx.execute(["chmod", "755", "canister_sandbox"])
 
-    repository_ctx.report_progress("Fetching sandbox_launcher")
-    if os_name == "linux":
-        repository_ctx.download(
-            url = "https://download.dfinity.systems/ic/02138563741c87cefed2b223e31f25b59623307a/binaries/x86_64-linux/sandbox_launcher.gz",
-            sha256 = "eaacaab81203b6a8a34a5c96c413d4e2491c30e02a881597cb5cf62fe85146b8",
-            output = "sandbox_launcher.gz",
-        )
-    elif os_name == "mac os x":
-        repository_ctx.download(
-            url = "https://download.dfinity.systems/ic/02138563741c87cefed2b223e31f25b59623307a/binaries/x86_64-darwin/sandbox_launcher.gz",
-            sha256 = "8aaff3721cb239454e50f51a0fd0e8e7f834b379354f5a0f8d874ff1d805c0b0",
-            output = "sandbox_launcher.gz",
-        )
-    else:
-        fail("Unsupported operating system " + os_name)
-
-    ic_sandbox_launcher_path = repository_ctx.path("sandbox_launcher.gz")
-    repository_ctx.execute(["/usr/bin/gunzip", ic_sandbox_launcher_path])
-    repository_ctx.execute(["chmod", "755", "sandbox_launcher"])
-
     repository_ctx.report_progress("Fetching ic-test-state-machine")
     if os_name == "linux":
         repository_ctx.download(
@@ -106,6 +86,26 @@ def _replica_impl(repository_ctx):
     ic_test_state_machine = repository_ctx.path("ic-test-state-machine.gz")
     repository_ctx.execute(["/usr/bin/gunzip", ic_test_state_machine])
     repository_ctx.execute(["chmod", "755", "ic-test-state-machine"])
+
+    repository_ctx.report_progress("Fetching sandbox_launcher")
+    if os_name == "linux":
+        repository_ctx.download(
+            url = "https://download.dfinity.systems/ic/02138563741c87cefed2b223e31f25b59623307a/binaries/x86_64-linux/sandbox_launcher.gz",
+            sha256 = "eaacaab81203b6a8a34a5c96c413d4e2491c30e02a881597cb5cf62fe85146b8",
+            output = "sandbox_launcher.gz",
+        )
+    elif os_name == "mac os x":
+        repository_ctx.download(
+            url = "https://download.dfinity.systems/ic/02138563741c87cefed2b223e31f25b59623307a/binaries/x86_64-darwin/sandbox_launcher.gz",
+            sha256 = "8aaff3721cb239454e50f51a0fd0e8e7f834b379354f5a0f8d874ff1d805c0b0",
+            output = "sandbox_launcher.gz",
+        )
+    else:
+        fail("Unsupported operating system " + os_name)
+
+    ic_sandbox_launcher_path = repository_ctx.path("sandbox_launcher.gz")
+    repository_ctx.execute(["/usr/bin/gunzip", ic_sandbox_launcher_path])
+    repository_ctx.execute(["chmod", "755", "sandbox_launcher"])
 
 _replica = repository_rule(
     implementation = _replica_impl,

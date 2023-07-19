@@ -115,7 +115,7 @@ async fn install_canister(agent: &Agent, wasm: &[u8], init_arg: &[u8]) -> Princi
 
 fn sm_env() -> StateMachine {
     let ic_test_state_machine_path = std::fs::canonicalize(
-        std::env::var_os("IC_STARTER_PATH").expect("missing ic-starter binary"),
+        std::env::var_os("STATE_MACHINE_BINARY").expect("missing ic-starter binary"),
     )
     .unwrap();
 
@@ -222,6 +222,7 @@ async fn test_state_machine() {
     println!("Got here");
 
     let canister_id = sm_env.create_canister(Some(minter.sender().unwrap()));
+    println!("Got here");
 
     sm_env.install_canister(
         canister_id,
