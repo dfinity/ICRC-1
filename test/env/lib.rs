@@ -167,7 +167,7 @@ pub trait LedgerEnv: Clone {
 pub type BurnReturnType =
     Pin<Box<dyn std::future::Future<Output = anyhow::Result<Result<Nat, TransferError>>>>>;
 
-pub type ReplicaBurnFn = fn(Arc<ReplicaLedger>, Nat) -> BurnReturnType;
+pub type ReplicaBurnFn = fn(ReplicaLedger, Nat) -> BurnReturnType;
 
 #[derive(Clone)]
 pub struct ReplicaLedger {
@@ -282,11 +282,11 @@ impl ReplicaLedger {
 #[async_trait(?Send)]
 impl LedgerTransaction for ReplicaLedger {
     async fn burn(&self, amount: Nat) -> anyhow::Result<Result<Nat, TransferError>> {
-        (self.burn_fn)(Arc::new(self.clone()), amount).await
+        (self.burn_fn)(self.clone(), amount).await
     }
 }
 
-pub type SMBurnFn = fn(Arc<SMLedger>, Nat) -> BurnReturnType;
+pub type SMBurnFn = fn(SMLedger, Nat) -> BurnReturnType;
 
 #[derive(Clone)]
 pub struct SMLedger {
@@ -390,7 +390,7 @@ impl LedgerEnv for SMLedger {
 #[async_trait(?Send)]
 impl LedgerTransaction for SMLedger {
     async fn burn(&self, amount: Nat) -> anyhow::Result<Result<Nat, TransferError>> {
-        (self.burn_fn)(Arc::new(self.clone()), amount).await
+        (self.burn_fn)(self.clone(), amount).await
     }
 }
 
@@ -475,44 +475,33 @@ pub mod icrc1 {
     }
 }
 
-pub fn standard_replica_burn_fn(ledger_env: Arc<ReplicaLedger>, amount: Nat) -> BurnReturnType {
+pub fn standard_replica_burn_fn(ledger_env: ReplicaLedger, amount: Nat) -> BurnReturnType {
     // This method panics if it is called but burning is not supported by the given icrc1 ledger
-    Box::pin(async move {
-        let minting_account: Account = ledger_env
-            .query::<(), (Option<Account>,)>("icrc1_minting_account", ())
-            .await
-            .map(|(t,)| t)
-            .unwrap()
-            .unwrap();
-        let res = ledger_env
-            .update(
-                "icrc1_transfer",
-                (Transfer::amount_to(amount, minting_account.owner),),
-            )
-            .await
-            .map(|(t,)| t)
-            .unwrap();
-        Ok(res)
-    })
+    Box::pin(async move { standard_burn_fn(ledger_env, amount).await })
 }
 
-pub fn standard_sm_burn_fn(ledger_env: Arc<SMLedger>, amount: Nat) -> BurnReturnType {
+async fn standard_burn_fn(
+    ledger_env: impl LedgerEnv,
+    amount: Nat,
+) -> anyhow::Result<Result<Nat, TransferError>> {
+    let minting_account: Account = ledger_env
+        .query::<(), (Option<Account>,)>("icrc1_minting_account", ())
+        .await
+        .map(|(t,)| t)
+        .unwrap()
+        .unwrap();
+    let res = ledger_env
+        .update(
+            "icrc1_transfer",
+            (Transfer::amount_to(amount, minting_account.owner),),
+        )
+        .await
+        .map(|(t,)| t)
+        .unwrap();
+    Ok(res)
+}
+
+pub fn standard_sm_burn_fn(ledger_env: SMLedger, amount: Nat) -> BurnReturnType {
     // This method panics if it is called but burning is not supported by the given icrc1 ledger
-    Box::pin(async move {
-        let minting_account: Account = ledger_env
-            .query::<(), (Option<Account>,)>("icrc1_minting_account", ())
-            .await
-            .map(|(t,)| t)
-            .unwrap()
-            .unwrap();
-        let res = ledger_env
-            .update(
-                "icrc1_transfer",
-                (Transfer::amount_to(amount, minting_account.owner),),
-            )
-            .await
-            .map(|(t,)| t)
-            .unwrap();
-        Ok(res)
-    })
+    Box::pin(async move { standard_burn_fn(ledger_env, amount).await })
 }
