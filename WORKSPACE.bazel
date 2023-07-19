@@ -1,4 +1,4 @@
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive","http_file")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("//bazel:didc_repo.bzl", "didc_repository")
 
@@ -99,10 +99,3 @@ crate_repositories()
 load("//bazel:replica_tools.bzl", "replica_tools_repository")
 
 replica_tools_repository(name = "replica_tools")
-
-http_file(
-    name = "ic-test-state-machine",
-    downloaded_file_path = "ic-test-state-machine.gz",
-    urls = ["https://download.dfinity.systems/ic/2857a39ea4d991b2d5c8307623e00a5360eae84c/binaries/x86_64-linux/ic-test-state-machine.gz"],
-    sha256 = "213369060b47ac5fd6318e5a1fa3101b846d1baad2cd194ac486fa9979dfba1d",
-)

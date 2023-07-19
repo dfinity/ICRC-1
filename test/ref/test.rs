@@ -1,5 +1,4 @@
 use candid::{CandidType, Decode, Encode, Nat, Principal};
-use flate2::read::GzDecoder;
 use ic_agent::Agent;
 use ic_agent::Identity;
 use ic_test_state_machine_client::StateMachine;
@@ -12,10 +11,6 @@ use icrc1_test_replica::start_replica;
 use ring::rand::SystemRandom;
 use serde::{Deserialize, Serialize};
 use std::env;
-use std::fs;
-use std::fs::File;
-use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -118,53 +113,19 @@ async fn install_canister(agent: &Agent, wasm: &[u8], init_arg: &[u8]) -> Princi
     canister_id
 }
 
-fn unzip_file(file_path: &str, output_path: &str) {
-    let file = File::open(file_path).unwrap();
-    let mut decoder = GzDecoder::new(file);
-    let mut output_file = File::create(output_path).unwrap();
-    std::io::copy(&mut decoder, &mut output_file).unwrap();
-}
-
-pub static STATE_MACHINE_BINARY: &str = "../ic-test-state-machine";
 fn sm_env() -> StateMachine {
-    let path = match env::var_os("STATE_MACHINE_BINARY") {
-        None => STATE_MACHINE_BINARY.to_string(),
-        Some(path) => path
-            .clone()
+    let ic_test_state_machine_path = std::fs::canonicalize(
+        std::env::var_os("IC_STARTER_PATH").expect("missing ic-starter binary"),
+    )
+    .unwrap();
+
+    StateMachine::new(
+        &ic_test_state_machine_path
+            .into_os_string()
             .into_string()
-            .unwrap_or_else(|_| panic!("Invalid string path for {path:?}")),
-    };
-
-    if !Path::new(&path).exists() {
-        println!("
-        Could not find state machine binary to run canister integration tests.
-
-        I looked for it at {:?}. You can specify another path with the environment variable STATE_MACHINE_BINARY (note that I run from {:?}).
-
-        Run the following command to get the binary:
-            curl -sLO https://download.dfinity.systems/ic/$commit/binaries/$platform/ic-test-state-machine.gz
-            gzip -d ic-test-state-machine.gz
-            chmod +x ic-test-state-machine
-        where $commit can be read from `.ic-commit` and $platform is 'x86_64-linux' for Linux and 'x86_64-darwin' for Intel/rosetta-enabled Darwin.
-        ", &path, &env::current_dir().map(|x| x.display().to_string()).unwrap_or_else(|_| "an unknown directory".to_string()));
-    }
-
-    let new_path = env::temp_dir().join("ic-test-state-machine");
-    unzip_file(
-        &path,
-        &new_path.clone().into_os_string().into_string().unwrap(),
-    );
-
-    // Get the current permissions
-    let mut permissions = fs::metadata(new_path.clone()).unwrap().permissions();
-
-    // Add the executable permission
-    permissions.set_mode(permissions.mode() | 0o111);
-
-    // Set the updated permissions
-    fs::set_permissions(new_path.clone(), permissions).unwrap();
-
-    StateMachine::new(&new_path.into_os_string().into_string().unwrap(), false)
+            .unwrap(),
+        false,
+    )
 }
 
 async fn test_replica() {
@@ -258,6 +219,8 @@ async fn test_state_machine() {
         transfer_fee: Nat::from(10_000),
     })
     .unwrap();
+    println!("Got here");
+
     let canister_id = sm_env.create_canister(Some(minter.sender().unwrap()));
 
     sm_env.install_canister(
@@ -266,6 +229,7 @@ async fn test_state_machine() {
         init_arg,
         Some(minter.sender().unwrap()),
     );
+    println!("Got here");
 
     let env = SMLedger::new(
         Arc::new(sm_env),
@@ -273,6 +237,7 @@ async fn test_state_machine() {
         p1.sender().unwrap(),
         standard_sm_burn_fn,
     );
+    println!("Got here");
 
     let tests = icrc1_test_suite::test_suite(env);
 
@@ -283,7 +248,7 @@ async fn test_state_machine() {
 
 #[tokio::main]
 async fn main() {
-    test_replica().await;
-
     test_state_machine().await;
+
+    test_replica().await;
 }
