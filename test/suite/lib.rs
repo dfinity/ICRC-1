@@ -1,11 +1,11 @@
 use anyhow::{bail, Context};
-use candid::Nat;
+use candid::{Nat, Principal};
 use futures::StreamExt;
 use icrc1_test_env::icrc1::{
     balance_of, metadata, supported_standards, token_decimals, token_name, token_symbol, transfer,
     transfer_fee, LedgerTransaction,
 };
-use icrc1_test_env::{Account, LedgerEnv, Transfer, Value};
+use icrc1_test_env::{Account, LedgerEnv, Transfer, TransferError, Value};
 use std::future::Future;
 use std::pin::Pin;
 
@@ -63,62 +63,54 @@ async fn assert_balance(
     Ok(())
 }
 
-async fn setup_test_accounts(
+async fn transfer_or_fail(
+    ledger_env: &impl LedgerEnv,
+    amount: Nat,
+    receiver: Principal,
+) -> Result<Nat, TransferError> {
+    transfer(ledger_env, Transfer::amount_to(amount.clone(), receiver))
+        .await
+        .with_context(|| format!("failed to transfer {} tokens to {}", amount, receiver))
+        .unwrap()
+}
+
+async fn setup_test_account(
     ledger_env: &(impl LedgerEnv + LedgerTransaction + std::clone::Clone),
     amount: Nat,
-    acc_num: u64,
-) -> anyhow::Result<Vec<impl LedgerEnv + LedgerTransaction + Clone>> {
-    let mut res = vec![];
-    assert!(acc_num > 0);
+) -> anyhow::Result<impl LedgerEnv + LedgerTransaction + Clone> {
     let balance = balance_of(ledger_env, ledger_env.principal()).await?;
-    assert!(balance >= amount.clone() + Nat::from(acc_num) * transfer_fee(ledger_env).await?);
-    for _i in 0..acc_num {
-        let receiver_env = ledger_env.fork();
-        let receiver = receiver_env.principal();
-        assert_balance(&receiver_env, receiver, 0).await?;
+    assert!(balance >= amount.clone() + transfer_fee(ledger_env).await?);
+    let receiver_env = ledger_env.fork();
+    let receiver = receiver_env.principal();
+    assert_balance(&receiver_env, receiver, 0).await?;
 
-        let _tx = transfer(ledger_env, Transfer::amount_to(amount.clone(), receiver))
-            .await
-            .with_context(|| format!("failed to transfer {} tokens to {}", amount, receiver))?;
+    let _tx = transfer_or_fail(ledger_env, amount.clone(), receiver)
+        .await
+        .unwrap();
 
-        assert_balance(
-            &receiver_env,
-            Account {
-                owner: receiver,
-                subaccount: None,
-            },
-            amount.clone(),
-        )
-        .await?;
-        res.push(receiver_env);
-    }
-    Ok(res)
+    assert_balance(
+        &receiver_env,
+        Account {
+            owner: receiver,
+            subaccount: None,
+        },
+        amount.clone(),
+    )
+    .await?;
+    Ok(receiver_env)
 }
 
 /// Checks whether the ledger supports token transfers and handles
 /// default sub accounts correctly.
 /// Expects the given account to have a balance of at least 2*Transfer_Fee
 pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerTransaction + Clone) -> TestResult {
-    let envs = setup_test_accounts(&ledger_env, Nat::from(20_000), 2).await?;
-    let p1_env = envs[0].clone();
-    let p2_env = envs[1].clone();
+    let p1_env = setup_test_account(&ledger_env, Nat::from(20_000)).await?;
+    let p2_env = setup_test_account(&ledger_env, Nat::from(20_000)).await?;
     let transfer_amount = 10_000;
     let balance_p1 = balance_of(&p1_env, p1_env.principal()).await?;
     let balance_p2 = balance_of(&p2_env, p2_env.principal()).await?;
-    assert!(balance_p1 >= Nat::from(transfer_amount) + transfer_fee(&p1_env).await?);
 
-    let _tx = transfer(
-        &p1_env,
-        Transfer::amount_to(transfer_amount, p2_env.principal()),
-    )
-    .await
-    .with_context(|| {
-        format!(
-            "failed to transfer {} tokens to {}",
-            transfer_amount,
-            p2_env.principal()
-        )
-    })?;
+    let _tx = transfer_or_fail(&p1_env, Nat::from(transfer_amount), p2_env.principal()).await;
 
     assert_balance(
         &p2_env,
@@ -148,8 +140,7 @@ pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerTransaction + Clon
 /// Expects the given account to have a balance of at least 2*Transfer_Fee
 pub async fn test_burn(ledger_env: impl LedgerEnv + LedgerTransaction + Clone) -> TestResult {
     let burn_amount = Nat::from(10_000);
-    let envs = setup_test_accounts(&ledger_env, burn_amount.clone(), 1).await?;
-    let p1_env = envs[0].clone();
+    let p1_env = setup_test_account(&ledger_env, burn_amount.clone()).await?;
 
     p1_env
         .burn(burn_amount.clone())
