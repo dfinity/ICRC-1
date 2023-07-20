@@ -261,6 +261,7 @@ pub async fn execute_async_tests(tests: Vec<AsyncTest>) -> bool {
     }
 
     println!("TAP version 14");
+    println!("Running asynchronous tests...");
     println!("1..{}", futures.len());
 
     let mut idx = 0;
@@ -291,6 +292,7 @@ pub async fn execute_async_tests(tests: Vec<AsyncTest>) -> bool {
 
 pub async fn execute_sync_tests(tests: Vec<SyncTest>) -> bool {
     println!("TAP version 14");
+    println!("Running synchronous tests...");
     println!("1..{}", tests.len());
 
     let mut success = true;
