@@ -473,6 +473,10 @@ pub mod icrc1 {
     pub async fn transfer_fee(ledger: &impl LedgerEnv) -> anyhow::Result<Nat> {
         ledger.query("icrc1_fee", ()).await.map(|(t,)| t)
     }
+
+    pub async fn total_supply(ledger: &impl LedgerEnv) -> anyhow::Result<Nat> {
+        ledger.query("icrc1_total_supply", ()).await.map(|(t,)| t)
+    }
 }
 
 pub fn standard_replica_burn_fn(ledger_env: ReplicaLedger, amount: Nat) -> BurnReturnType {

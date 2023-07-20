@@ -185,9 +185,15 @@ async fn test_replica() {
     // We need to set the identity of the agent to that of what a user would parse
     agent.set_identity(p1);
     let env = ReplicaLedger::new(agent, canister_id, standard_replica_burn_fn);
-    let tests = icrc1_test_suite::test_suite(env);
+    let tests_async = icrc1_test_suite::test_suite_async(env.clone());
 
-    if !icrc1_test_suite::execute_tests(tests).await {
+    if !icrc1_test_suite::execute_async_tests(tests_async).await {
+        std::process::exit(1);
+    }
+
+    let tests_sync = icrc1_test_suite::test_suite_sync(env);
+
+    if !icrc1_test_suite::execute_sync_tests(tests_sync).await {
         std::process::exit(1);
     }
 }
@@ -219,10 +225,8 @@ async fn test_state_machine() {
         transfer_fee: Nat::from(10_000),
     })
     .unwrap();
-    println!("Got here");
 
     let canister_id = sm_env.create_canister(Some(minter.sender().unwrap()));
-    println!("Got here");
 
     sm_env.install_canister(
         canister_id,
@@ -230,7 +234,6 @@ async fn test_state_machine() {
         init_arg,
         Some(minter.sender().unwrap()),
     );
-    println!("Got here");
 
     let env = SMLedger::new(
         Arc::new(sm_env),
@@ -238,11 +241,16 @@ async fn test_state_machine() {
         p1.sender().unwrap(),
         standard_sm_burn_fn,
     );
-    println!("Got here");
 
-    let tests = icrc1_test_suite::test_suite(env);
+    let tests_async = icrc1_test_suite::test_suite_async(env.clone());
 
-    if !icrc1_test_suite::execute_tests(tests).await {
+    if !icrc1_test_suite::execute_async_tests(tests_async).await {
+        std::process::exit(1);
+    }
+
+    let tests_sync = icrc1_test_suite::test_suite_sync(env);
+
+    if !icrc1_test_suite::execute_sync_tests(tests_sync).await {
         std::process::exit(1);
     }
 }

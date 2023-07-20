@@ -81,9 +81,9 @@ async fn main() {
         .expect("agent failed to fetch the root key");
 
     let env = ReplicaLedger::new(agent, canister_id, standard_replica_burn_fn);
-    let tests = icrc1_test_suite::test_suite(env);
+    let tests = icrc1_test_suite::test_suite_async(env);
 
-    if !icrc1_test_suite::execute_tests(tests).await {
+    if !icrc1_test_suite::execute_async_tests(tests).await {
         std::process::exit(1);
     }
 }

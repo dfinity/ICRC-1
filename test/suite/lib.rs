@@ -2,8 +2,8 @@ use anyhow::{bail, Context};
 use candid::{Nat, Principal};
 use futures::StreamExt;
 use icrc1_test_env::icrc1::{
-    balance_of, metadata, supported_standards, token_decimals, token_name, token_symbol, transfer,
-    transfer_fee, LedgerTransaction,
+    balance_of, metadata, supported_standards, token_decimals, token_name, token_symbol,
+    total_supply, transfer, transfer_fee, LedgerTransaction,
 };
 use icrc1_test_env::{Account, LedgerEnv, Transfer, Value};
 use std::future::Future;
@@ -15,16 +15,34 @@ pub enum Outcome {
 }
 
 pub type TestResult = anyhow::Result<Outcome>;
-
-pub struct Test {
+pub type SyncTestResult = Pin<Box<dyn std::future::Future<Output = anyhow::Result<Outcome>>>>;
+pub struct AsyncTest {
     name: String,
     action: Pin<Box<dyn Future<Output = TestResult>>>,
 }
 
-pub fn test(name: impl Into<String>, body: impl Future<Output = TestResult> + 'static) -> Test {
-    Test {
+pub struct SyncTest {
+    name: String,
+    action: Box<dyn FnOnce() -> SyncTestResult>,
+}
+
+pub fn test_async(
+    name: impl Into<String>,
+    body: impl Future<Output = TestResult> + 'static,
+) -> AsyncTest {
+    AsyncTest {
         name: name.into(),
         action: Box::pin(body),
+    }
+}
+
+pub fn test_sync(
+    name: impl Into<String>,
+    body: impl FnOnce() -> SyncTestResult + 'static,
+) -> SyncTest {
+    SyncTest {
+        name: name.into(),
+        action: Box::new(body),
     }
 }
 
@@ -148,6 +166,25 @@ pub async fn test_burn(ledger_env: impl LedgerEnv + LedgerTransaction) -> TestRe
     Ok(Outcome::Passed)
 }
 
+pub async fn test_total_supply(ledger_env: impl LedgerEnv + LedgerTransaction) -> TestResult {
+    let burn_amount = Nat::from(10_000);
+    let initial_supply = total_supply(&ledger_env).await.unwrap();
+    let p1_env = setup_test_account(&ledger_env, burn_amount.clone()).await?;
+
+    let mut current_supply = initial_supply - transfer_fee(&ledger_env).await?;
+    // Total supply should only change by the transfer fee when transfering tokens
+    assert_eq!(total_supply(&ledger_env).await.unwrap(), current_supply);
+
+    p1_env
+        .burn(burn_amount.clone())
+        .await?
+        .context("failed to burn amount")?;
+    current_supply -= burn_amount;
+    // Total supply should change when burning tokens
+    assert_eq!(total_supply(&ledger_env).await.unwrap(), current_supply);
+    Ok(Outcome::Passed)
+}
+
 /// Checks whether the ledger metadata entries agree with named methods.
 pub async fn test_metadata(ledger: impl LedgerEnv) -> TestResult {
     let mut metadata = metadata(&ledger).await?;
@@ -189,19 +226,30 @@ pub async fn test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<
     Ok(Outcome::Passed)
 }
 
-/// Returns the entire list of tests.
-pub fn test_suite(env: impl LedgerEnv + LedgerTransaction + 'static) -> Vec<Test> {
+/// Returns the entire list of asynchronous tests.
+/// These tests can be run against any ledger environment, including live networks
+pub fn test_suite_async(env: impl LedgerEnv + LedgerTransaction + 'static) -> Vec<AsyncTest> {
     vec![
-        test("basic:transfer", test_transfer(env.clone())),
-        test("basic:burn", test_burn(env.clone())),
-        test("basic:metadata", test_metadata(env.clone())),
-        test("basic:supported_standards", test_supported_standards(env)),
+        test_async("basic:transfer", test_transfer(env.clone())),
+        test_async("basic:burn", test_burn(env.clone())),
+        test_async("basic:metadata", test_metadata(env.clone())),
+        test_async("basic:supported_standards", test_supported_standards(env)),
     ]
+}
+
+/// Returns the entire list of synchronous tests.
+/// These tests can only be run against ledger enviornments that exists in a controlled environment
+/// Network calls are expected to happen synchronous and other than this test suite no other entitity is
+/// changing the state of the ledger while the test is running
+pub fn test_suite_sync(env: impl LedgerEnv + LedgerTransaction + 'static) -> Vec<SyncTest> {
+    vec![test_sync("basic:supply", move || {
+        Box::pin(test_total_supply(env))
+    })]
 }
 
 /// Executes the list of tests concurrently and prints results using
 /// the TAP protocol (https://testanything.org/).
-pub async fn execute_tests(tests: Vec<Test>) -> bool {
+pub async fn execute_async_tests(tests: Vec<AsyncTest>) -> bool {
     use futures::stream::FuturesOrdered;
 
     let mut names = Vec::new();
@@ -238,5 +286,33 @@ pub async fn execute_tests(tests: Vec<Test>) -> bool {
         idx += 1;
     }
 
+    success
+}
+
+pub async fn execute_sync_tests(tests: Vec<SyncTest>) -> bool {
+    println!("TAP version 14");
+    println!("1..{}", tests.len());
+
+    let mut success = true;
+    for (idx, test) in tests.into_iter().enumerate() {
+        let result = (test.action)().await;
+        match result {
+            Ok(Outcome::Passed) => {
+                println!("ok {} - {}", idx + 1, test.name);
+            }
+            Ok(Outcome::Skipped { reason }) => {
+                println!("ok {} - {} # SKIP {}", idx + 1, test.name, reason);
+            }
+            Err(err) => {
+                success = false;
+
+                for line in format!("{:?}", err).lines() {
+                    println!("# {}", line);
+                }
+
+                println!("not ok {} - {}", idx + 1, test.name);
+            }
+        }
+    }
     success
 }
