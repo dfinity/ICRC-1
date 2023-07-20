@@ -14,5 +14,6 @@ rust_binary(
     ) + [
         "//test/env",
         "//test/suite",
+        "@crate_index//:candid",
     ],
 )
