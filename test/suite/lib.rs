@@ -94,7 +94,7 @@ pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerEnv) -> TestResult
 
 /// Checks whether the ledger supports token burns.
 /// Skips the checks if the ledger does not have a minting account.
-pub async fn test_burn(ledger_env: impl LedgerEnv + LedgerEnv) -> TestResult {
+pub async fn test_burn(ledger_env: impl LedgerEnv) -> TestResult {
     let minting_account = match minting_account(&ledger_env).await? {
         Some(account) => account,
         None => {
