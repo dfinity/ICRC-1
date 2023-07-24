@@ -1,7 +1,7 @@
 REPLICA_BUILD = """
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["replica", "ic-starter", "canister_sandbox", "sandbox_launcher","ic-test-state-machine"])
+exports_files(["replica", "ic-starter", "canister_sandbox", "sandbox_launcher"])
 """
 
 def _replica_impl(repository_ctx):
@@ -66,26 +66,6 @@ def _replica_impl(repository_ctx):
     ic_canister_sandbox_path = repository_ctx.path("canister_sandbox.gz")
     repository_ctx.execute(["/usr/bin/gunzip", ic_canister_sandbox_path])
     repository_ctx.execute(["chmod", "755", "canister_sandbox"])
-
-    repository_ctx.report_progress("Fetching ic-test-state-machine")
-    if os_name == "linux":
-        repository_ctx.download(
-            url = "https://download.dfinity.systems/ic/2857a39ea4d991b2d5c8307623e00a5360eae84c/binaries/x86_64-linux/ic-test-state-machine.gz",
-            sha256 = "213369060b47ac5fd6318e5a1fa3101b846d1baad2cd194ac486fa9979dfba1d",
-            output = "ic-test-state-machine.gz",
-        )
-    elif os_name == "mac os x":
-        repository_ctx.download(
-            url = "https://download.dfinity.systems/ic/2857a39ea4d991b2d5c8307623e00a5360eae84c/binaries/x86_64-darwin/ic-test-state-machine.gz",
-            sha256 = "213369060b47ac5fd6318e5a1fa3101b846d1baad2cd194ac486fa9979dfba1d",
-            output = "ic-test-state-machine.gz",
-        )
-    else:
-        fail("Unsupported operating system: " + os_name)
-
-    ic_test_state_machine = repository_ctx.path("ic-test-state-machine.gz")
-    repository_ctx.execute(["/usr/bin/gunzip", ic_test_state_machine])
-    repository_ctx.execute(["chmod", "755", "ic-test-state-machine"])
 
     repository_ctx.report_progress("Fetching sandbox_launcher")
     if os_name == "linux":

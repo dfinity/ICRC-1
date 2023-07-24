@@ -1,36 +1,22 @@
-use candid::{CandidType, Decode, Encode, Nat, Principal};
+use candid::{CandidType, Decode, Encode, Nat};
 use ic_agent::Agent;
-use ic_agent::Identity;
-use ic_test_state_machine_client::StateMachine;
-use icrc1_test_env::fresh_identity;
-use icrc1_test_env::standard_replica_burn_fn;
-use icrc1_test_env::standard_sm_burn_fn;
+use ic_types::Principal;
 use icrc1_test_env::ReplicaLedger;
-use icrc1_test_env::SMLedger;
 use icrc1_test_replica::start_replica;
-use ring::rand::SystemRandom;
 use serde::{Deserialize, Serialize};
-use std::env;
-use std::sync::Arc;
 use std::time::Duration;
 
 const REF_WASM: &[u8] = include_bytes!(env!("REF_WASM_PATH"));
 
-#[derive(CandidType, Deserialize, Debug)]
+#[derive(CandidType)]
 struct Account {
     owner: Principal,
     subaccount: Option<[u8; 32]>,
 }
 
 #[derive(CandidType)]
-struct Mints {
-    account: Account,
-    amount: Nat,
-}
-
-#[derive(CandidType)]
 struct RefInitArg {
-    initial_mints: Vec<Mints>,
+    initial_mints: Vec<(Account, Nat)>,
     minting_account: Account,
     token_name: String,
     token_symbol: String,
@@ -113,22 +99,8 @@ async fn install_canister(agent: &Agent, wasm: &[u8], init_arg: &[u8]) -> Princi
     canister_id
 }
 
-fn sm_env() -> StateMachine {
-    let ic_test_state_machine_path = std::fs::canonicalize(
-        std::env::var_os("STATE_MACHINE_BINARY").expect("missing ic-starter binary"),
-    )
-    .unwrap();
-
-    StateMachine::new(
-        &ic_test_state_machine_path
-            .into_os_string()
-            .into_string()
-            .unwrap(),
-        false,
-    )
-}
-
-async fn test_replica() {
+#[tokio::main]
+async fn main() {
     let replica_path =
         std::fs::canonicalize(std::env::var_os("IC_REPLICA_PATH").expect("missing replica binary"))
             .unwrap();
@@ -148,7 +120,7 @@ async fn test_replica() {
     )
     .unwrap();
 
-    let (mut agent, _replica_context) = start_replica(
+    let (agent, _replica_context) = start_replica(
         &replica_path,
         &ic_starter_path,
         &sandbox_launcher_path,
@@ -156,19 +128,8 @@ async fn test_replica() {
     )
     .await;
 
-    // We need a fresh identity to be used for the tests
-    // This identity simulates the identity a user would parse to the binary
-    let p1 = fresh_identity(&SystemRandom::new());
-
-    // The tests expect the parsed identity to have enough ICP to run the tests
     let init_arg = Encode!(&RefInitArg {
-        initial_mints: vec![Mints {
-            account: Account {
-                owner: p1.sender().unwrap(),
-                subaccount: None
-            },
-            amount: Nat::from(100_000_000)
-        }],
+        initial_mints: vec![],
         minting_account: Account {
             owner: agent.get_principal().unwrap(),
             subaccount: None
@@ -182,74 +143,10 @@ async fn test_replica() {
 
     let canister_id = install_canister(&agent, REF_WASM, &init_arg).await;
 
-    // We need to set the identity of the agent to that of what a user would parse
-    agent.set_identity(p1);
-    let env = ReplicaLedger::new(agent, canister_id, standard_replica_burn_fn);
+    let env = ReplicaLedger::new(agent, canister_id);
     let tests = icrc1_test_suite::test_suite(env);
 
     if !icrc1_test_suite::execute_tests(tests).await {
         std::process::exit(1);
     }
-}
-
-async fn test_state_machine() {
-    let sm_env = sm_env();
-
-    // We need a fresh identity to be used for the tests
-    // This identity simulates the identity a user would parse to the binary
-    let minter = fresh_identity(&SystemRandom::new());
-    let p1 = fresh_identity(&SystemRandom::new());
-
-    // The tests expect the parsed identity to have enough ICP to run the tests
-    let init_arg = Encode!(&RefInitArg {
-        initial_mints: vec![Mints {
-            account: Account {
-                owner: p1.sender().unwrap(),
-                subaccount: None
-            },
-            amount: Nat::from(100_000_000)
-        }],
-        minting_account: Account {
-            owner: minter.sender().unwrap(),
-            subaccount: None
-        },
-        token_name: "Test token".to_string(),
-        token_symbol: "XTK".to_string(),
-        decimals: 8,
-        transfer_fee: Nat::from(10_000),
-    })
-    .unwrap();
-    println!("Got here");
-
-    let canister_id = sm_env.create_canister(Some(minter.sender().unwrap()));
-    println!("Got here");
-
-    sm_env.install_canister(
-        canister_id,
-        (*REF_WASM).to_vec(),
-        init_arg,
-        Some(minter.sender().unwrap()),
-    );
-    println!("Got here");
-
-    let env = SMLedger::new(
-        Arc::new(sm_env),
-        canister_id,
-        p1.sender().unwrap(),
-        standard_sm_burn_fn,
-    );
-    println!("Got here");
-
-    let tests = icrc1_test_suite::test_suite(env);
-
-    if !icrc1_test_suite::execute_tests(tests).await {
-        std::process::exit(1);
-    }
-}
-
-#[tokio::main]
-async fn main() {
-    test_state_machine().await;
-
-    test_replica().await;
 }
