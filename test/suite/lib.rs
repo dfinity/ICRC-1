@@ -1,9 +1,9 @@
 use anyhow::{bail, Context};
-use candid::{Nat, Principal};
+use candid::Nat;
 use futures::StreamExt;
 use icrc1_test_env::icrc1::{
-    balance_of, metadata, supported_standards, token_decimals, token_name, token_symbol, transfer,
-    transfer_fee, LedgerTransaction,
+    balance_of, metadata, minting_account, supported_standards, token_decimals, token_name,
+    token_symbol, transfer, transfer_fee,
 };
 use icrc1_test_env::{Account, LedgerEnv, Transfer, Value};
 use std::future::Future;
@@ -63,88 +63,74 @@ async fn assert_balance(
     Ok(())
 }
 
-#[track_caller]
-async fn transfer_or_fail(ledger_env: &impl LedgerEnv, amount: Nat, receiver: Principal) -> Nat {
-    transfer(ledger_env, Transfer::amount_to(amount.clone(), receiver))
-        .await
-        .with_context(|| format!("failed to transfer {} tokens to {}", amount, receiver))
-        .unwrap()
-        .unwrap()
-}
-
-#[track_caller]
-async fn setup_test_account(
-    ledger_env: &(impl LedgerEnv + LedgerTransaction + std::clone::Clone),
-    amount: Nat,
-) -> anyhow::Result<impl LedgerEnv + LedgerTransaction> {
-    let balance = balance_of(ledger_env, ledger_env.principal()).await?;
-    assert!(balance >= amount.clone() + transfer_fee(ledger_env).await?);
+/// Checks whether the ledger supports token transfers and handles
+/// default sub accounts correctly.
+pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerEnv) -> TestResult {
     let receiver_env = ledger_env.fork();
     let receiver = receiver_env.principal();
-    assert_balance(&receiver_env, receiver, 0).await?;
 
-    let _tx = transfer_or_fail(ledger_env, amount.clone(), receiver).await;
+    let amount = 10_000;
+
+    let _tx = transfer(&ledger_env, Transfer::amount_to(amount, receiver))
+        .await
+        .with_context(|| format!("failed to transfer {} tokens to {}", amount, receiver))?;
 
     assert_balance(
-        &receiver_env,
+        &ledger_env,
         Account {
             owner: receiver,
             subaccount: None,
         },
-        amount.clone(),
-    )
-    .await?;
-    Ok(receiver_env)
-}
-
-/// Checks whether the ledger supports token transfers and handles
-/// default sub accounts correctly.
-/// Expects the given account to have a balance of at least 2*Transfer_Fee
-pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerTransaction) -> TestResult {
-    let p1_env = setup_test_account(&ledger_env, Nat::from(20_000)).await?;
-    let p2_env = setup_test_account(&ledger_env, Nat::from(20_000)).await?;
-    let transfer_amount = 10_000;
-    let balance_p1 = balance_of(&p1_env, p1_env.principal()).await?;
-    let balance_p2 = balance_of(&p2_env, p2_env.principal()).await?;
-
-    let _tx = transfer_or_fail(&p1_env, Nat::from(transfer_amount), p2_env.principal()).await;
-
-    assert_balance(
-        &p2_env,
-        Account {
-            owner: p2_env.principal(),
-            subaccount: None,
-        },
-        balance_p2.clone() + Nat::from(transfer_amount),
+        amount,
     )
     .await?;
 
-    assert_balance(&ledger_env, Account{ owner: p2_env.principal(), subaccount: Some([0; 32]) }, balance_p2 + transfer_amount)
+    assert_balance(&ledger_env, Account{ owner: receiver, subaccount: Some([0; 32]) }, amount)
         .await
         .context("the ledger does not treat accounts with an empty subaccount as accounts with the default subaccount")?;
-
-    assert_balance(
-        &p1_env,
-        p1_env.principal(),
-        balance_p1 - Nat::from(transfer_amount) - transfer_fee(&p1_env).await?,
-    )
-    .await?;
 
     Ok(Outcome::Passed)
 }
 
 /// Checks whether the ledger supports token burns.
-/// Expects the given account to have a balance of at least 2*Transfer_Fee
-pub async fn test_burn(ledger_env: impl LedgerEnv + LedgerTransaction) -> TestResult {
-    let burn_amount = Nat::from(10_000);
-    let p1_env = setup_test_account(&ledger_env, burn_amount.clone()).await?;
+/// Skips the checks if the ledger does not have a minting account.
+pub async fn test_burn(ledger_env: impl LedgerEnv + LedgerEnv) -> TestResult {
+    let minting_account = match minting_account(&ledger_env).await? {
+        Some(account) => account,
+        None => {
+            return Ok(Outcome::Skipped {
+                reason: "the ledger does not support burn transactions".to_string(),
+            });
+        }
+    };
 
-    p1_env
-        .burn(burn_amount.clone())
-        .await?
-        .context("failed to burn amount")?;
+    assert_balance(&ledger_env, minting_account.clone(), 0)
+        .await
+        .context("minting account cannot hold any funds")?;
 
-    assert_balance(&p1_env, p1_env.principal(), 0).await?;
+    let burn_amount = Nat::from(10_000) + transfer_fee(&ledger_env).await?;
+    let tmp_account_env = ledger_env.fork();
+    let tmp_account = tmp_account_env.principal();
+
+    transfer(
+        &ledger_env,
+        Transfer::amount_to(burn_amount.clone(), tmp_account),
+    )
+    .await?
+    .context("failed to transfer funds to a temporary account")?;
+
+    assert_balance(&ledger_env, tmp_account, burn_amount.clone()).await?;
+
+    let _tx = transfer(
+        &tmp_account_env,
+        Transfer::amount_to(burn_amount, minting_account.clone()).fee(0),
+    )
+    .await
+    .context("failed to burn tokens");
+
+    assert_balance(&ledger_env, tmp_account, 0).await?;
+    assert_balance(&ledger_env, minting_account, 0).await?;
+
     Ok(Outcome::Passed)
 }
 
@@ -190,7 +176,7 @@ pub async fn test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<
 }
 
 /// Returns the entire list of tests.
-pub fn test_suite(env: impl LedgerEnv + LedgerTransaction + 'static) -> Vec<Test> {
+pub fn test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
     vec![
         test("basic:transfer", test_transfer(env.clone())),
         test("basic:burn", test_burn(env.clone())),

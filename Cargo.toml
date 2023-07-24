@@ -6,3 +6,6 @@ members = [
   "test/runner",
   "test/replica",
 ]
+
+[patch.crates-io]
+ic-agent = { git = "https://github.com/dfinity/agent-rs", rev = "5bd26b8" }
