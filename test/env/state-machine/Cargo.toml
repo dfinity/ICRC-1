@@ -10,8 +10,7 @@ path = "lib.rs"
 anyhow = "1.0"
 candid = "0.8"
 rand = "0.8.5"
-ring = "0.16.20"
 async-trait = "0.1.71"
 hex = "0.4.3"
 ic-test-state-machine-client = "2.2.1"
-icrc1-test-env = { path = "../" }
+icrc1-test-env = { version = "0.1.0", path = "../" }

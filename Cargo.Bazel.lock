@@ -1,5 +1,5 @@
 {
-  "checksum": "9c3d82812fbd47b477ddb03bbc46448707b03e701b3f97a3765e3e4808fd5644",
+  "checksum": "e9b505942bd0fd018fb6531adc4901e64922474842ae726ff7ddcfd6e647cbbd",
   "crates": {
     "aho-corasick 0.7.18": {
       "name": "aho-corasick",
@@ -4662,10 +4662,6 @@
             {
               "id": "rand 0.8.5",
               "target": "rand"
-            },
-            {
-              "id": "ring 0.16.20",
-              "target": "ring"
             }
           ],
           "selects": {}

@@ -923,7 +923,6 @@ dependencies = [
  "ic-test-state-machine-client",
  "icrc1-test-env",
  "rand",
- "ring",
 ]
 
 [[package]]

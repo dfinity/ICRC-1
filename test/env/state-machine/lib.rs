@@ -4,19 +4,20 @@ use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
 use candid::Principal;
 use ic_test_state_machine_client::StateMachine;
 use icrc1_test_env::LedgerEnv;
-use ring::rand::SystemRandom;
+use rand::rngs::ThreadRng;
+use rand::Rng;
 use std::sync::{Arc, Mutex};
 
-fn new_principal(rand: &SystemRandom) -> Principal {
-    use ring::signature::Ed25519KeyPair as KeyPair;
-
-    let doc = KeyPair::generate_pkcs8(rand).expect("failed to generate an ed25519 key pair");
-    Principal::self_authenticating(doc.as_ref())
+fn new_principal(n: u64) -> Principal {
+    let mut bytes = n.to_le_bytes().to_vec();
+    bytes.push(0xfe);
+    bytes.push(0x01);
+    Principal::try_from_slice(&bytes[..]).unwrap()
 }
 
 #[derive(Clone)]
 pub struct SMLedger {
-    rand: Arc<Mutex<SystemRandom>>,
+    rand: Arc<Mutex<ThreadRng>>,
     sm: Arc<StateMachine>,
     sender: Principal,
     canister_id: Principal,
@@ -28,7 +29,7 @@ impl LedgerEnv for SMLedger {
         Self {
             rand: self.rand.clone(),
             sm: self.sm.clone(),
-            sender: new_principal(&self.rand.lock().expect("failed to grab a lock")),
+            sender: new_principal(self.rand.lock().expect("failed to grab a lock").gen()),
             canister_id: self.canister_id,
         }
     }
@@ -82,14 +83,14 @@ impl LedgerEnv for SMLedger {
             .with_context(|| format!("Failed to encode arguments {}", debug_inputs))?;
         match self
             .sm
-            .update_call(
-                Principal::from_slice(self.canister_id.as_slice()),
-                Principal::from_slice(self.sender.as_slice()),
-                method,
-                in_bytes,
-            )
-            .map_err(|err| anyhow::Error::msg(err.to_string()))?
-        {
+            .update_call(self.canister_id, self.sender, method, in_bytes)
+            .map_err(|err| anyhow::Error::msg(err.to_string()))
+            .with_context(|| {
+                format!(
+                    "failed to execute update call {} on canister {}",
+                    method, self.canister_id
+                )
+            })? {
             ic_test_state_machine_client::WasmResult::Reply(bytes) => decode_args(&bytes)
                 .with_context(|| {
                     format!(
@@ -112,7 +113,7 @@ impl LedgerEnv for SMLedger {
 impl SMLedger {
     pub fn new(sm: Arc<StateMachine>, canister_id: Principal, sender: Principal) -> Self {
         Self {
-            rand: Arc::new(Mutex::new(SystemRandom::new())),
+            rand: Arc::new(Mutex::new(rand::thread_rng())),
             sm,
             canister_id,
             sender,
