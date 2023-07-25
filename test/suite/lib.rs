@@ -127,6 +127,7 @@ pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerEnv) -> TestResult
         balance_p2 + transfer_amount,
     )
     .await?;
+
     assert_balance(
         &p1_env,
         p1_env.principal(),
