@@ -1,0 +1,21 @@
+load("@crate_index//:defs.bzl", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["Cargo.toml"]) 
+
+MACRO_DEPENDENCIES = [
+    "@crate_index//:async-trait",
+]
+
+rust_library(
+    name = "replica",
+    srcs = ["lib.rs"],
+    crate_name = "icrc1_test_env_replica",
+    deps = all_crate_deps(
+        normal = True,
+    )+ [        "//test/env",
+],
+    proc_macro_deps = MACRO_DEPENDENCIES,
+)
