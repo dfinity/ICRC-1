@@ -127,3 +127,80 @@ service : {
     icrc3_get_transactions : GetTransactionsFn;
 };
 ```
+
+## Transaction Types
+
+### [ICRC-1](../ICRC-1/README.md)
+
+#### Account Schema
+
+Account is represented as an `Array` containing the `owner` bytes and optionally the subaccount bytes:
+
+```
+type Account = [ blob(principal); blob(subaccount)? ];
+```
+
+
+#### Base Operation Schema
+
+This schema describes the common `Value` schema for all ICRC-1 operations.
+
+```
+type ICRC1_Common = {
+  "amt" : Nat;
+  "fee" : Nat?;
+  "memo" : Blob?;
+  "ts" : Nat?;
+};
+```
+
+#### ICRC1_Burn Schema
+
+```
+type ICRC1_Burn = ICRC1_Common and {
+  "op" : "burn";
+  "from" : Account;
+};
+```
+
+#### ICRC1_Mint Schema
+
+```
+type ICRC1_Mint = ICRC1_Common and {
+  "op": "mint";
+  "to": Account;
+};
+```
+
+#### ICRC1_Transfer Schema
+
+```
+type ICRC1_Transfer = ICRC1_Common and {
+  "op": "xfer";
+  "from": Account;
+  "to": Account;
+};
+```
+
+### [ICRC-2](../ICRC-2/README.md)
+
+
+#### ICRC2_Approve Schema
+
+```
+type ICRC2_Approve = ICRC1_Common and {
+  "op": "approve";
+  "from": Account;
+  "spender": Account;
+};
+```
+
+#### ICRC2_TransferFrom Schema
+
+> Note: ICRC2_TransferFrom extends [ICRC1_Transfer](#icrc1_transfer-schema)
+
+```
+type ICRC2_TransferFrom = ICRC1_Transfer and {
+  "spender" : Account?;
+};
+```

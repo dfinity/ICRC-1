@@ -222,25 +222,3 @@ service : {
 }
 ```
 -->
-
-## ICRC-3 Transaction Types
-
-### ICRC2_Approve Schema
-
-```
-type ICRC2_Approve = ICRC1_Common and {
-  "op": "approve";
-  "from": Account;
-  "spender": Account;
-};
-```
-
-### ICRC2_TransferFrom Schema
-
-> Note: ICRC2_TransferFrom replaces ICRC1_Transfer
-
-```
-type ICRC2_TransferFrom = ICRC1_Transfer and {
-  "spender" : Account?;
-};
-```
