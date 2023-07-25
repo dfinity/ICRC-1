@@ -1,5 +1,5 @@
 {
-  "checksum": "d0e87b3fba72d5f89c8792225240fb592642d6f3b26942fa2bd7c748e831cb0b",
+  "checksum": "9c3d82812fbd47b477ddb03bbc46448707b03e701b3f97a3765e3e4808fd5644",
   "crates": {
     "aho-corasick 0.7.18": {
       "name": "aho-corasick",
@@ -4597,20 +4597,12 @@
               "target": "ic_agent"
             },
             {
-              "id": "ic-test-state-machine-client 2.2.1",
-              "target": "ic_test_state_machine_client"
-            },
-            {
               "id": "rand 0.8.5",
               "target": "rand"
             },
             {
               "id": "ring 0.16.20",
               "target": "ring"
-            },
-            {
-              "id": "serde 1.0.144",
-              "target": "serde"
             }
           ],
           "selects": {}
@@ -4660,16 +4652,8 @@
               "target": "candid"
             },
             {
-              "id": "garcon 0.2.3",
-              "target": "garcon"
-            },
-            {
               "id": "hex 0.4.3",
               "target": "hex"
-            },
-            {
-              "id": "ic-agent 0.22.0",
-              "target": "ic_agent"
             },
             {
               "id": "ic-test-state-machine-client 2.2.1",
@@ -4682,10 +4666,6 @@
             {
               "id": "ring 0.16.20",
               "target": "ring"
-            },
-            {
-              "id": "serde 1.0.144",
-              "target": "serde"
             }
           ],
           "selects": {}

@@ -13,6 +13,6 @@ garcon = "0.2.3"
 ic-agent = "0.22.0"
 rand = "0.8.5"
 ring = "0.16.20"
-serde = "1"
+hex = "0.4.3"
 async-trait = "0.1.71"
 icrc1-test-env = { path = "../" }

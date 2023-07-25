@@ -905,11 +905,11 @@ dependencies = [
  "async-trait",
  "candid",
  "garcon",
+ "hex",
  "ic-agent",
  "icrc1-test-env",
  "rand",
  "ring",
- "serde",
 ]
 
 [[package]]
@@ -919,12 +919,11 @@ dependencies = [
  "anyhow",
  "async-trait",
  "candid",
- "ic-agent",
+ "hex",
  "ic-test-state-machine-client",
  "icrc1-test-env",
  "rand",
  "ring",
- "serde",
 ]
 
 [[package]]
