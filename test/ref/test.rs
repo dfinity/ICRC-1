@@ -1,22 +1,34 @@
+use candid::Principal;
 use candid::{CandidType, Decode, Encode, Nat};
 use ic_agent::Agent;
-use ic_types::Principal;
+use ic_agent::Identity;
+use ic_test_state_machine_client::StateMachine;
+use icrc1_test_env::fresh_identity;
 use icrc1_test_env::ReplicaLedger;
+use icrc1_test_env::SMLedger;
 use icrc1_test_replica::start_replica;
+use ring::rand::SystemRandom;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::time::Duration;
 
 const REF_WASM: &[u8] = include_bytes!(env!("REF_WASM_PATH"));
 
-#[derive(CandidType)]
+#[derive(CandidType, Deserialize, Debug)]
 struct Account {
     owner: Principal,
     subaccount: Option<[u8; 32]>,
 }
 
+#[derive(CandidType, Debug)]
+struct Mints {
+    account: Account,
+    amount: Nat,
+}
+
 #[derive(CandidType)]
 struct RefInitArg {
-    initial_mints: Vec<(Account, Nat)>,
+    initial_mints: Vec<Mints>,
     minting_account: Account,
     token_name: String,
     token_symbol: String,
@@ -99,8 +111,22 @@ async fn install_canister(agent: &Agent, wasm: &[u8], init_arg: &[u8]) -> Princi
     canister_id
 }
 
-#[tokio::main]
-async fn main() {
+fn sm_env() -> StateMachine {
+    let ic_test_state_machine_path = std::fs::canonicalize(
+        std::env::var_os("STATE_MACHINE_BINARY").expect("missing ic-starter binary"),
+    )
+    .unwrap();
+
+    StateMachine::new(
+        &ic_test_state_machine_path
+            .into_os_string()
+            .into_string()
+            .unwrap(),
+        false,
+    )
+}
+
+async fn test_replica() {
     let replica_path =
         std::fs::canonicalize(std::env::var_os("IC_REPLICA_PATH").expect("missing replica binary"))
             .unwrap();
@@ -120,7 +146,7 @@ async fn main() {
     )
     .unwrap();
 
-    let (agent, _replica_context) = start_replica(
+    let (mut agent, _replica_context) = start_replica(
         &replica_path,
         &ic_starter_path,
         &sandbox_launcher_path,
@@ -128,8 +154,18 @@ async fn main() {
     )
     .await;
 
+    // We need a fresh identity to be used for the tests
+    // This identity simulates the identity a user would parse to the binary
+    let p1 = fresh_identity(&SystemRandom::new());
+
     let init_arg = Encode!(&RefInitArg {
-        initial_mints: vec![],
+        initial_mints: vec![Mints {
+            account: Account {
+                owner: p1.sender().unwrap(),
+                subaccount: None
+            },
+            amount: Nat::from(100_000_000)
+        }],
         minting_account: Account {
             owner: agent.get_principal().unwrap(),
             subaccount: None
@@ -143,10 +179,65 @@ async fn main() {
 
     let canister_id = install_canister(&agent, REF_WASM, &init_arg).await;
 
+    // We need to set the identity of the agent to that of what a user would parse
+    agent.set_identity(p1);
     let env = ReplicaLedger::new(agent, canister_id);
     let tests = icrc1_test_suite::test_suite(env);
 
     if !icrc1_test_suite::execute_tests(tests).await {
         std::process::exit(1);
     }
+}
+
+async fn test_state_machine() {
+    let sm_env = sm_env();
+
+    // We need a fresh identity to be used for the tests
+    // This identity simulates the identity a user would parse to the binary
+    let minter = fresh_identity(&SystemRandom::new());
+    let p1 = fresh_identity(&SystemRandom::new());
+
+    // The tests expect the parsed identity to have enough ICP to run the tests
+    let init_arg = Encode!(&RefInitArg {
+        initial_mints: vec![Mints {
+            account: Account {
+                owner: p1.sender().unwrap(),
+                subaccount: None
+            },
+            amount: Nat::from(100_000_000)
+        }],
+        minting_account: Account {
+            owner: minter.sender().unwrap(),
+            subaccount: None
+        },
+        token_name: "Test token".to_string(),
+        token_symbol: "XTK".to_string(),
+        decimals: 8,
+        transfer_fee: Nat::from(10_000),
+    })
+    .unwrap();
+
+    let canister_id = sm_env.create_canister(Some(minter.sender().unwrap()));
+
+    sm_env.install_canister(
+        canister_id,
+        (*REF_WASM).to_vec(),
+        init_arg,
+        Some(minter.sender().unwrap()),
+    );
+
+    let env = SMLedger::new(Arc::new(sm_env), canister_id, p1.sender().unwrap());
+
+    let tests = icrc1_test_suite::test_suite(env);
+
+    if !icrc1_test_suite::execute_tests(tests).await {
+        std::process::exit(1);
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    test_state_machine().await;
+
+    test_replica().await;
 }
