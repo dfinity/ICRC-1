@@ -2,6 +2,8 @@
 
 members = [
   "test/env",
+  "test/env/state-machine",
+  "test/env/replica",
   "test/suite",
   "test/runner",
   "test/replica",

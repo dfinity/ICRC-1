@@ -37,6 +37,8 @@ rust_test(
     use_libtest_harness = False,
     deps = [
         "//test/env",
+        "//test/env/replica",
+        "//test/env/state-machine",
         "//test/replica",
         "//test/suite",
         "@crate_index//:candid",

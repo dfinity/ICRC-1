@@ -894,10 +894,34 @@ dependencies = [
  "anyhow",
  "async-trait",
  "candid",
+ "serde",
+]
+
+[[package]]
+name = "icrc1-test-env-replica"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "candid",
  "garcon",
- "hex",
+ "ic-agent",
+ "icrc1-test-env",
+ "rand",
+ "ring",
+ "serde",
+]
+
+[[package]]
+name = "icrc1-test-env-state-machine"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "candid",
  "ic-agent",
  "ic-test-state-machine-client",
+ "icrc1-test-env",
  "rand",
  "ring",
  "serde",
@@ -922,6 +946,7 @@ dependencies = [
  "candid",
  "ic-agent",
  "icrc1-test-env",
+ "icrc1-test-env-replica",
  "icrc1-test-suite",
  "pico-args 0.5.0",
  "reqwest",

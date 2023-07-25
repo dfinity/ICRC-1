@@ -1,5 +1,5 @@
 {
-  "checksum": "d70ff2117bec3a349d65238680bd99ead9949d9f0d5a9af89fc05237cfe43e8f",
+  "checksum": "d0e87b3fba72d5f89c8792225240fb592642d6f3b26942fa2bd7c748e831cb0b",
   "crates": {
     "aho-corasick 0.7.18": {
       "name": "aho-corasick",
@@ -4519,6 +4519,132 @@
         }
       ],
       "library_target_name": "icrc1_test_env",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "anyhow 1.0.63",
+              "target": "anyhow"
+            },
+            {
+              "id": "candid 0.8.4",
+              "target": "candid"
+            },
+            {
+              "id": "serde 1.0.144",
+              "target": "serde"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "async-trait 0.1.71",
+              "target": "async_trait"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.1.0"
+      },
+      "license": null
+    },
+    "icrc1-test-env-replica 0.1.0": {
+      "name": "icrc1-test-env-replica",
+      "version": "0.1.0",
+      "repository": null,
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "icrc1_test_env_replica",
+            "crate_root": "lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "icrc1_test_env_replica",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "anyhow 1.0.63",
+              "target": "anyhow"
+            },
+            {
+              "id": "candid 0.8.4",
+              "target": "candid"
+            },
+            {
+              "id": "garcon 0.2.3",
+              "target": "garcon"
+            },
+            {
+              "id": "hex 0.4.3",
+              "target": "hex"
+            },
+            {
+              "id": "ic-agent 0.22.0",
+              "target": "ic_agent"
+            },
+            {
+              "id": "ic-test-state-machine-client 2.2.1",
+              "target": "ic_test_state_machine_client"
+            },
+            {
+              "id": "rand 0.8.5",
+              "target": "rand"
+            },
+            {
+              "id": "ring 0.16.20",
+              "target": "ring"
+            },
+            {
+              "id": "serde 1.0.144",
+              "target": "serde"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "async-trait 0.1.71",
+              "target": "async_trait"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.1.0"
+      },
+      "license": null
+    },
+    "icrc1-test-env-state-machine 0.1.0": {
+      "name": "icrc1-test-env-state-machine",
+      "version": "0.1.0",
+      "repository": null,
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "icrc1_test_env_state_machine",
+            "crate_root": "lib.rs",
+            "srcs": [
+              "**/*.rs"
+            ]
+          }
+        }
+      ],
+      "library_target_name": "icrc1_test_env_state_machine",
       "common_attrs": {
         "compile_data_glob": [
           "**"
@@ -12570,6 +12696,8 @@
   "binary_crates": [],
   "workspace_members": {
     "icrc1-test-env 0.1.0": "test/env",
+    "icrc1-test-env-replica 0.1.0": "test/env/replica",
+    "icrc1-test-env-state-machine 0.1.0": "test/env/state-machine",
     "icrc1-test-replica 0.1.0": "test/replica",
     "icrc1-test-runner 0.1.0": "test/runner",
     "icrc1-test-suite 0.1.0": "test/suite"

@@ -9,6 +9,7 @@ path = "main.rs"
 
 [dependencies]
 icrc1-test-env = { path = "../env" }
+icrc1-test-env-replica = { path = "../env/replica" }
 icrc1-test-suite = { path = "../suite" }
 ic-agent = "0.22.0"
 pico-args = "0.5"
