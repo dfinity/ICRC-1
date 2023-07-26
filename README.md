@@ -1,4 +1,5 @@
 # Ledger & Tokenization Working Group Standards
+[![CI](https://github.com/dfinity/ICRC-1/actions/workflows/ci.yml/badge.svg)](https://github.com/dfinity/ICRC-1/actions/workflows/ci.yml)
 
 This repository contains standards for the [Internet Computer](https://internetcomputer.org) accepted by the Ledger & Tokenization Working Group.
 
