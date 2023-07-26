@@ -1,5 +1,5 @@
 {
-  "checksum": "2c1439d8a6f5e5e947910f79f08a6957329dd8faa28fd090d90b8fee05d5fb05",
+  "checksum": "41576ceb43e32a3fb2b400b5fa00fb7aa37834862450e06db58276ca71be46cb",
   "crates": {
     "addr2line 0.20.0": {
       "name": "addr2line",
@@ -5076,7 +5076,7 @@
         },
         "version": "0.1.0"
       },
-      "license": null
+      "license": "Apache-2.0"
     },
     "icrc1-test-env-replica 0.1.0": {
       "name": "icrc1-test-env-replica",
@@ -5139,7 +5139,7 @@
         },
         "version": "0.1.0"
       },
-      "license": null
+      "license": "Apache-2.0"
     },
     "icrc1-test-env-state-machine 0.1.0": {
       "name": "icrc1-test-env-state-machine",
@@ -5194,7 +5194,7 @@
         },
         "version": "0.1.0"
       },
-      "license": null
+      "license": "Apache-2.0"
     },
     "icrc1-test-replica 0.1.0": {
       "name": "icrc1-test-replica",
@@ -5240,7 +5240,7 @@
         "edition": "2018",
         "version": "0.1.0"
       },
-      "license": null
+      "license": "Apache-2.0"
     },
     "icrc1-test-runner 0.1.0": {
       "name": "icrc1-test-runner",
@@ -5284,7 +5284,7 @@
         "edition": "2018",
         "version": "0.1.0"
       },
-      "license": null
+      "license": "Apache-2.0"
     },
     "icrc1-test-suite 0.1.0": {
       "name": "icrc1-test-suite",
@@ -5326,7 +5326,7 @@
         "edition": "2018",
         "version": "0.1.0"
       },
-      "license": null
+      "license": "Apache-2.0"
     },
     "idna 0.2.3": {
       "name": "idna",
