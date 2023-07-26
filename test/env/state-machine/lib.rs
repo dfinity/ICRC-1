@@ -47,12 +47,7 @@ impl LedgerEnv for SMLedger {
             .with_context(|| format!("Failed to encode arguments {}", debug_inputs))?;
         match self
             .sm
-            .query_call(
-                Principal::from_slice(self.canister_id.as_slice()),
-                Principal::from_slice(self.sender.as_slice()),
-                method,
-                in_bytes,
-            )
+            .query_call(self.canister_id, self.sender, method, in_bytes)
             .map_err(|err| anyhow::Error::msg(err.to_string()))?
         {
             ic_test_state_machine_client::WasmResult::Reply(bytes) => decode_args(&bytes)

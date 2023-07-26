@@ -8,9 +8,9 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0"
-candid = "0.8"
+candid = "0.9"
 garcon = "0.2.3"
-ic-agent = "0.22.0"
+ic-agent = "0.25"
 rand = "0.8.5"
 ring = "0.16.20"
 hex = "0.4.3"

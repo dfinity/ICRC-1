@@ -8,9 +8,9 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0"
-candid = "0.8"
+candid = "0.9"
 rand = "0.8.5"
 async-trait = "0.1.71"
 hex = "0.4.3"
-ic-test-state-machine-client = "2.2.1"
+ic-test-state-machine-client = "3.0.0"
 icrc1-test-env = { version = "0.1.0", path = "../" }

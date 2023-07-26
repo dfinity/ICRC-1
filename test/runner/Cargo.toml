@@ -11,9 +11,9 @@ path = "main.rs"
 icrc1-test-env = { path = "../env" }
 icrc1-test-env-replica = { path = "../env/replica" }
 icrc1-test-suite = { path = "../suite" }
-ic-agent = "0.22.0"
+ic-agent = "0.25"
 pico-args = "0.5"
 reqwest = "0.11"
 tokio = { version = "1.20.1", features = ["macros"] }
-candid = "0.8"
+candid = "0.9"
 anyhow = "1.0"

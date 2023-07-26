@@ -7,7 +7,7 @@ edition = "2018"
 path = "lib.rs"
 
 [dependencies]
-ic-agent = "0.22"
+ic-agent = "0.25"
 garcon = "0.2.3"
 reqwest = "0.11"
 tempfile = "3.3.0"
