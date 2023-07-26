@@ -27,6 +27,7 @@ type ApproveError = variant {
 };
 
 type TransferFromArgs = record {
+    spender_subaccount : opt blob;
     from : Account;
     to : Account;
     amount : nat;
