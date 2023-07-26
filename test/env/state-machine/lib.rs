@@ -4,9 +4,8 @@ use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
 use candid::Principal;
 use ic_test_state_machine_client::StateMachine;
 use icrc1_test_env::LedgerEnv;
-use rand::rngs::ThreadRng;
-use rand::Rng;
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 fn new_principal(n: u64) -> Principal {
     let mut bytes = n.to_le_bytes().to_vec();
@@ -17,7 +16,7 @@ fn new_principal(n: u64) -> Principal {
 
 #[derive(Clone)]
 pub struct SMLedger {
-    rand: Arc<Mutex<ThreadRng>>,
+    counter: Arc<AtomicU64>,
     sm: Arc<StateMachine>,
     sender: Principal,
     canister_id: Principal,
@@ -27,9 +26,9 @@ pub struct SMLedger {
 impl LedgerEnv for SMLedger {
     fn fork(&self) -> Self {
         Self {
-            rand: self.rand.clone(),
+            counter: self.counter.clone(),
             sm: self.sm.clone(),
-            sender: new_principal(self.rand.lock().expect("failed to grab a lock").gen()),
+            sender: new_principal(self.counter.fetch_add(1, Ordering::Relaxed)),
             canister_id: self.canister_id,
         }
     }
@@ -113,7 +112,7 @@ impl LedgerEnv for SMLedger {
 impl SMLedger {
     pub fn new(sm: Arc<StateMachine>, canister_id: Principal, sender: Principal) -> Self {
         Self {
-            rand: Arc::new(Mutex::new(rand::thread_rng())),
+            counter: Arc::new(AtomicU64::new(0)),
             sm,
             canister_id,
             sender,

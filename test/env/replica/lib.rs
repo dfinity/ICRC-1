@@ -7,7 +7,6 @@ use ic_agent::Agent;
 use icrc1_test_env::LedgerEnv;
 use ring::rand::SystemRandom;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 pub fn fresh_identity(rand: &SystemRandom) -> BasicIdentity {
     use ring::signature::Ed25519KeyPair as KeyPair;
@@ -24,13 +23,6 @@ pub struct ReplicaLedger {
     rand: Arc<Mutex<SystemRandom>>,
     agent: Arc<Agent>,
     canister_id: Principal,
-}
-
-fn waiter() -> garcon::Delay {
-    garcon::Delay::builder()
-        .throttle(Duration::from_millis(500))
-        .timeout(Duration::from_secs(60 * 5))
-        .build()
 }
 
 #[async_trait(?Send)]
@@ -96,7 +88,7 @@ impl LedgerEnv for ReplicaLedger {
             .agent
             .update(&self.canister_id, method)
             .with_arg(in_bytes)
-            .call_and_wait(waiter())
+            .call_and_wait()
             .await
             .with_context(|| {
                 format!(

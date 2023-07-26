@@ -7,10 +7,9 @@ version = "0.1.0"
 path = "lib.rs"
 
 [dependencies]
-anyhow = "1.0"
-candid = "0.8"
-rand = "0.8.5"
-async-trait = "0.1.71"
-hex = "0.4.3"
-ic-test-state-machine-client = "2.2.1"
+anyhow = { workspace = true }
+candid = { workspace = true }
+async-trait = { workspace = true }
+hex = { workspace = true }
+ic-test-state-machine-client = { workspace = true }
 icrc1-test-env = { version = "0.1.0", path = "../" }

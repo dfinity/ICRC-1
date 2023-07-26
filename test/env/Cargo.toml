@@ -7,7 +7,7 @@ version = "0.1.0"
 path = "lib.rs"
 
 [dependencies]
-anyhow = "1.0"
-candid = "0.8"
-serde = "1"
-async-trait = "0.1.71"
+anyhow = { workspace = true }
+candid = { workspace = true }
+serde = { workspace = true }
+async-trait = { workspace = true } 

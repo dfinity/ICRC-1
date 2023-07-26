@@ -18,11 +18,11 @@ rust_test(
     ],
     crate_name = "icrc1_test_ref",
     data = [
+        "@replica_tools//:canister_sandbox",
         "@replica_tools//:ic-starter",
+        "@replica_tools//:ic-test-state-machine",
         "@replica_tools//:replica",
-	"@replica_tools//:sandbox_launcher",
-	"@replica_tools//:canister_sandbox",
-        "@replica_tools//:ic-test-state-machine"
+        "@replica_tools//:sandbox_launcher",
     ],
     env = {
         "IC_REPLICA_PATH": "$(rootpath @replica_tools//:replica)",
@@ -42,11 +42,10 @@ rust_test(
         "//test/replica",
         "//test/suite",
         "@crate_index//:candid",
-        "@crate_index//:garcon",
         "@crate_index//:ic-agent",
-        "@crate_index//:serde",
-        "@crate_index//:tokio",
         "@crate_index//:ic-test-state-machine-client",
         "@crate_index//:ring",
+        "@crate_index//:serde",
+        "@crate_index//:tokio",
     ],
 )
