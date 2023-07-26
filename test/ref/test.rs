@@ -3,14 +3,13 @@ use candid::{CandidType, Decode, Encode, Nat};
 use ic_agent::Agent;
 use ic_agent::Identity;
 use ic_test_state_machine_client::StateMachine;
-use icrc1_test_env::fresh_identity;
-use icrc1_test_env::ReplicaLedger;
-use icrc1_test_env::SMLedger;
+use icrc1_test_env_replica::fresh_identity;
+use icrc1_test_env_replica::ReplicaLedger;
+use icrc1_test_env_state_machine::SMLedger;
 use icrc1_test_replica::start_replica;
 use ring::rand::SystemRandom;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use std::time::Duration;
 
 const REF_WASM: &[u8] = include_bytes!(env!("REF_WASM_PATH"));
 
@@ -67,11 +66,6 @@ async fn install_canister(agent: &Agent, wasm: &[u8], init_arg: &[u8]) -> Princi
         arg: &'a [u8],
     }
 
-    let waiter = garcon::Delay::builder()
-        .throttle(Duration::from_millis(500))
-        .timeout(Duration::from_secs(60 * 5))
-        .build();
-
     let response_bytes = agent
         .update(
             &Principal::management_canister(),
@@ -86,7 +80,7 @@ async fn install_canister(agent: &Agent, wasm: &[u8], init_arg: &[u8]) -> Princi
             })
             .unwrap(),
         )
-        .call_and_wait(waiter.clone())
+        .call_and_wait()
         .await
         .expect("failed to create a canister");
 
@@ -105,7 +99,7 @@ async fn install_canister(agent: &Agent, wasm: &[u8], init_arg: &[u8]) -> Princi
             })
             .unwrap(),
         )
-        .call_and_wait(waiter)
+        .call_and_wait()
         .await
         .expect("failed to install canister");
     canister_id

@@ -13,6 +13,7 @@ rust_binary(
         normal = True,
     ) + [
         "//test/env",
+        "//test/env/replica",
         "//test/suite",
         "@crate_index//:candid",
     ],

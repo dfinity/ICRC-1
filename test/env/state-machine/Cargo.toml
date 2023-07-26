@@ -1,0 +1,15 @@
+[package]
+name = "icrc1-test-env-state-machine"
+edition = "2018"
+version = "0.1.0"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+candid = { workspace = true }
+async-trait = { workspace = true }
+hex = { workspace = true }
+ic-test-state-machine-client = { workspace = true }
+icrc1-test-env = { version = "0.1.0", path = "../" }

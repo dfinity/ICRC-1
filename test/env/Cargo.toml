@@ -7,13 +7,7 @@ version = "0.1.0"
 path = "lib.rs"
 
 [dependencies]
-anyhow = "1.0"
-candid = "0.8"
-garcon = "0.2.3"
-hex = "0.4"
-ic-agent = "0.22.0"
-rand = "0.8.5"
-ring = "0.16.20"
-serde = "1"
-async-trait = "0.1.71"
-ic-test-state-machine-client = "2.2.1"
+anyhow = { workspace = true }
+candid = { workspace = true }
+serde = { workspace = true }
+async-trait = { workspace = true } 

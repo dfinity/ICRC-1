@@ -1,0 +1,17 @@
+[package]
+name = "icrc1-test-env-replica"
+edition = "2018"
+version = "0.1.0"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+candid = { workspace = true }
+ic-agent = { workspace = true }
+rand = { workspace = true }
+ring = { worksapce = true }
+hex = { workspace = true }
+async-trait = { workspace = true }
+icrc1-test-env = { version = "0.1.0", path = "../" }

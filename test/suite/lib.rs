@@ -64,7 +64,6 @@ async fn assert_balance(
     Ok(())
 }
 
-#[track_caller]
 async fn transfer_or_fail(ledger_env: &impl LedgerEnv, amount: Nat, receiver: Principal) -> Nat {
     transfer(ledger_env, Transfer::amount_to(amount.clone(), receiver))
         .await
@@ -73,7 +72,6 @@ async fn transfer_or_fail(ledger_env: &impl LedgerEnv, amount: Nat, receiver: Pr
         .unwrap()
 }
 
-#[track_caller]
 async fn setup_test_account(
     ledger_env: &impl LedgerEnv,
     amount: Nat,
