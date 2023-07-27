@@ -222,7 +222,7 @@ pub async fn test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<
 /// Checks whether the ledger applies deduplication of transactions correctly
 pub async fn test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     // Create two test accounts and transfer some tokens to the first account
-    let p1_env = setup_test_account(&ledger_env, 100_000.into()).await?;
+    let p1_env = setup_test_account(&ledger_env, 200_000.into()).await?;
     let p2_env = p1_env.fork();
 
     // If created at time is not set, the transfer should not be calssified as a duplicate --> Transfer should succeed
@@ -245,12 +245,14 @@ pub async fn test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
+
     // Changing the timestamp to the previous transfer args should result in no deduplication --> Transfer should succeed
     let transfer_args = transfer_args.created_at_time(now as u64);
     transfer(&p1_env, transfer_args.clone())
         .await
         .unwrap()
         .unwrap();
+
     // Sending the previous transaction with the same timestamp twice should not be possible --> Transfer should not succeed
     assert!(transfer(&p1_env, transfer_args.clone())
         .await
@@ -282,6 +284,31 @@ pub async fn test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result
         .await
         .unwrap()
         .is_err());
+
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let args_1 = Transfer::amount_to(
+        10_000,
+        Account {
+            owner: p2_env.principal(),
+            subaccount: None,
+        },
+    )
+    .created_at_time(now as u64);
+    let args_2 = Transfer::amount_to(
+        10_000,
+        Account {
+            owner: p2_env.principal(),
+            subaccount: Some([0; 32]),
+        },
+    )
+    .created_at_time(now as u64);
+
+    // None and Some([0; 32]) should not be considered duplicates
+    transfer(&p1_env, args_1).await.unwrap().unwrap();
+    transfer(&p1_env, args_2).await.unwrap().unwrap();
 
     Ok(Outcome::Passed)
 }
