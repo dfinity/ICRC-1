@@ -227,8 +227,14 @@ pub async fn test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result
 
     // If created at time is not set, the transfer should not be calssified as a duplicate --> Transfer should succeed
     let transfer_args = Transfer::amount_to(10_000, p2_env.principal());
-    if transfer(&p1_env, transfer_args.clone()).await??
-        > transfer(&p1_env, transfer_args.clone()).await??
+    if transfer(&p1_env, transfer_args.clone())
+        .await
+        .unwrap()
+        .unwrap()
+        > transfer(&p1_env, transfer_args.clone())
+            .await
+            .unwrap()
+            .unwrap()
     {
         return Err(anyhow::Error::msg(
             "BlockIndex of previous transaction is higher than that of the following transaction",
