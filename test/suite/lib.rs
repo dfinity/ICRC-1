@@ -293,7 +293,7 @@ pub fn test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
             "basic:supported_standards",
             test_supported_standards(env.clone()),
         ),
-        test("basic:tx_deduplication", test_supported_standards(env)),
+        test("basic:tx_deduplication", test_tx_deduplication(env)),
     ]
 }
 
