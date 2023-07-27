@@ -9,6 +9,7 @@ use icrc1_test_env::icrc1::{
 use icrc1_test_env::{Account, LedgerEnv, Transfer, Value};
 use std::future::Future;
 use std::pin::Pin;
+use std::time::SystemTime;
 
 pub enum Outcome {
     Passed,
@@ -218,13 +219,80 @@ pub async fn test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<
     Ok(Outcome::Passed)
 }
 
+/// Checks whether the ledger advertizes support for ICRC-1 standard.
+pub async fn test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+    // Create two test accounts and transfer some tokens to it
+    let p1_env = setup_test_account(&ledger_env, 100_000.into()).await?;
+    let p2_env = p1_env.fork();
+
+    // If created at time is not set, the transfer should not be calssified as a duplicate --> Transfer should succeed
+    let transfer_args = Transfer::amount_to(10_000, p2_env.principal());
+    assert!(
+        transfer(&p1_env, transfer_args.clone())
+            .await
+            .unwrap()
+            .unwrap()
+            < transfer(&p1_env, transfer_args.clone())
+                .await
+                .unwrap()
+                .unwrap()
+    );
+
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let transfer_args = transfer_args.created_at_time(now as u64);
+    transfer(&p1_env, transfer_args.clone())
+        .await
+        .unwrap()
+        .unwrap();
+    // Sending the previous transaction with the same timestamp twice should not be possible --> Transfer should not succeed
+    assert!(transfer(&p1_env, transfer_args.clone())
+        .await
+        .unwrap()
+        .is_err());
+
+    // Changing the fee to the previous transfer args should result in no deduplication --> Transfer should succeed
+    let transfer_args = transfer_args.fee(transfer_fee(&ledger_env).await.unwrap());
+    transfer(&p1_env, transfer_args.clone())
+        .await
+        .unwrap()
+        .unwrap();
+
+    // If we send the transfer again it should be a duplicate --> Transfer should not succeed
+    assert!(transfer(&p1_env, transfer_args.clone())
+        .await
+        .unwrap()
+        .is_err());
+
+    // Changing the memo to the previous transfer args should result in no deduplication --> Transfer should succeed
+    let transfer_args = transfer_args.memo(vec![1, 2, 3]);
+    transfer(&p1_env, transfer_args.clone())
+        .await
+        .unwrap()
+        .unwrap();
+
+    // If we send the transfer again it should be a duplicate --> Transfer should not succeed
+    assert!(transfer(&p1_env, transfer_args.clone())
+        .await
+        .unwrap()
+        .is_err());
+
+    Ok(Outcome::Passed)
+}
+
 /// Returns the entire list of tests.
 pub fn test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
     vec![
         test("basic:transfer", test_transfer(env.clone())),
         test("basic:burn", test_burn(env.clone())),
         test("basic:metadata", test_metadata(env.clone())),
-        test("basic:supported_standards", test_supported_standards(env)),
+        test(
+            "basic:supported_standards",
+            test_supported_standards(env.clone()),
+        ),
+        test("basic:tx_deduplication", test_supported_standards(env)),
     ]
 }
 

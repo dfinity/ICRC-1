@@ -88,7 +88,7 @@ impl fmt::Display for TransferError {
 
 impl std::error::Error for TransferError {}
 
-#[derive(CandidType, Debug)]
+#[derive(CandidType, Debug, Clone)]
 pub struct Transfer {
     from_subaccount: Option<Subaccount>,
     amount: Nat,
