@@ -219,7 +219,7 @@ pub async fn test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<
     Ok(Outcome::Passed)
 }
 
-/// Checks whether the ledger advertizes support for ICRC-1 standard.
+/// Checks whether the ledger applies deduplication of transactions correctly
 pub async fn test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     // Create two test accounts and transfer some tokens to the first account
     let p1_env = setup_test_account(&ledger_env, 100_000.into()).await?;
