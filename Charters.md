@@ -1,5 +1,39 @@
 # Ledger & Tokenization Working Group Charters
 
+## 2023-07-25
+[Slide deck](https://docs.google.com/presentation/d/1if2iZPLWSg6gV0siInuBBST_HXiLaVAfUlgGMdSse04/edit?usp=sharing)
+
+* `icrc3_get_transactions` should be a query
+* `icrc3_get_transactions` type may not be correct. It seems it's returning a function instead of being one
+* Is the certificate just for the last transaction?
+  * Yes, in order to verify a transaction you need the suffix of the log up to that transaction
+  * You need to upgrade the certificated data every time you add a new transaction
+* Right now transfer and transfer_from operations are the same ("xfer"). Would it make sense to split them in two distinct operation? This may set a bad precedent
+  * The reason why we went with a single operation is that the spender is additional metadata that doesn't change the balance semantic of the transaction
+  * Yeah but also the spender is never there for normal transfers and always there for transfers_from. The Ledger does give you back two different blocks that just have the same name and overlapping fields.
+  * The issue with allowing to extend/override operations is that new custom standards may just decide to override a previous operation
+  * e.g. "xfer" could be extended again and it would make it even more convoluted
+  * It can be confusing but there is an underlying semantic in common
+  * Another issue with allowing to extend/override operations is that indexing become more complex
+    * I don't think so. Indexing work on fields and don't care about the semantic. They don't look at the opereation type.
+  * If a client is verifying the Ledger then it needs to know the semantic in order to verify the balances
+    * Yes, a client would need how a block would change the semantic but there is a common semantic for all operations, e.g. all of them have a fee
+    * That's dangerous because you don't know about future operations. A new standard could override the fee field
+    * You are not supposed to change the semantic of fields used by standards. You can extend but not change the meaning
+      * This should be written in the standard
+    * We should make it sure that operations and fields are reserved by standards
+* The approve operation is missing the expiration field. Is this on purpose?
+  * No, it's actually a mistake. I'll add it
+* It could be an issue that new services may add additional fields and client won't know how to interpret them. Are we expecting wallets to implement every single possible operation?
+  * A client should fail on unknow operation
+  * What about known operation? Can we agree that "xfer" is always the same type?
+    * Yes, we should make it so that the same operation has the same semantic
+* We could change transfer_from to write two blocks, one with "xfer" operation that is a normal transfer and one for the additional field. In this way we keep the original "xfer" operation semantic without extending it but we know that is a transfer_from
+  * We try to avoid writing multiple blocks per operation, it increases the cost and makes it confusing.
+* Would existing Ledgers be able to support the change to operation for transfer_from
+  * yes because no approve/transfer_from block has been written yet
+* Let me talk with Ledger developers about the change proposed in this meeting.
+
 ## 2023-07-11
 [Slide deck](https://docs.google.com/presentation/d/17h_7w3_yK2SdM2wOHW7Wkz8pCIxNN9AV7iioZNy0_iE/edit?usp=sharing)
 
