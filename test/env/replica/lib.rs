@@ -7,6 +7,7 @@ use ic_agent::Agent;
 use icrc1_test_env::LedgerEnv;
 use ring::rand::SystemRandom;
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 pub fn fresh_identity(rand: &SystemRandom) -> BasicIdentity {
     use ring::signature::Ed25519KeyPair as KeyPair;
@@ -39,10 +40,18 @@ impl LedgerEnv for ReplicaLedger {
             canister_id: self.canister_id,
         }
     }
+
     fn principal(&self) -> Principal {
         self.agent
             .get_principal()
             .expect("failed to get agent principal")
+    }
+
+    fn time(&self) -> SystemTime {
+        // The replica relies on the system time by default.
+        // Unfortunately, this assumption might break during the time
+        // shifts, but it's probably good enough for tests.
+        SystemTime::now()
     }
 
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>

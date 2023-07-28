@@ -185,7 +185,6 @@ async fn test_replica() {
 
 async fn test_state_machine() {
     let sm_env = sm_env();
-
     // We need a fresh identity to be used for the tests
     // This identity simulates the identity a user would parse to the binary
     let minter = fresh_identity(&SystemRandom::new());

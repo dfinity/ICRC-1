@@ -36,7 +36,7 @@ pub enum Value {
     Int(Int),
 }
 
-#[derive(CandidType, Deserialize, Debug, Clone)]
+#[derive(CandidType, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub enum TransferError {
     BadFee { expected_fee: Nat },
     BadBurn { min_burn_amount: Nat },
@@ -88,7 +88,7 @@ impl fmt::Display for TransferError {
 
 impl std::error::Error for TransferError {}
 
-#[derive(CandidType, Debug)]
+#[derive(CandidType, Debug, Clone)]
 pub struct Transfer {
     from_subaccount: Option<Subaccount>,
     amount: Nat,
@@ -133,12 +133,22 @@ impl Transfer {
 
 #[async_trait(?Send)]
 pub trait LedgerEnv {
+    /// Creates a new environment pointing to the same ledger but using a new caller.
     fn fork(&self) -> Self;
+
+    /// Returns the caller's principal.
     fn principal(&self) -> Principal;
+
+    /// Returns the approximation of the current ledger time.
+    fn time(&self) -> std::time::SystemTime;
+
+    /// Executes a query call with the specified arguments on the ledger.
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
     where
         Input: ArgumentEncoder + std::fmt::Debug,
         Output: for<'a> ArgumentDecoder<'a>;
+
+    /// Executes an update call with the specified arguments on the ledger.
     async fn update<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
     where
         Input: ArgumentEncoder + std::fmt::Debug,
