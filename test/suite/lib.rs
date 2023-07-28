@@ -6,7 +6,7 @@ use icrc1_test_env::icrc1::{
     balance_of, metadata, minting_account, supported_standards, token_decimals, token_name,
     token_symbol, transfer, transfer_fee,
 };
-use icrc1_test_env::{Account, LedgerEnv, Transfer, Value};
+use icrc1_test_env::{Account, LedgerEnv, Transfer, TransferError, Value};
 use std::future::Future;
 use std::pin::Pin;
 use std::time::SystemTime;
@@ -41,6 +41,13 @@ where
 fn assert_equal<T: PartialEq + std::fmt::Debug>(lhs: T, rhs: T) -> anyhow::Result<()> {
     if lhs != rhs {
         bail!("{:?} ≠ {:?}", lhs, rhs)
+    }
+    Ok(())
+}
+
+fn assert_not_equal<T: PartialEq + std::fmt::Debug>(lhs: T, rhs: T) -> anyhow::Result<()> {
+    if lhs == rhs {
+        bail!("{:?} = {:?}", lhs, rhs)
     }
     Ok(())
 }
@@ -161,16 +168,14 @@ pub async fn test_burn(ledger_env: impl LedgerEnv) -> TestResult {
         &p1_env,
         Transfer::amount_to(burn_amount.clone(), minting_account.clone()),
     )
-    .await
+    .await?
     .with_context(|| {
         format!(
             "failed to transfer {} tokens to {:?}",
             burn_amount,
             minting_account.clone()
         )
-    })
-    .unwrap()
-    .unwrap();
+    })?;
 
     assert_balance(&p1_env, p1_env.principal(), 0).await?;
     assert_balance(&ledger_env, minting_account, 0).await?;
@@ -225,90 +230,141 @@ pub async fn test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result
     let p1_env = setup_test_account(&ledger_env, 200_000.into()).await?;
     let p2_env = p1_env.fork();
 
-    // If created at time is not set, the transfer should not be calssified as a duplicate --> Transfer should succeed
+    let time_nanos = || {
+        ledger_env
+            .time()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64
+    };
+
+    // Deduplication should not happen if the created_at_time field is unset.
     let transfer_args = Transfer::amount_to(10_000, p2_env.principal());
-    if transfer(&p1_env, transfer_args.clone())
-        .await
-        .unwrap()
-        .unwrap()
-        > transfer(&p1_env, transfer_args.clone())
+    transfer(&p1_env, transfer_args.clone())
+        .await?
+        .context("failed to execute the first no-dedup transfer")?;
+
+    assert_balance(&p1_env, p2_env.principal(), 10_000).await?;
+
+    transfer(&p1_env, transfer_args.clone())
+        .await?
+        .context("failed to execute the second no-dedup transfer")?;
+
+    assert_balance(&p1_env, p2_env.principal(), 20_000).await?;
+
+    // Setting the created_at_time field changes the transaction
+    // identity, so the transfer should succeed.
+    let transfer_args = transfer_args.created_at_time(time_nanos());
+
+    let txid = match transfer(&p1_env, transfer_args.clone()).await? {
+        Ok(txid) => txid,
+        Err(TransferError::TooOld) => {
+            return Ok(Outcome::Skipped {
+                reason: "the ledger does not support deduplication".to_string(),
+            })
+        }
+        Err(e) => return Err(e).context("failed to execute the first dedup transfer"),
+    };
+
+    assert_balance(&p1_env, p2_env.principal(), 30_000).await?;
+
+    // Sending the same transfer again should trigger deduplication.
+    assert_equal(
+        Err(TransferError::Duplicate {
+            duplicate_of: txid.clone(),
+        }),
+        transfer(&p1_env, transfer_args.clone()).await?,
+    )?;
+
+    assert_balance(&p1_env, p2_env.principal(), 30_000).await?;
+
+    // Explicitly setting the fee field changes the transaction
+    // identity, so the transfer should succeed.
+    let transfer_args = transfer_args.fee(
+        transfer_fee(&ledger_env)
             .await
-            .unwrap()
-            .unwrap()
-    {
-        return Err(anyhow::Error::msg(
-            "BlockIndex of previous transaction is higher than that of the following transaction",
-        ));
-    }
+            .context("failed to obtain the transfer fee")?,
+    );
 
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
+    let txid_2 = transfer(&p1_env, transfer_args.clone())
+        .await?
+        .context("failed to execute the transfer with an explicitly set fee field")?;
 
-    // Changing the timestamp to the previous transfer args should result in no deduplication --> Transfer should succeed
-    let transfer_args = transfer_args.created_at_time(now as u64);
-    transfer(&p1_env, transfer_args.clone())
-        .await
-        .unwrap()
-        .unwrap();
+    assert_balance(&p1_env, p2_env.principal(), 40_000).await?;
 
-    // Sending the previous transaction with the same timestamp twice should not be possible --> Transfer should not succeed
-    assert!(transfer(&p1_env, transfer_args.clone())
-        .await
-        .unwrap()
-        .is_err());
+    assert_not_equal(&txid, &txid_2).context("duplicate txid")?;
 
-    // Changing the fee to the previous transfer args should result in no deduplication --> Transfer should succeed
-    let transfer_args = transfer_args.fee(transfer_fee(&ledger_env).await.unwrap());
-    transfer(&p1_env, transfer_args.clone())
-        .await
-        .unwrap()
-        .unwrap();
+    // Sending the same transfer again should trigger deduplication.
+    assert_equal(
+        Err(TransferError::Duplicate {
+            duplicate_of: txid_2.clone(),
+        }),
+        transfer(&p1_env, transfer_args.clone()).await?,
+    )?;
 
-    // If we send the transfer again it should be a duplicate --> Transfer should not succeed
-    assert!(transfer(&p1_env, transfer_args.clone())
-        .await
-        .unwrap()
-        .is_err());
+    assert_balance(&p1_env, p2_env.principal(), 40_000).await?;
 
-    // Changing the memo to the previous transfer args should result in no deduplication --> Transfer should succeed
+    // A custom memo changes the transaction identity, so the transfer
+    // should succeed.
     let transfer_args = transfer_args.memo(vec![1, 2, 3]);
-    transfer(&p1_env, transfer_args.clone())
-        .await
-        .unwrap()
-        .unwrap();
 
-    // If we send the transfer again it should be a duplicate --> Transfer should not succeed
-    assert!(transfer(&p1_env, transfer_args.clone())
-        .await
-        .unwrap()
-        .is_err());
+    let txid_3 = transfer(&p1_env, transfer_args.clone())
+        .await?
+        .context("failed to execute the transfer with an explicitly set memo field")?;
 
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let args_1 = Transfer::amount_to(
-        10_000,
-        Account {
-            owner: p2_env.principal(),
-            subaccount: None,
-        },
+    assert_balance(&p1_env, p2_env.principal(), 50_000).await?;
+
+    assert_not_equal(&txid, &txid_3).context("duplicate txid")?;
+    assert_not_equal(&txid_2, &txid_3).context("duplicate txid")?;
+
+    // Sending the same transfer again should trigger deduplication.
+    assert_equal(
+        Err(TransferError::Duplicate {
+            duplicate_of: txid_3,
+        }),
+        transfer(&p1_env, transfer_args.clone()).await?,
+    )?;
+
+    assert_balance(&p1_env, p2_env.principal(), 50_000).await?;
+
+    let now = time_nanos();
+
+    // Transactions with different subaccounts (even if it's None and
+    // Some([0; 32])) should not be considered duplicates.
+
+    transfer(
+        &p1_env,
+        Transfer::amount_to(
+            10_000,
+            Account {
+                owner: p2_env.principal(),
+                subaccount: None,
+            },
+        )
+        .memo(vec![0])
+        .created_at_time(now),
     )
-    .created_at_time(now as u64);
-    let args_2 = Transfer::amount_to(
-        10_000,
-        Account {
-            owner: p2_env.principal(),
-            subaccount: Some([0; 32]),
-        },
-    )
-    .created_at_time(now as u64);
+    .await?
+    .context("failed to execute the transfer with an empty subaccount")?;
 
-    // None and Some([0; 32]) should not be considered duplicates
-    transfer(&p1_env, args_1).await.unwrap().unwrap();
-    transfer(&p1_env, args_2).await.unwrap().unwrap();
+    assert_balance(&p1_env, p2_env.principal(), 60_000).await?;
+
+    transfer(
+        &p1_env,
+        Transfer::amount_to(
+            10_000,
+            Account {
+                owner: p2_env.principal(),
+                subaccount: Some([0; 32]),
+            },
+        )
+        .memo(vec![0])
+        .created_at_time(now),
+    )
+    .await?
+    .context("failed to execute the transfer with the default subaccount")?;
+
+    assert_balance(&p1_env, p2_env.principal(), 70_000).await?;
 
     Ok(Outcome::Passed)
 }
