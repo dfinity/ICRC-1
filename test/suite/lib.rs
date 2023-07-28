@@ -369,6 +369,62 @@ pub async fn test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result
     Ok(Outcome::Passed)
 }
 
+// Checks whether the errors returned by the icrc1_transfer endpoint are used correctly
+pub async fn test_transfer_errors(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+    // Create two test accounts and transfer some tokens to the first account
+    let p1_env = setup_test_account(&ledger_env, 200_000.into()).await?;
+    let p2_env = p1_env.fork();
+
+    let mut transfer_args = Transfer::amount_to(10_000, p2_env.principal());
+    let ledger_fee = transfer_fee(&ledger_env).await.unwrap();
+    // Set incorrect fee
+    transfer_args = transfer_args.fee(ledger_fee.clone() + Nat::from(1));
+    match transfer(&ledger_env, transfer_args.clone())
+        .await
+        .unwrap()
+        .unwrap_err()
+    {
+        TransferError::BadFee { expected_fee } => {
+            if expected_fee != transfer_fee(&ledger_env).await.unwrap() {
+                return Err(anyhow::Error::msg(format!(
+                    "Expected BadFee argument to be {}, got {}",
+                    ledger_fee, expected_fee
+                )));
+            }
+        }
+        _ => return Err(anyhow::Error::msg("Expected BadFee error")),
+    }
+
+    transfer_args = Transfer::amount_to(10_000, p2_env.principal()).memo([1; 32]);
+    // Ledger should accept memos of at least 32 bytes;
+    transfer(&ledger_env, transfer_args.clone())
+        .await
+        .unwrap()
+        .unwrap();
+
+    transfer_args = Transfer::amount_to(10_000, p2_env.principal());
+    let time_nanos = || {
+        ledger_env
+            .time()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64
+    };
+    // Set created time in the future
+    let tomorrow = time_nanos() + 24 * 60 * 60 * 1_000_000_000;
+    transfer_args = transfer_args.created_at_time(tomorrow);
+    match transfer(&ledger_env, transfer_args)
+        .await
+        .unwrap()
+        .unwrap_err()
+    {
+        TransferError::CreatedInFuture { ledger_time: _ } => (),
+        _ => return Err(anyhow::Error::msg("Expected BadFee error")),
+    }
+
+    Ok(Outcome::Passed)
+}
+
 /// Returns the entire list of tests.
 pub fn test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
     vec![
@@ -379,7 +435,8 @@ pub fn test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
             "basic:supported_standards",
             test_supported_standards(env.clone()),
         ),
-        test("basic:tx_deduplication", test_tx_deduplication(env)),
+        test("basic:tx_deduplication", test_tx_deduplication(env.clone())),
+        test("basic:transfer_errors", test_transfer_errors(env)),
     ]
 }
 
