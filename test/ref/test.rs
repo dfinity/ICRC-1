@@ -10,7 +10,6 @@ use icrc1_test_replica::start_replica;
 use ring::rand::SystemRandom;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use std::time::SystemTime;
 
 const REF_WASM: &[u8] = include_bytes!(env!("REF_WASM_PATH"));
 
