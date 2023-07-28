@@ -32,8 +32,13 @@ impl LedgerEnv for SMLedger {
             canister_id: self.canister_id,
         }
     }
+
     fn principal(&self) -> Principal {
         self.sender
+    }
+
+    fn time(&self) -> std::time::SystemTime {
+        self.sm.time()
     }
 
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
