@@ -395,7 +395,7 @@ pub async fn test_transfer_errors(ledger_env: impl LedgerEnv) -> anyhow::Result<
         _ => return Err(anyhow::Error::msg("Expected BadFee error")),
     }
 
-    transfer_args = Transfer::amount_to(10_000, p2_env.principal()).memo([1; 32]);
+    transfer_args = Transfer::amount_to(10_000, p2_env.principal()).memo([1u8; 32]);
     // Ledger should accept memos of at least 32 bytes;
     transfer(&ledger_env, transfer_args.clone())
         .await
