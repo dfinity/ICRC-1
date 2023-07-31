@@ -3,7 +3,6 @@ use ic_agent::agent::http_transport::ReqwestHttpReplicaV2Transport;
 use ic_agent::identity::BasicIdentity;
 use ic_agent::Agent;
 use icrc1_test_env_replica::ReplicaLedger;
-use icrc1_test_suite::test_suite;
 use pico_args::Arguments;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -82,9 +81,9 @@ async fn main() {
         .expect("agent failed to fetch the root key");
 
     let env = ReplicaLedger::new(agent, canister_id);
-    let test_suite = test_suite(env).await;
+    let tests = icrc1_test_suite::test_suite(env).await;
 
-    if !icrc1_test_suite::execute_tests(test_suite).await {
+    if !icrc1_test_suite::execute_tests(tests).await {
         std::process::exit(1);
     }
 }

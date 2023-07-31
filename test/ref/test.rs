@@ -7,7 +7,6 @@ use icrc1_test_env_replica::fresh_identity;
 use icrc1_test_env_replica::ReplicaLedger;
 use icrc1_test_env_state_machine::SMLedger;
 use icrc1_test_replica::start_replica;
-use icrc1_test_suite::test_suite;
 use ring::rand::SystemRandom;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -177,9 +176,9 @@ async fn test_replica() {
     // We need to set the identity of the agent to that of what a user would parse
     agent.set_identity(p1);
     let env = ReplicaLedger::new(agent, canister_id);
-    let test_suite = test_suite(env).await;
+    let tests = icrc1_test_suite::test_suite(env).await;
 
-    if !icrc1_test_suite::execute_tests(test_suite).await {
+    if !icrc1_test_suite::execute_tests(tests).await {
         std::process::exit(1);
     }
 }
@@ -222,9 +221,9 @@ async fn test_state_machine() {
 
     let env = SMLedger::new(Arc::new(sm_env), canister_id, p1.sender().unwrap());
 
-    let test_suite = test_suite(env).await;
+    let tests = icrc1_test_suite::test_suite(env).await;
 
-    if !icrc1_test_suite::execute_tests(test_suite).await {
+    if !icrc1_test_suite::execute_tests(tests).await {
         std::process::exit(1);
     }
 }
