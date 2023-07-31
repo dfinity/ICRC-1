@@ -448,33 +448,33 @@ pub async fn icrc1_test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow:
 /// Returns the entire list of icrc1 tests.
 pub fn icrc1_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
     vec![
-        test("ICRC-1 | basic:transfer", icrc1_test_transfer(env.clone())),
-        test("ICRC-1 | basic:burn", icrc1_test_burn(env.clone())),
-        test("ICRC-1 | basic:metadata", icrc1_test_metadata(env.clone())),
+        test("icrc1:transfer", icrc1_test_transfer(env.clone())),
+        test("icrc1:burn", icrc1_test_burn(env.clone())),
+        test("icrc1:metadata", icrc1_test_metadata(env.clone())),
         test(
-            "ICRC-1 | basic:supported_standards",
+            "icrc1:supported_standards",
             icrc1_test_supported_standards(env.clone()),
         ),
         test(
-            "ICRC-1 | basic:tx_deduplication",
+            "icrc1:tx_deduplication",
             icrc1_test_tx_deduplication(env.clone()),
         ),
         test(
-            "ICRC-1 | basic:memo_bytes_length",
+            "icrc1:memo_bytes_length",
             icrc1_test_memo_bytes_length(env.clone()),
         ),
         test(
-            "ICRC-1 | basic:future_transfers",
+            "icrc1:future_transfers",
             icrc1_test_future_transfer(env.clone()),
         ),
-        test("ICRC-1 | basic:bad_fee", icrc1_test_bad_fee(env)),
+        test("icrc1:bad_fee", icrc1_test_bad_fee(env)),
     ]
 }
 
 /// Returns the entire list of icrc2 tests.
 pub fn icrc2_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
     vec![test(
-        "ICRC-2 | basic:supported_standards",
+        "icrc2:supported_standards",
         icrc2_test_supported_standards(env.clone()),
     )]
 }
