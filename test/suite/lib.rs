@@ -409,11 +409,9 @@ pub async fn test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::Result<
         .unwrap()
         .unwrap_err()
     {
-        TransferError::CreatedInFuture { ledger_time: _ } => (),
-        _ => return Err(anyhow::Error::msg("Expected BadFee error")),
+        TransferError::CreatedInFuture { ledger_time: _ } => Ok(Outcome::Passed),
+        _ => Err(anyhow::Error::msg("Expected BadFee error")),
     }
-
-    Ok(Outcome::Passed)
 }
 
 pub async fn test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
@@ -424,16 +422,12 @@ pub async fn test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow::Resul
     let transfer_args = Transfer::amount_to(10_000, p2_env.principal()).memo([1u8; 32]);
     // Ledger should accept memos of at least 32 bytes;
     match transfer(&ledger_env, transfer_args.clone()).await.unwrap() {
-        Ok(_) => (),
-        Err(err) => {
-            return Err(anyhow::Error::msg(format!(
-                "Expected memo wiht 32 bytes to succeed but received error: {:?}",
-                err
-            )))
-        }
+        Ok(_) => Ok(Outcome::Passed),
+        Err(err) => Err(anyhow::Error::msg(format!(
+            "Expected memo with 32 bytes to succeed but received error: {:?}",
+            err
+        ))),
     }
-
-    Ok(Outcome::Passed)
 }
 
 /// Returns the entire list of tests.
