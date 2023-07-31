@@ -369,8 +369,7 @@ pub async fn test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result
     Ok(Outcome::Passed)
 }
 
-// Checks whether the errors returned by the icrc1_transfer endpoint are used correctly
-pub async fn test_transfer_errors(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+pub async fn test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     // Create two test accounts and transfer some tokens to the first account
     let p1_env = setup_test_account(&ledger_env, 200_000.into()).await?;
     let p2_env = p1_env.fork();
@@ -379,40 +378,32 @@ pub async fn test_transfer_errors(ledger_env: impl LedgerEnv) -> anyhow::Result<
     let ledger_fee = transfer_fee(&ledger_env).await.unwrap();
     // Set incorrect fee
     transfer_args = transfer_args.fee(ledger_fee.clone() + Nat::from(1));
-    match transfer(&ledger_env, transfer_args.clone())
-        .await
-        .unwrap()
-        .unwrap_err()
-    {
-        TransferError::BadFee { expected_fee } => {
-            if expected_fee != transfer_fee(&ledger_env).await.unwrap() {
-                return Err(anyhow::Error::msg(format!(
-                    "Expected BadFee argument to be {}, got {}",
-                    ledger_fee, expected_fee
-                )));
+    match transfer(&ledger_env, transfer_args.clone()).await.unwrap() {
+        Ok(_) => return Err(anyhow::Error::msg("Expected Bad Fee Error")),
+        Err(err) => match err {
+            TransferError::BadFee { expected_fee } => {
+                if expected_fee != transfer_fee(&ledger_env).await.unwrap() {
+                    return Err(anyhow::Error::msg(format!(
+                        "Expected BadFee argument to be {}, got {}",
+                        ledger_fee, expected_fee
+                    )));
+                }
             }
-        }
-        _ => return Err(anyhow::Error::msg("Expected BadFee error")),
+            _ => return Err(anyhow::Error::msg("Expected BadFee error")),
+        },
     }
+    Ok(Outcome::Passed)
+}
 
-    transfer_args = Transfer::amount_to(10_000, p2_env.principal()).memo([1u8; 32]);
-    // Ledger should accept memos of at least 32 bytes;
-    transfer(&ledger_env, transfer_args.clone())
-        .await
-        .unwrap()
-        .unwrap();
+pub async fn test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+    // Create two test accounts and transfer some tokens to the first account
+    let p1_env = setup_test_account(&ledger_env, 200_000.into()).await?;
+    let p2_env = p1_env.fork();
 
-    transfer_args = Transfer::amount_to(10_000, p2_env.principal());
-    let time_nanos = || {
-        ledger_env
-            .time()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos() as u64
-    };
+    let mut transfer_args = Transfer::amount_to(10_000, p2_env.principal());
+
     // Set created time in the future
-    let tomorrow = time_nanos() + 24 * 60 * 60 * 1_000_000_000;
-    transfer_args = transfer_args.created_at_time(tomorrow);
+    transfer_args = transfer_args.created_at_time(u64::MAX);
     match transfer(&ledger_env, transfer_args)
         .await
         .unwrap()
@@ -420,6 +411,26 @@ pub async fn test_transfer_errors(ledger_env: impl LedgerEnv) -> anyhow::Result<
     {
         TransferError::CreatedInFuture { ledger_time: _ } => (),
         _ => return Err(anyhow::Error::msg("Expected BadFee error")),
+    }
+
+    Ok(Outcome::Passed)
+}
+
+pub async fn test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+    // Create two test accounts and transfer some tokens to the first account
+    let p1_env = setup_test_account(&ledger_env, 200_000.into()).await?;
+    let p2_env = p1_env.fork();
+
+    let transfer_args = Transfer::amount_to(10_000, p2_env.principal()).memo([1u8; 32]);
+    // Ledger should accept memos of at least 32 bytes;
+    match transfer(&ledger_env, transfer_args.clone()).await.unwrap() {
+        Ok(_) => (),
+        Err(err) => {
+            return Err(anyhow::Error::msg(format!(
+                "Expected memo wiht 32 bytes to succeed but received error: {:?}",
+                err
+            )))
+        }
     }
 
     Ok(Outcome::Passed)
@@ -436,7 +447,12 @@ pub fn test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
             test_supported_standards(env.clone()),
         ),
         test("basic:tx_deduplication", test_tx_deduplication(env.clone())),
-        test("basic:transfer_errors", test_transfer_errors(env)),
+        test(
+            "basic:memo_bytes_length",
+            test_memo_bytes_length(env.clone()),
+        ),
+        test("basic:future_transfers", test_future_transfer(env.clone())),
+        test("basic:bad_fee", test_bad_fee(env)),
     ]
 }
 
