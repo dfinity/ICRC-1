@@ -2,8 +2,8 @@ use candid::Principal;
 use ic_agent::agent::http_transport::ReqwestHttpReplicaV2Transport;
 use ic_agent::identity::BasicIdentity;
 use ic_agent::Agent;
-use icrc1_test_env::icrc1::supported_standards;
 use icrc1_test_env_replica::ReplicaLedger;
+use icrc1_test_suite::test_suite;
 use pico_args::Arguments;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -82,23 +82,9 @@ async fn main() {
         .expect("agent failed to fetch the root key");
 
     let env = ReplicaLedger::new(agent, canister_id);
+    let test_suite = test_suite(env).await;
 
-    match supported_standards(&env).await {
-        Ok(standard) => {
-            let mut tests = vec![];
-            if standard.iter().any(|std| std.name == "ICRC-1") {
-                tests.append(&mut icrc1_test_suite::icrc1_test_suite(env.clone()));
-            }
-            if standard.iter().any(|std| std.name == "ICRC-2") {
-                tests.append(&mut icrc1_test_suite::icrc2_test_suite(env));
-            }
-            if !icrc1_test_suite::execute_tests(tests).await {
-                std::process::exit(1);
-            }
-        }
-        Err(_) => {
-            println!("No standard is supported by the given ledger: Is the endpoint 'icrc1_supported_standards' implemented correctly?");
-            std::process::exit(1);
-        }
-    };
+    if !icrc1_test_suite::execute_tests(test_suite).await {
+        std::process::exit(1);
+    }
 }

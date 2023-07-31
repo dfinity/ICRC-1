@@ -480,6 +480,24 @@ pub fn icrc2_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
     ]
 }
 
+pub async fn test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
+    match supported_standards(&env).await {
+        Ok(standard) => {
+            let mut tests = vec![];
+            if standard.iter().any(|std| std.name == "ICRC-1") {
+                tests.append(&mut icrc1_test_suite(env.clone()));
+            }
+            if standard.iter().any(|std| std.name == "ICRC-2") {
+                tests.append(&mut icrc2_test_suite(env));
+            }
+            tests
+        }
+        Err(_) => {
+            println!("No standard is supported by the given ledger: Is the endpoint 'icrc1_supported_standards' implemented correctly?");
+            vec![]
+        }
+    }
+}
 /// Executes the list of tests concurrently and prints results using
 /// the TAP protocol (https://testanything.org/).
 pub async fn execute_tests(tests: Vec<Test>) -> bool {
