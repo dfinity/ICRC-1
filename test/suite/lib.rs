@@ -227,6 +227,7 @@ pub async fn icrc1_test_supported_standards(ledger: impl LedgerEnv) -> anyhow::R
 /// Checks whether the ledger advertizes support for ICRC-2 standard.
 pub async fn icrc2_test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let stds = supported_standards(&ledger).await?;
+    // If the ledger claims to support ICRC-2 it also needs to support ICRC-1
     if !(stds.iter().any(|std| std.name == "ICRC-2") && stds.iter().any(|std| std.name == "ICRC-1"))
     {
         bail!(
@@ -470,14 +471,12 @@ pub fn icrc1_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
     ]
 }
 
+/// Returns the entire list of icrc2 tests.
 pub fn icrc2_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
-    vec![
-        // If the ledger claims to support ICRC-2 it also needs to support ICRC-1
-        test(
-            "ICRC-2 | basic:supported_standards",
-            icrc2_test_supported_standards(env.clone()),
-        ),
-    ]
+    vec![test(
+        "ICRC-2 | basic:supported_standards",
+        icrc2_test_supported_standards(env.clone()),
+    )]
 }
 
 pub async fn test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
