@@ -3,6 +3,7 @@ use candid::{CandidType, Decode, Encode, Nat};
 use ic_agent::Agent;
 use ic_agent::Identity;
 use ic_test_state_machine_client::StateMachine;
+use icrc1_test_env::icrc1::supported_standards;
 use icrc1_test_env_replica::fresh_identity;
 use icrc1_test_env_replica::ReplicaLedger;
 use icrc1_test_env_state_machine::SMLedger;
@@ -176,11 +177,24 @@ async fn test_replica() {
     // We need to set the identity of the agent to that of what a user would parse
     agent.set_identity(p1);
     let env = ReplicaLedger::new(agent, canister_id);
-    let tests = icrc1_test_suite::test_suite(env);
-
-    if !icrc1_test_suite::execute_tests(tests).await {
-        std::process::exit(1);
-    }
+    match supported_standards(&env).await {
+        Ok(standard) => {
+            let mut tests = vec![];
+            if standard.iter().any(|std| std.name == "ICRC-1") {
+                tests.append(&mut icrc1_test_suite::icrc1_test_suite(env.clone()));
+            }
+            if standard.iter().any(|std| std.name == "ICRC-2") {
+                tests.append(&mut icrc1_test_suite::icrc2_test_suite(env));
+            }
+            if !icrc1_test_suite::execute_tests(tests).await {
+                std::process::exit(1);
+            }
+        }
+        Err(_) => {
+            println!("No standard is supported by the given ledger: Is the endpoint 'icrc1_supported_standards' implemented correctly?");
+            std::process::exit(1);
+        }
+    };
 }
 
 async fn test_state_machine() {
@@ -221,11 +235,24 @@ async fn test_state_machine() {
 
     let env = SMLedger::new(Arc::new(sm_env), canister_id, p1.sender().unwrap());
 
-    let tests = icrc1_test_suite::test_suite(env);
-
-    if !icrc1_test_suite::execute_tests(tests).await {
-        std::process::exit(1);
-    }
+    match supported_standards(&env).await {
+        Ok(standard) => {
+            let mut tests = vec![];
+            if standard.iter().any(|std| std.name == "ICRC-1") {
+                tests.append(&mut icrc1_test_suite::icrc1_test_suite(env.clone()));
+            }
+            if standard.iter().any(|std| std.name == "ICRC-2") {
+                tests.append(&mut icrc1_test_suite::icrc2_test_suite(env));
+            }
+            if !icrc1_test_suite::execute_tests(tests).await {
+                std::process::exit(1);
+            }
+        }
+        Err(_) => {
+            println!("No standard is supported by the given ledger: Is the endpoint 'icrc1_supported_standards' implemented correctly?");
+            std::process::exit(1);
+        }
+    };
 }
 
 #[tokio::main]

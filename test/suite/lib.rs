@@ -104,7 +104,7 @@ async fn setup_test_account(
 
 /// Checks whether the ledger supports token transfers and handles
 /// default sub accounts correctly.
-pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerEnv) -> TestResult {
+pub async fn icrc1_test_transfer(ledger_env: impl LedgerEnv + LedgerEnv) -> TestResult {
     let p1_env = setup_test_account(&ledger_env, Nat::from(20_000)).await?;
     let p2_env = setup_test_account(&ledger_env, Nat::from(20_000)).await?;
     let transfer_amount = 10_000;
@@ -146,7 +146,7 @@ pub async fn test_transfer(ledger_env: impl LedgerEnv + LedgerEnv) -> TestResult
 
 /// Checks whether the ledger supports token burns.
 /// Skips the checks if the ledger does not have a minting account.
-pub async fn test_burn(ledger_env: impl LedgerEnv) -> TestResult {
+pub async fn icrc1_test_burn(ledger_env: impl LedgerEnv) -> TestResult {
     let minting_account = match minting_account(&ledger_env).await? {
         Some(account) => account,
         None => {
@@ -184,7 +184,7 @@ pub async fn test_burn(ledger_env: impl LedgerEnv) -> TestResult {
 }
 
 /// Checks whether the ledger metadata entries agree with named methods.
-pub async fn test_metadata(ledger: impl LedgerEnv) -> TestResult {
+pub async fn icrc1_test_metadata(ledger: impl LedgerEnv) -> TestResult {
     let mut metadata = metadata(&ledger).await?;
     metadata.sort_by(|l, r| l.0.cmp(&r.0));
 
@@ -215,7 +215,7 @@ pub async fn test_metadata(ledger: impl LedgerEnv) -> TestResult {
 }
 
 /// Checks whether the ledger advertizes support for ICRC-1 standard.
-pub async fn test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<Outcome> {
+pub async fn icrc1_test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let stds = supported_standards(&ledger).await?;
     if !stds.iter().any(|std| std.name == "ICRC-1") {
         bail!("The ledger does not claim support for ICRC-1: {:?}", stds);
@@ -224,8 +224,22 @@ pub async fn test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<
     Ok(Outcome::Passed)
 }
 
+/// Checks whether the ledger advertizes support for ICRC-2 standard.
+pub async fn icrc2_test_supported_standards(ledger: impl LedgerEnv) -> anyhow::Result<Outcome> {
+    let stds = supported_standards(&ledger).await?;
+    if !(stds.iter().any(|std| std.name == "ICRC-2") && stds.iter().any(|std| std.name == "ICRC-1"))
+    {
+        bail!(
+            "The ledger does not claim support for ICRC-1 and ICRC-2: {:?}",
+            stds
+        );
+    }
+
+    Ok(Outcome::Passed)
+}
+
 /// Checks whether the ledger applies deduplication of transactions correctly
-pub async fn test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     // Create two test accounts and transfer some tokens to the first account
     let p1_env = setup_test_account(&ledger_env, 200_000.into()).await?;
     let p2_env = p1_env.fork();
@@ -369,7 +383,7 @@ pub async fn test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result
     Ok(Outcome::Passed)
 }
 
-pub async fn test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+pub async fn icrc1_test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     // Create two test accounts and transfer some tokens to the first account
     let p1_env = setup_test_account(&ledger_env, 200_000.into()).await?;
     let p2_env = p1_env.fork();
@@ -395,7 +409,7 @@ pub async fn test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome>
     Ok(Outcome::Passed)
 }
 
-pub async fn test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+pub async fn icrc1_test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     // Create two test accounts and transfer some tokens to the first account
     let p1_env = setup_test_account(&ledger_env, 200_000.into()).await?;
     let p2_env = p1_env.fork();
@@ -414,7 +428,7 @@ pub async fn test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::Result<
     }
 }
 
-pub async fn test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+pub async fn icrc1_test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     // Create two test accounts and transfer some tokens to the first account
     let p1_env = setup_test_account(&ledger_env, 200_000.into()).await?;
     let p2_env = p1_env.fork();
@@ -430,23 +444,39 @@ pub async fn test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow::Resul
     }
 }
 
-/// Returns the entire list of tests.
-pub fn test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
+/// Returns the entire list of icrc1 tests.
+pub fn icrc1_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
     vec![
-        test("basic:transfer", test_transfer(env.clone())),
-        test("basic:burn", test_burn(env.clone())),
-        test("basic:metadata", test_metadata(env.clone())),
+        test("ICRC-1 | basic:transfer", icrc1_test_transfer(env.clone())),
+        test("ICRC-1 | basic:burn", icrc1_test_burn(env.clone())),
+        test("ICRC-1 | basic:metadata", icrc1_test_metadata(env.clone())),
         test(
-            "basic:supported_standards",
-            test_supported_standards(env.clone()),
+            "ICRC-1 | basic:supported_standards",
+            icrc1_test_supported_standards(env.clone()),
         ),
-        test("basic:tx_deduplication", test_tx_deduplication(env.clone())),
         test(
-            "basic:memo_bytes_length",
-            test_memo_bytes_length(env.clone()),
+            "ICRC-1 | basic:tx_deduplication",
+            icrc1_test_tx_deduplication(env.clone()),
         ),
-        test("basic:future_transfers", test_future_transfer(env.clone())),
-        test("basic:bad_fee", test_bad_fee(env)),
+        test(
+            "ICRC-1 | basic:memo_bytes_length",
+            icrc1_test_memo_bytes_length(env.clone()),
+        ),
+        test(
+            "ICRC-1 | basic:future_transfers",
+            icrc1_test_future_transfer(env.clone()),
+        ),
+        test("ICRC-1 | basic:bad_fee", icrc1_test_bad_fee(env)),
+    ]
+}
+
+pub fn icrc2_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
+    vec![
+        // If the ledger claims to support ICRC-2 it also needs to support ICRC-1
+        test(
+            "ICRC-2 | basic:supported_standards",
+            icrc2_test_supported_standards(env.clone()),
+        ),
     ]
 }
 
