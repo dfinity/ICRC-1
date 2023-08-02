@@ -176,7 +176,7 @@ async fn test_replica() {
     // We need to set the identity of the agent to that of what a user would parse
     agent.set_identity(p1);
     let env = ReplicaLedger::new(agent, canister_id);
-    let tests = icrc1_test_suite::test_suite(env);
+    let tests = icrc1_test_suite::test_suite(env).await;
 
     if !icrc1_test_suite::execute_tests(tests).await {
         std::process::exit(1);
@@ -221,7 +221,7 @@ async fn test_state_machine() {
 
     let env = SMLedger::new(Arc::new(sm_env), canister_id, p1.sender().unwrap());
 
-    let tests = icrc1_test_suite::test_suite(env);
+    let tests = icrc1_test_suite::test_suite(env).await;
 
     if !icrc1_test_suite::execute_tests(tests).await {
         std::process::exit(1);
