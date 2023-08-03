@@ -126,7 +126,9 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
           };
           if (accountsEqual(args.to, account)) { sum += args.amount };
         };
-        case (#Approve(_)) {};
+        case (#Approve(args)) {
+          if (accountsEqual(args.from, account)) { sum -= tx.fee };
+        };
       };
     };
     sum;
@@ -140,7 +142,7 @@ actor class Ledger(init : { initial_mints : [{ account : { owner : Principal; su
         case (#Burn(args)) { total -= args.amount };
         case (#Mint(args)) { total += args.amount };
         case (#Transfer(_)) { total -= tx.fee };
-        case (#Approve(_)) {};
+        case (#Approve(_)) {total -= tx.fee};
       };
     };
     total;
