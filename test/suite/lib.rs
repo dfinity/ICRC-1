@@ -325,28 +325,39 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
     let fee = transfer_fee(&ledger_env).await.unwrap();
     let initial_balance = Nat::from(100_000);
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
-    let p2_env = setup_test_account(&ledger_env, fee.clone()).await?;
+    let p2_env = ledger_env.fork();
     let p3_env = ledger_env.fork();
 
-    let approve_amount = Nat::from(10_000);
+    let approve_amount = Nat::from(50_000);
 
     approve_or_err(
         &p1_env,
         ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal()),
     )
     .await?;
+
+    // Transferred amount has to be larger than the approved amount minus the fee for transfering tokens
+    let transfer_amount = approve_amount - fee.clone() - Nat::from(1);
     transfer_from_or_err(
         &p2_env,
         TransferFromArgs::transfer_from(
-            approve_amount.clone(),
+            transfer_amount.clone(),
             p3_env.principal(),
             p1_env.principal(),
         ),
     )
     .await?;
-    assert_balance(&ledger_env, p1_env.principal(), initial_balance - fee).await?;
+    assert_balance(
+        &ledger_env,
+        p1_env.principal(),
+        // Balance should be the initial balance minus two times the fee, once for the approve and once for the transfer, and the transferred amount
+        initial_balance - fee.clone() - fee - transfer_amount.clone(),
+    )
+    .await?;
+    // Balance of spender should not change
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
-    assert_balance(&ledger_env, p3_env.principal(), approve_amount).await?;
+    // Beneficiary should get the amount transferred
+    assert_balance(&ledger_env, p3_env.principal(), transfer_amount).await?;
 
     Ok(Outcome::Passed)
 }
