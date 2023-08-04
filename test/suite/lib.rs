@@ -110,6 +110,34 @@ async fn transfer_from_or_err(
     }
 }
 
+async fn assert_allowance(
+    ledger_env: &impl LedgerEnv,
+    from: Account,
+    spender: Account,
+    expected_allowance: Nat,
+) -> anyhow::Result<()> {
+    match allowance(
+        ledger_env,
+        AllowanceArgs {
+            account: from.clone(),
+            spender: spender.clone(),
+        },
+    )
+    .await
+    {
+        Ok(allowance) => {
+            if allowance.allowance != expected_allowance {
+                return Err(anyhow::Error::msg(format!("Expected the allowance returned by the allowance endpoint to be the {:?}, received {:?}",expected_allowance,allowance.allowance)));
+            }
+            Ok(())
+        }
+        Err(err) => Err(anyhow::Error::msg(format!(
+            "Expected allowance of {:?} from {:?}, spender {:?} to succeed but received {:?}.",
+            expected_allowance, from, spender, err
+        ))),
+    }
+}
+
 async fn setup_test_account(
     ledger_env: &impl LedgerEnv,
     amount: Nat,
@@ -290,30 +318,13 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
     .await?;
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
 
-    match allowance(
+    assert_allowance(
         &p1_env,
-        AllowanceArgs {
-            account: p1_env.principal().into(),
-            spender: p2_env.principal().into(),
-        },
+        p1_env.principal().into(),
+        p2_env.principal().into(),
+        approve_amount,
     )
-    .await
-    {
-        Ok(allowance) => {
-            if allowance.allowance != approve_amount {
-                return Err(anyhow::Error::msg(format!("Expected the allowance returned by the allowance endpoint to be the same as the approved amount. Approved {:?}, allowance {:?}",approve_amount,allowance)));
-            }
-        }
-        Err(err) => {
-            return Err(anyhow::Error::msg(format!(
-                "Expected allowance of {:?} from {:?}, spender {:?} to succeed but received {:?}.",
-                approve_amount,
-                p1_env.principal(),
-                p2_env.principal(),
-                err
-            )))
-        }
-    }
+    .await?;
 
     assert_balance(&ledger_env, p1_env.principal(), initial_balance - fee).await?;
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
@@ -336,7 +347,7 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
     )
     .await?;
 
-    // Transferred amount has to be larger than the approved amount minus the fee for transfering tokens
+    // Transferred amount has to be smaller than the approved amount minus the fee for transfering tokens
     let transfer_amount = approve_amount - fee.clone() - Nat::from(1);
     transfer_from_or_err(
         &p2_env,
@@ -359,6 +370,13 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
     // Beneficiary should get the amount transferred
     assert_balance(&ledger_env, p3_env.principal(), transfer_amount).await?;
 
+    assert_allowance(
+        &p1_env,
+        p1_env.principal().into(),
+        p2_env.principal().into(),
+        Nat::from(1),
+    )
+    .await?;
     Ok(Outcome::Passed)
 }
 
