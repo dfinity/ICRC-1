@@ -1,5 +1,6 @@
 # Ledger & Tokenization Working Group Charters
 
+
 ## 2023-07-25
 [Slide deck](https://docs.google.com/presentation/d/1if2iZPLWSg6gV0siInuBBST_HXiLaVAfUlgGMdSse04/edit?usp=sharing)
 
@@ -34,6 +35,7 @@
   * yes because no approve/transfer_from block has been written yet
 * Let me talk with Ledger developers about the change proposed in this meeting.
 
+
 ## 2023-07-11
 [Slide deck](https://docs.google.com/presentation/d/17h_7w3_yK2SdM2wOHW7Wkz8pCIxNN9AV7iioZNy0_iE/edit?usp=sharing)
 
@@ -53,7 +55,7 @@
 ## 2023-06-27
 
 [Slide deck](https://docs.google.com/presentation/d/18JV8Kb5G1-KeQAY92BMbM9CwAJV4Uey8V7vwZXpc6WQ/edit), 
-[recording](n.a.)
+recording: n.a.
 
 * Dieter summarizes of where we are with ICRC-3
   * In the most recent meeting, Mario has presented a simpler solution than the one before:
