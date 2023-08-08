@@ -3,7 +3,7 @@ use candid::utils::{ArgumentDecoder, ArgumentEncoder};
 use candid::Principal;
 use candid::{CandidType, Int, Nat};
 use serde::Deserialize;
-use std::fmt;
+use thiserror::Error;
 
 pub type Subaccount = [u8; 32];
 
@@ -36,57 +36,25 @@ pub enum Value {
     Int(Int),
 }
 
-#[derive(CandidType, Deserialize, PartialEq, Eq, Debug, Clone)]
+#[derive(CandidType, Deserialize, PartialEq, Eq, Debug, Clone, Error)]
 pub enum TransferError {
+    #[error("Invalid transfer fee, the ledger expected fee {expected_fee}")]
     BadFee { expected_fee: Nat },
+    #[error("Invalid burn amount, the minimal burn amount is {min_burn_amount}")]
     BadBurn { min_burn_amount: Nat },
+    #[error("The account owner doesn't have enough funds to for the transfer, balance: {balance}")]
     InsufficientFunds { balance: Nat },
+    #[error("created_at_time is too far in the past")]
     TooOld,
+    #[error("created_at_time is too far in the future, ledger time: {ledger_time}")]
     CreatedInFuture { ledger_time: u64 },
+    #[error("the transfer is a duplicate of transaction {duplicate_of}")]
     Duplicate { duplicate_of: Nat },
+    #[error("the ledger is temporarily unavailable")]
     TemporarilyUnavailable,
+    #[error("generic error (code {error_code}): {message}")]
     GenericError { error_code: Nat, message: String },
 }
-
-impl fmt::Display for TransferError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::BadFee { expected_fee } => write!(
-                f,
-                "Invalid transfer fee, the ledger expected fee {}",
-                expected_fee
-            ),
-            Self::BadBurn { min_burn_amount } => write!(
-                f,
-                "Invalid burn amount, the minimal burn amount is {}",
-                min_burn_amount
-            ),
-            Self::InsufficientFunds { balance } => write!(
-                f,
-                "The account owner doesn't have enough funds to for the transfer, balance: {}",
-                balance
-            ),
-            Self::TooOld => write!(f, "created_at_time is too far in the past"),
-            Self::CreatedInFuture { ledger_time } => write!(
-                f,
-                "created_at_time is too far in the future, ledger time: {}",
-                ledger_time
-            ),
-            Self::Duplicate { duplicate_of } => write!(
-                f,
-                "the transfer is a duplicate of transaction {}",
-                duplicate_of
-            ),
-            Self::TemporarilyUnavailable => write!(f, "the ledger is temporarily unavailable"),
-            Self::GenericError {
-                error_code,
-                message,
-            } => write!(f, "generic error (code {}): {}", error_code, message),
-        }
-    }
-}
-
-impl std::error::Error for TransferError {}
 
 #[derive(CandidType, Debug, Clone)]
 pub struct Transfer {
@@ -183,16 +151,25 @@ impl ApproveArgs {
     }
 }
 
-#[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq, Error)]
 pub enum ApproveError {
+    #[error("Invalid transfer fee, the ledger expected fee {expected_fee}")]
     BadFee { expected_fee: Nat },
+    #[error("The account owner doesn't have enough funds to for the approval, balance: {balance}")]
     InsufficientFunds { balance: Nat },
+    #[error("The allowance changed, current allowance: {current_allowance}")]
     AllowanceChanged { current_allowance: Nat },
+    #[error("the approval expiration time is in the past, ledger time: {ledger_time}")]
     Expired { ledger_time: u64 },
+    #[error("created_at_time is too far in the past")]
     TooOld,
+    #[error("created_at_time is too far in the future, ledger time: {ledger_time}")]
     CreatedInFuture { ledger_time: u64 },
+    #[error("the transfer is a duplicate of transaction {duplicate_of}")]
     Duplicate { duplicate_of: Nat },
+    #[error("the ledger is temporarily unavailable")]
     TemporarilyUnavailable,
+    #[error("generic error (code {error_code}): {message}")]
     GenericError { error_code: Nat, message: String },
 }
 
@@ -245,16 +222,25 @@ impl TransferFromArgs {
     }
 }
 
-#[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq, Error)]
 pub enum TransferFromError {
+    #[error("Invalid transfer fee, the ledger expected fee {expected_fee}")]
     BadFee { expected_fee: Nat },
+    #[error("Invalid burn amount, the minimal burn amount is {min_burn_amount}")]
     BadBurn { min_burn_amount: Nat },
+    #[error("The account owner doesn't have enough funds to for the transfer, balance: {balance}")]
     InsufficientFunds { balance: Nat },
+    #[error("The account owner doesn't have allowance for the transfer, allowance: {allowance}")]
     InsufficientAllowance { allowance: Nat },
+    #[error("created_at_time is too far in the past")]
     TooOld,
+    #[error("created_at_time is too far in the future, ledger time: {ledger_time}")]
     CreatedInFuture { ledger_time: u64 },
+    #[error("the transfer is a duplicate of transaction {duplicate_of}")]
     Duplicate { duplicate_of: Nat },
+    #[error("the ledger is temporarily unavailable")]
     TemporarilyUnavailable,
+    #[error("generic error (code {error_code}): {message}")]
     GenericError { error_code: Nat, message: String },
 }
 
@@ -296,10 +282,7 @@ pub trait LedgerEnv {
 }
 
 pub mod icrc1 {
-    use crate::{
-        Account, Allowance, AllowanceArgs, ApproveArgs, ApproveError, LedgerEnv, SupportedStandard,
-        Transfer, TransferError, TransferFromArgs, TransferFromError, Value,
-    };
+    use crate::{Account, LedgerEnv, SupportedStandard, Transfer, TransferError, Value};
     use candid::Nat;
 
     pub async fn transfer(
@@ -354,6 +337,14 @@ pub mod icrc1 {
     pub async fn transfer_fee(ledger: &impl LedgerEnv) -> anyhow::Result<Nat> {
         ledger.query("icrc1_fee", ()).await.map(|(t,)| t)
     }
+}
+
+pub mod icrc2 {
+    use crate::{
+        Allowance, AllowanceArgs, ApproveArgs, ApproveError, LedgerEnv, TransferFromArgs,
+        TransferFromError,
+    };
+    use candid::Nat;
 
     pub async fn approve(
         ledger: &impl LedgerEnv,
