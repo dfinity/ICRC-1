@@ -265,7 +265,7 @@ pub async fn icrc2_test_supported_standards(ledger: impl LedgerEnv) -> anyhow::R
 }
 
 pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
-    let fee = transfer_fee(&ledger_env).await.unwrap();
+    let fee = transfer_fee(&ledger_env).await?;
     let initial_balance = Nat::from(100_000);
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
@@ -300,7 +300,7 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
 }
 
 pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
-    let fee = transfer_fee(&ledger_env).await.unwrap();
+    let fee = transfer_fee(&ledger_env).await?;
     let initial_balance = Nat::from(100_000);
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
@@ -499,14 +499,14 @@ pub async fn icrc1_test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
     let p2_env = p1_env.fork();
 
     let mut transfer_args = Transfer::amount_to(10_000, p2_env.principal());
-    let ledger_fee = transfer_fee(&ledger_env).await.unwrap();
+    let ledger_fee = transfer_fee(&ledger_env).await?;
     // Set incorrect fee
     transfer_args = transfer_args.fee(ledger_fee.clone() + Nat::from(1));
-    match transfer(&ledger_env, transfer_args.clone()).await.unwrap() {
+    match transfer(&ledger_env, transfer_args.clone()).await? {
         Ok(_) => return Err(anyhow::Error::msg("Expected Bad Fee Error")),
         Err(err) => match err {
             TransferError::BadFee { expected_fee } => {
-                if expected_fee != transfer_fee(&ledger_env).await.unwrap() {
+                if expected_fee != transfer_fee(&ledger_env).await? {
                     return Err(anyhow::Error::msg(format!(
                         "Expected BadFee argument to be {}, got {}",
                         ledger_fee, expected_fee
@@ -528,13 +528,9 @@ pub async fn icrc1_test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::R
 
     // Set created time in the future
     transfer_args = transfer_args.created_at_time(u64::MAX);
-    match transfer(&ledger_env, transfer_args)
-        .await
-        .unwrap()
-        .unwrap_err()
-    {
-        TransferError::CreatedInFuture { ledger_time: _ } => Ok(Outcome::Passed),
-        _ => Err(anyhow::Error::msg("Expected BadFee error")),
+    match transfer(&ledger_env, transfer_args).await? {
+        Err(TransferError::CreatedInFuture { ledger_time: _ }) => Ok(Outcome::Passed),
+        other => bail!("expected CreatedInFuture error, got: {:?}", other),
     }
 }
 
@@ -545,12 +541,12 @@ pub async fn icrc1_test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow:
 
     let transfer_args = Transfer::amount_to(10_000, p2_env.principal()).memo([1u8; 32]);
     // Ledger should accept memos of at least 32 bytes;
-    match transfer(&ledger_env, transfer_args.clone()).await.unwrap() {
+    match transfer(&ledger_env, transfer_args.clone()).await? {
         Ok(_) => Ok(Outcome::Passed),
-        Err(err) => Err(anyhow::Error::msg(format!(
-            "Expected memo with 32 bytes to succeed but received error: {:?}",
+        Err(err) => bail!(
+            "Expected memo with 32 bytes to succeed but got error: {:?}",
             err
-        ))),
+        ),
     }
 }
 
