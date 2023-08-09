@@ -72,14 +72,6 @@ async fn assert_balance(
     Ok(())
 }
 
-async fn transfer_or_fail(ledger_env: &impl LedgerEnv, amount: Nat, receiver: Principal) -> Nat {
-    transfer(ledger_env, Transfer::amount_to(amount.clone(), receiver))
-        .await
-        .with_context(|| format!("failed to transfer {} tokens to {}", amount, receiver))
-        .unwrap()
-        .unwrap()
-}
-
 async fn setup_test_account(
     ledger_env: &impl LedgerEnv,
     amount: Nat,
@@ -89,7 +81,7 @@ async fn setup_test_account(
     let receiver_env = ledger_env.fork();
     let receiver = receiver_env.principal();
     assert_balance(&receiver_env, receiver, 0).await?;
-    let _tx = transfer_or_fail(ledger_env, amount.clone(), receiver).await;
+    let _tx = transfer(ledger_env, Transfer::amount_to(amount.clone(), receiver)).await??;
     assert_balance(
         &receiver_env,
         Account {
@@ -104,18 +96,23 @@ async fn setup_test_account(
 
 /// Checks whether the ledger supports token transfers and handles
 /// default sub accounts correctly.
-pub async fn icrc1_test_transfer(ledger_env: impl LedgerEnv + LedgerEnv) -> TestResult {
-    let p1_env = setup_test_account(&ledger_env, Nat::from(20_000)).await?;
-    let p2_env = setup_test_account(&ledger_env, Nat::from(20_000)).await?;
+pub async fn icrc1_test_transfer(ledger_env: impl LedgerEnv) -> TestResult {
+    let fee = transfer_fee(&ledger_env).await?;
+    let p1_env = setup_test_account(&ledger_env, Nat::from(20_000) + fee.clone()).await?;
+    let p2_env = ledger_env.fork();
     let transfer_amount = 10_000;
 
     let balance_p1 = balance_of(&p1_env, p1_env.principal()).await?;
     let balance_p2 = balance_of(&p2_env, p2_env.principal()).await?;
 
-    let _tx = transfer_or_fail(&p1_env, Nat::from(transfer_amount), p2_env.principal()).await;
+    let _tx = transfer(
+        &p1_env,
+        Transfer::amount_to(Nat::from(transfer_amount), p2_env.principal()),
+    )
+    .await??;
 
     assert_balance(
-        &p2_env,
+        &ledger_env,
         Account {
             owner: p2_env.principal(),
             subaccount: None,
@@ -135,9 +132,9 @@ pub async fn icrc1_test_transfer(ledger_env: impl LedgerEnv + LedgerEnv) -> Test
     .await?;
 
     assert_balance(
-        &p1_env,
+        &ledger_env,
         p1_env.principal(),
-        balance_p1 - Nat::from(transfer_amount) - transfer_fee(&p1_env).await?,
+        balance_p1 - Nat::from(transfer_amount) - fee,
     )
     .await?;
 
