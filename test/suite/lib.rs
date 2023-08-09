@@ -1,11 +1,14 @@
 use anyhow::{bail, Context};
 use candid::Nat;
-use candid::Principal;
 use futures::StreamExt;
 use icrc1_test_env::icrc1::{
     balance_of, metadata, minting_account, supported_standards, token_decimals, token_name,
     token_symbol, transfer, transfer_fee,
 };
+use icrc1_test_env::icrc2::{allowance, approve, transfer_from};
+use icrc1_test_env::AllowanceArgs;
+use icrc1_test_env::ApproveArgs;
+use icrc1_test_env::TransferFromArgs;
 use icrc1_test_env::{Account, LedgerEnv, Transfer, TransferError, Value};
 use std::future::Future;
 use std::pin::Pin;
@@ -72,12 +75,30 @@ async fn assert_balance(
     Ok(())
 }
 
-async fn transfer_or_fail(ledger_env: &impl LedgerEnv, amount: Nat, receiver: Principal) -> Nat {
-    transfer(ledger_env, Transfer::amount_to(amount.clone(), receiver))
-        .await
-        .with_context(|| format!("failed to transfer {} tokens to {}", amount, receiver))
-        .unwrap()
-        .unwrap()
+async fn assert_allowance(
+    ledger_env: &impl LedgerEnv,
+    from: Account,
+    spender: Account,
+    expected_allowance: Nat,
+) -> anyhow::Result<()> {
+    let allowance = allowance(
+        ledger_env,
+        AllowanceArgs {
+            account: from.clone(),
+            spender: spender.clone(),
+        },
+    )
+    .await?;
+    if allowance.allowance != expected_allowance {
+        bail!(
+            "Expected the {:?} -> {:?} allowance to be {}, got {}",
+            from,
+            spender,
+            expected_allowance,
+            allowance.allowance
+        );
+    }
+    Ok(())
 }
 
 async fn setup_test_account(
@@ -89,7 +110,7 @@ async fn setup_test_account(
     let receiver_env = ledger_env.fork();
     let receiver = receiver_env.principal();
     assert_balance(&receiver_env, receiver, 0).await?;
-    let _tx = transfer_or_fail(ledger_env, amount.clone(), receiver).await;
+    let _tx = transfer(ledger_env, Transfer::amount_to(amount.clone(), receiver)).await??;
     assert_balance(
         &receiver_env,
         Account {
@@ -112,7 +133,11 @@ pub async fn icrc1_test_transfer(ledger_env: impl LedgerEnv + LedgerEnv) -> Test
     let balance_p1 = balance_of(&p1_env, p1_env.principal()).await?;
     let balance_p2 = balance_of(&p2_env, p2_env.principal()).await?;
 
-    let _tx = transfer_or_fail(&p1_env, Nat::from(transfer_amount), p2_env.principal()).await;
+    let _tx = transfer(
+        &p1_env,
+        Transfer::amount_to(transfer_amount, p2_env.principal()),
+    )
+    .await??;
 
     assert_balance(
         &p2_env,
@@ -236,6 +261,90 @@ pub async fn icrc2_test_supported_standards(ledger: impl LedgerEnv) -> anyhow::R
         );
     }
 
+    Ok(Outcome::Passed)
+}
+
+pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+    let fee = transfer_fee(&ledger_env).await?;
+    let initial_balance = Nat::from(100_000);
+    let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
+    let p2_env = ledger_env.fork();
+    let approve_amount = Nat::from(10_000);
+
+    approve(
+        &p1_env,
+        ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal()),
+    )
+    .await??;
+
+    assert_balance(
+        &ledger_env,
+        p1_env.principal(),
+        initial_balance.clone() - fee.clone(),
+    )
+    .await?;
+    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+
+    assert_allowance(
+        &p1_env,
+        p1_env.principal().into(),
+        p2_env.principal().into(),
+        approve_amount,
+    )
+    .await?;
+
+    assert_balance(&ledger_env, p1_env.principal(), initial_balance - fee).await?;
+    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+
+    Ok(Outcome::Passed)
+}
+
+pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+    let fee = transfer_fee(&ledger_env).await?;
+    let initial_balance = Nat::from(100_000);
+    let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
+    let p2_env = ledger_env.fork();
+    let p3_env = ledger_env.fork();
+
+    let approve_amount = Nat::from(50_000);
+
+    approve(
+        &p1_env,
+        ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal()),
+    )
+    .await??;
+
+    // Transferred amount has to be smaller than the approved amount minus the fee for transfering tokens
+    let transfer_amount = approve_amount - fee.clone() - Nat::from(1);
+    transfer_from(
+        &p2_env,
+        TransferFromArgs::transfer_from(
+            transfer_amount.clone(),
+            p3_env.principal(),
+            p1_env.principal(),
+        ),
+    )
+    .await??;
+
+    assert_balance(
+        &ledger_env,
+        p1_env.principal(),
+        // Balance should be the initial balance minus two times the fee, once for the approve and once for the transfer, and the transferred amount
+        initial_balance - fee.clone() - fee - transfer_amount.clone(),
+    )
+    .await?;
+    // Balance of spender should not change
+    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+    // Beneficiary should get the amount transferred
+    assert_balance(&ledger_env, p3_env.principal(), transfer_amount).await?;
+
+    assert_allowance(
+        &p1_env,
+        p1_env.principal().into(),
+        p2_env.principal().into(),
+        Nat::from(1),
+    )
+    .await?;
     Ok(Outcome::Passed)
 }
 
@@ -390,14 +499,14 @@ pub async fn icrc1_test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
     let p2_env = p1_env.fork();
 
     let mut transfer_args = Transfer::amount_to(10_000, p2_env.principal());
-    let ledger_fee = transfer_fee(&ledger_env).await.unwrap();
+    let ledger_fee = transfer_fee(&ledger_env).await?;
     // Set incorrect fee
     transfer_args = transfer_args.fee(ledger_fee.clone() + Nat::from(1));
-    match transfer(&ledger_env, transfer_args.clone()).await.unwrap() {
+    match transfer(&ledger_env, transfer_args.clone()).await? {
         Ok(_) => return Err(anyhow::Error::msg("Expected Bad Fee Error")),
         Err(err) => match err {
             TransferError::BadFee { expected_fee } => {
-                if expected_fee != transfer_fee(&ledger_env).await.unwrap() {
+                if expected_fee != transfer_fee(&ledger_env).await? {
                     return Err(anyhow::Error::msg(format!(
                         "Expected BadFee argument to be {}, got {}",
                         ledger_fee, expected_fee
@@ -419,13 +528,9 @@ pub async fn icrc1_test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::R
 
     // Set created time in the future
     transfer_args = transfer_args.created_at_time(u64::MAX);
-    match transfer(&ledger_env, transfer_args)
-        .await
-        .unwrap()
-        .unwrap_err()
-    {
-        TransferError::CreatedInFuture { ledger_time: _ } => Ok(Outcome::Passed),
-        _ => Err(anyhow::Error::msg("Expected BadFee error")),
+    match transfer(&ledger_env, transfer_args).await? {
+        Err(TransferError::CreatedInFuture { ledger_time: _ }) => Ok(Outcome::Passed),
+        other => bail!("expected CreatedInFuture error, got: {:?}", other),
     }
 }
 
@@ -436,12 +541,12 @@ pub async fn icrc1_test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow:
 
     let transfer_args = Transfer::amount_to(10_000, p2_env.principal()).memo([1u8; 32]);
     // Ledger should accept memos of at least 32 bytes;
-    match transfer(&ledger_env, transfer_args.clone()).await.unwrap() {
+    match transfer(&ledger_env, transfer_args.clone()).await? {
         Ok(_) => Ok(Outcome::Passed),
-        Err(err) => Err(anyhow::Error::msg(format!(
-            "Expected memo with 32 bytes to succeed but received error: {:?}",
+        Err(err) => bail!(
+            "Expected memo with 32 bytes to succeed but got error: {:?}",
             err
-        ))),
+        ),
     }
 }
 
@@ -473,10 +578,14 @@ pub fn icrc1_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
 
 /// Returns the entire list of icrc2 tests.
 pub fn icrc2_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
-    vec![test(
-        "icrc2:supported_standards",
-        icrc2_test_supported_standards(env.clone()),
-    )]
+    vec![
+        test(
+            "icrc2:supported_standards",
+            icrc2_test_supported_standards(env.clone()),
+        ),
+        test("icrc2:approve", icrc2_test_approve(env.clone())),
+        test("icrc2:transfer_from", icrc2_test_transfer_from(env.clone())),
+    ]
 }
 
 pub async fn test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {

@@ -973,6 +973,7 @@ dependencies = [
  "async-trait",
  "candid",
  "serde",
+ "thiserror",
 ]
 
 [[package]]

@@ -12,6 +12,7 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = { workspace = true }
+async-trait = { workspace = true } 
 candid = { workspace = true }
 serde = { workspace = true }
-async-trait = { workspace = true } 
+thiserror = { workspace = true }
