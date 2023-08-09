@@ -1029,7 +1029,7 @@ dependencies = [
 
 [[package]]
 name = "icrc1-test-suite"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "candid",
