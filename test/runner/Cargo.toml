@@ -6,15 +6,16 @@ edition = { workspace = true }
 license = { workspace = true }
 rust-version = { workspace = true }
 repository = { workspace = true }
+description = { workspace = true }
 
 [[bin]]
 name = "runner"
 path = "main.rs"
 
 [dependencies]
-icrc1-test-env = { path = "../env" }
-icrc1-test-env-replica = { path = "../env/replica" }
-icrc1-test-suite = { path = "../suite" }
+icrc1-test-env = { version ="0.1.0",path = "../env" }
+icrc1-test-env-replica = { version ="0.1.0",path = "../env/replica" }
+icrc1-test-suite = { version ="0.1.1",path = "../suite" }
 ic-agent = { workspace = true }
 pico-args = "0.5"
 reqwest = { workspace = true }
