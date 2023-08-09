@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.1] - 2023-09-08
 ### Changed
-- Charge accounts during setup with enough tokens so they can make transfers.
+- Make amounts transferred and approved in tests independent of the ledger fee and relative within a single test
 ### Added
 - Basic tests for the ICRC-2 standard.
 
