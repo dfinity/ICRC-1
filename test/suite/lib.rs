@@ -272,7 +272,7 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
     let initial_balance: Nat = transfer_amount.clone() + fee.clone() * 2;
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
-    let approve_amount = initial_balance.clone() + fee.clone();
+    let approve_amount = transfer_amount.clone() + fee.clone();
 
     approve(
         &p1_env,
@@ -358,7 +358,7 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
 pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
-    let initial_balance: Nat = transfer_amount.clone() * 10 + fee.clone() * 20;
+    let initial_balance: Nat = transfer_amount.clone() * 7 + fee.clone() * 7;
     // Create two test accounts and transfer some tokens to the first account. Also charge them with enough tokens so they can pay the transfer fees
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = p1_env.fork();
