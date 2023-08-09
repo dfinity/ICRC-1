@@ -1,5 +1,5 @@
 {
-  "checksum": "fd7fe8ea967274d2f13641d3bbfad70cb48ad849c110fd74440b62e666029e40",
+  "checksum": "285dea71af0c1827b72edc170c9d5512db2556808eddb5f3552c26c61edfe553",
   "crates": {
     "addr2line 0.20.0": {
       "name": "addr2line",
@@ -5286,9 +5286,9 @@
       },
       "license": "Apache-2.0"
     },
-    "icrc1-test-suite 0.1.0": {
+    "icrc1-test-suite 0.1.1": {
       "name": "icrc1-test-suite",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "repository": null,
       "targets": [
         {
@@ -5324,7 +5324,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.1.0"
+        "version": "0.1.1"
       },
       "license": "Apache-2.0"
     },
@@ -14009,7 +14009,7 @@
     "icrc1-test-env-state-machine 0.1.0": "test/env/state-machine",
     "icrc1-test-replica 0.1.0": "test/replica",
     "icrc1-test-runner 0.1.0": "test/runner",
-    "icrc1-test-suite 0.1.0": "test/suite"
+    "icrc1-test-suite 0.1.1": "test/suite"
   },
   "conditions": {
     "aarch64-apple-darwin": [

@@ -1,6 +1,5 @@
 use anyhow::{bail, Context};
 use candid::Nat;
-use candid::Principal;
 use futures::StreamExt;
 use icrc1_test_env::icrc1::{
     balance_of, metadata, minting_account, supported_standards, token_decimals, token_name,
@@ -238,8 +237,9 @@ pub async fn icrc2_test_supported_standards(ledger: impl LedgerEnv) -> anyhow::R
 
 /// Checks whether the ledger applies deduplication of transactions correctly
 pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
-    // Create two test accounts and transfer some tokens to the first account
-    let p1_env = setup_test_account(&ledger_env, 200_000.into()).await?;
+    let fee = transfer_fee(&ledger_env).await?;
+    // Create two test accounts and transfer some tokens to the first account. Also charge them with enough tokens so they can pay the transfer fees
+    let p1_env = setup_test_account(&ledger_env, Nat::from(100_000) + fee.clone() * 20).await?;
     let p2_env = p1_env.fork();
 
     let time_nanos = || {
@@ -292,11 +292,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
 
     // Explicitly setting the fee field changes the transaction
     // identity, so the transfer should succeed.
-    let transfer_args = transfer_args.fee(
-        transfer_fee(&ledger_env)
-            .await
-            .context("failed to obtain the transfer fee")?,
-    );
+    let transfer_args = transfer_args.fee(fee.clone());
 
     let txid_2 = transfer(&p1_env, transfer_args.clone())
         .await?
