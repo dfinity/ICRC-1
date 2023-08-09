@@ -1,5 +1,5 @@
 {
-  "checksum": "285dea71af0c1827b72edc170c9d5512db2556808eddb5f3552c26c61edfe553",
+  "checksum": "9342ca57941424bea3a2e98e00133f05b89d5b9724bd2905d4b140891108504a",
   "crates": {
     "addr2line 0.20.0": {
       "name": "addr2line",
@@ -5060,6 +5060,10 @@
             {
               "id": "serde 1.0.171",
               "target": "serde"
+            },
+            {
+              "id": "thiserror 1.0.44",
+              "target": "thiserror"
             }
           ],
           "selects": {}
