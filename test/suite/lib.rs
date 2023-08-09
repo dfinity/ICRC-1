@@ -128,7 +128,7 @@ async fn setup_test_account(
 pub async fn icrc1_test_transfer(ledger_env: impl LedgerEnv) -> TestResult {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
-    let initial_balance:Nat = transfer_amount.clone() + fee.clone();
+    let initial_balance: Nat = transfer_amount.clone() + fee.clone();
     let p1_env = setup_test_account(&ledger_env, initial_balance).await?;
     let p2_env = ledger_env.fork();
 
@@ -269,7 +269,7 @@ pub async fn icrc2_test_supported_standards(ledger: impl LedgerEnv) -> anyhow::R
 pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
-    let initial_balance:Nat = transfer_amount.clone() + fee.clone()*2;
+    let initial_balance: Nat = transfer_amount.clone() + fee.clone() * 2;
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
     let approve_amount = initial_balance.clone() + fee.clone();
@@ -306,13 +306,13 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
     let fee = transfer_fee(&ledger_env).await?;
     // Charge account with some tokens plus two times the transfer fee, once for approving and once for transferring
     let transfer_amount = Nat::from(10_000);
-    let initial_balance:Nat = transfer_amount.clone()*2 + fee.clone()*2;
+    let initial_balance: Nat = transfer_amount.clone() * 2 + fee.clone() * 2;
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
     let p3_env = ledger_env.fork();
 
     // Approve amount needs to be the transferred amount + the fee for transferring
-    let approve_amount:Nat = transfer_amount.clone() + fee.clone();
+    let approve_amount: Nat = transfer_amount.clone() + fee.clone();
 
     approve(
         &p1_env,
@@ -358,7 +358,7 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
 pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
-    let initial_balance:Nat = transfer_amount.clone()*10 + fee.clone() * 20;
+    let initial_balance: Nat = transfer_amount.clone() * 10 + fee.clone() * 20;
     // Create two test accounts and transfer some tokens to the first account. Also charge them with enough tokens so they can pay the transfer fees
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = p1_env.fork();
@@ -383,7 +383,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
         .await?
         .context("failed to execute the second no-dedup transfer")?;
 
-    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone()*2).await?;
+    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 2).await?;
 
     // Setting the created_at_time field changes the transaction
     // identity, so the transfer should succeed.
@@ -399,7 +399,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
         Err(e) => return Err(e).context("failed to execute the first dedup transfer"),
     };
 
-    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone()*3).await?;
+    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 3).await?;
 
     // Sending the same transfer again should trigger deduplication.
     assert_equal(
@@ -409,7 +409,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
         transfer(&p1_env, transfer_args.clone()).await?,
     )?;
 
-    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone()*3).await?;
+    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 3).await?;
 
     // Explicitly setting the fee field changes the transaction
     // identity, so the transfer should succeed.
@@ -419,7 +419,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
         .await?
         .context("failed to execute the transfer with an explicitly set fee field")?;
 
-    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone()*4).await?;
+    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 4).await?;
 
     assert_not_equal(&txid, &txid_2).context("duplicate txid")?;
 
@@ -431,7 +431,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
         transfer(&p1_env, transfer_args.clone()).await?,
     )?;
 
-    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone()*4).await?;
+    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 4).await?;
 
     // A custom memo changes the transaction identity, so the transfer
     // should succeed.
@@ -441,7 +441,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
         .await?
         .context("failed to execute the transfer with an explicitly set memo field")?;
 
-    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone()*5).await?;
+    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 5).await?;
 
     assert_not_equal(&txid, &txid_3).context("duplicate txid")?;
     assert_not_equal(&txid_2, &txid_3).context("duplicate txid")?;
@@ -454,7 +454,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
         transfer(&p1_env, transfer_args.clone()).await?,
     )?;
 
-    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone()*5).await?;
+    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 5).await?;
 
     let now = time_nanos();
 
@@ -476,7 +476,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
     .await?
     .context("failed to execute the transfer with an empty subaccount")?;
 
-    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone()*6).await?;
+    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 6).await?;
 
     transfer(
         &p1_env,
@@ -493,7 +493,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
     .await?
     .context("failed to execute the transfer with the default subaccount")?;
 
-    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone()*7).await?;
+    assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 7).await?;
 
     Ok(Outcome::Passed)
 }
@@ -501,7 +501,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
 pub async fn icrc1_test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
-    let initial_balance:Nat = transfer_amount.clone() + fee.clone();
+    let initial_balance: Nat = transfer_amount.clone() + fee.clone();
     // Create two test accounts and transfer some tokens to the first account
     let p1_env = setup_test_account(&ledger_env, initial_balance).await?;
     let p2_env = p1_env.fork();
@@ -529,7 +529,7 @@ pub async fn icrc1_test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
 pub async fn icrc1_test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
-    let initial_balance:Nat = transfer_amount.clone() + fee.clone();
+    let initial_balance: Nat = transfer_amount.clone() + fee.clone();
     // Create two test accounts and transfer some tokens to the first account
     let p1_env = setup_test_account(&ledger_env, initial_balance).await?;
     let p2_env = p1_env.fork();
@@ -547,7 +547,7 @@ pub async fn icrc1_test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::R
 pub async fn icrc1_test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
-    let initial_balance:Nat = transfer_amount.clone() + fee.clone();
+    let initial_balance: Nat = transfer_amount.clone() + fee.clone();
     // Create two test accounts and transfer some tokens to the first account
     let p1_env = setup_test_account(&ledger_env, initial_balance).await?;
     let p2_env = p1_env.fork();
