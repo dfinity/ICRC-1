@@ -57,7 +57,7 @@ The ledger SHOULD reject the call if the spender account owner is equal to the s
 
 If the `expected_allowance` field is set, the ledger MUST ensure that the current allowance for the `spender` from the caller's account is equal to the given value and return the `AllowanceChanged` error otherwise.
 
-The ledger MAY cap the total allowance if it becomes too large (for example, larger than the total token supply).
+The ledger MAY cap the total allowance if it is too large (for example, larger than the total token supply).
 For example, if there are only 100 tokens, and the ledger receives an approval for 120 tokens, the ledger may cap the allowance to 100.
 
 ```candid "Methods" +=
