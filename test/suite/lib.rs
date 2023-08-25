@@ -6,10 +6,10 @@ use icrc1_test_env::icrc1::{
     token_symbol, transfer, transfer_fee,
 };
 use icrc1_test_env::icrc2::{allowance, approve, transfer_from};
-use icrc1_test_env::AllowanceArgs;
 use icrc1_test_env::ApproveArgs;
 use icrc1_test_env::TransferFromArgs;
 use icrc1_test_env::{Account, LedgerEnv, Transfer, TransferError, Value};
+use icrc1_test_env::{AllowanceArgs, ApproveError};
 use std::future::Future;
 use std::pin::Pin;
 use std::time::SystemTime;
@@ -55,6 +55,14 @@ fn assert_not_equal<T: PartialEq + std::fmt::Debug>(lhs: T, rhs: T) -> anyhow::R
     Ok(())
 }
 
+fn time_nanos(ledger_env: &impl LedgerEnv) -> u64 {
+    ledger_env
+        .time()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64
+}
+
 async fn assert_balance(
     ledger: &impl LedgerEnv,
     account: impl Into<Account>,
@@ -80,6 +88,7 @@ async fn assert_allowance(
     from: Account,
     spender: Account,
     expected_allowance: Nat,
+    expires_at: Option<u64>,
 ) -> anyhow::Result<()> {
     let allowance = allowance(
         ledger_env,
@@ -97,6 +106,9 @@ async fn assert_allowance(
             expected_allowance,
             allowance.allowance
         );
+    }
+    if allowance.expires_at != expires_at {
+        bail!("Approval {:?} -> {:?} , wrong expiration", from, spender,);
     }
     Ok(())
 }
@@ -293,10 +305,116 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
         p1_env.principal().into(),
         p2_env.principal().into(),
         approve_amount,
+        None,
     )
     .await?;
 
     assert_balance(&ledger_env, p1_env.principal(), initial_balance - fee).await?;
+    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+
+    Ok(Outcome::Passed)
+}
+
+pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+    let fee = transfer_fee(&ledger_env).await?;
+    let transfer_amount = Nat::from(10_000);
+    let initial_balance: Nat = transfer_amount.clone() + fee.clone() * 2;
+    let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
+    let p2_env = ledger_env.fork();
+    let approve_amount = transfer_amount.clone() + fee.clone();
+    let now = time_nanos(&ledger_env);
+
+    match approve(
+        &p1_env,
+        ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal())
+            .expires_at(now - 100),
+    )
+    .await?
+    {
+        Ok(_) => {
+            return Err(anyhow::Error::msg(
+                "expected expired approval, got Ok result",
+            ))
+        }
+        Err(e) => match e {
+            ApproveError::Expired { .. } => {}
+            _ => return Err(e).context("expected ApproveError::Expired"),
+        },
+    }
+
+    let expiration = time_nanos(&ledger_env) + 1000000000000000;
+    approve(
+        &p1_env,
+        ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal())
+            .expires_at(expiration),
+    )
+    .await??;
+
+    assert_allowance(
+        &p1_env,
+        p1_env.principal().into(),
+        p2_env.principal().into(),
+        approve_amount.clone(),
+        Some(expiration),
+    )
+    .await?;
+
+    assert_balance(
+        &ledger_env,
+        p1_env.principal(),
+        initial_balance.clone() - fee.clone(),
+    )
+    .await?;
+    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+
+    let new_expiration = expiration - 100;
+    approve(
+        &p1_env,
+        ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal())
+            .expires_at(new_expiration),
+    )
+    .await??;
+
+    assert_allowance(
+        &p1_env,
+        p1_env.principal().into(),
+        p2_env.principal().into(),
+        approve_amount.clone(),
+        Some(new_expiration),
+    )
+    .await?;
+
+    assert_balance(
+        &ledger_env,
+        p1_env.principal(),
+        initial_balance.clone() - fee.clone() - fee.clone(),
+    )
+    .await?;
+    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+
+    let new_expiration = expiration + 100;
+    approve(
+        &p1_env,
+        ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal())
+            .expires_at(new_expiration),
+    )
+    .await??;
+
+    assert_allowance(
+        &p1_env,
+        p1_env.principal().into(),
+        p2_env.principal().into(),
+        approve_amount.clone(),
+        Some(new_expiration),
+    )
+    .await?;
+
+    assert_balance(
+        &ledger_env,
+        p1_env.principal(),
+        initial_balance - fee.clone() - fee.clone() - fee,
+    )
+    .await?;
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
 
     Ok(Outcome::Passed)
@@ -349,6 +467,7 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
         p1_env.principal().into(),
         p2_env.principal().into(),
         Nat::from(1),
+        None,
     )
     .await?;
     Ok(Outcome::Passed)
@@ -362,14 +481,6 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
     // Create two test accounts and transfer some tokens to the first account. Also charge them with enough tokens so they can pay the transfer fees
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = p1_env.fork();
-
-    let time_nanos = || {
-        ledger_env
-            .time()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos() as u64
-    };
 
     // Deduplication should not happen if the created_at_time field is unset.
     let transfer_args = Transfer::amount_to(transfer_amount.clone(), p2_env.principal());
@@ -387,7 +498,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
 
     // Setting the created_at_time field changes the transaction
     // identity, so the transfer should succeed.
-    let transfer_args = transfer_args.created_at_time(time_nanos());
+    let transfer_args = transfer_args.created_at_time(time_nanos(&ledger_env));
 
     let txid = match transfer(&p1_env, transfer_args.clone()).await? {
         Ok(txid) => txid,
@@ -456,7 +567,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
 
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 5).await?;
 
-    let now = time_nanos();
+    let now = time_nanos(&ledger_env);
 
     // Transactions with different subaccounts (even if it's None and
     // Some([0; 32])) should not be considered duplicates.
@@ -597,6 +708,10 @@ pub fn icrc2_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
             icrc2_test_supported_standards(env.clone()),
         ),
         test("icrc2:approve", icrc2_test_approve(env.clone())),
+        test(
+            "icrc2:approve_expiration",
+            icrc2_test_approve_expiration(env.clone()),
+        ),
         test("icrc2:transfer_from", icrc2_test_transfer_from(env.clone())),
     ]
 }
