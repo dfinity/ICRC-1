@@ -354,6 +354,32 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
     Ok(Outcome::Passed)
 }
 
+pub async fn icrc2_test_transfer_from_self(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+    let fee = transfer_fee(&ledger_env).await?;
+    let transfer_amount = fee.clone();
+    let initial_balance: Nat = fee.clone() * 2;
+    let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
+    let p2_env = ledger_env.fork();
+
+    // icrc2_transfer_from does not require approval if spender == from
+    let transfer_amount = transfer_amount;
+    transfer_from(
+        &p1_env,
+        TransferFromArgs::transfer_from(
+            transfer_amount.clone(),
+            p2_env.principal(),
+            p1_env.principal(),
+        ),
+    )
+    .await??;
+
+    // Transfered fee and payed additional fee, balance is now 0.
+    assert_balance(&ledger_env, p1_env.principal(), 0).await?;
+    // Beneficiary should get the amount transferred.
+    assert_balance(&ledger_env, p2_env.principal(), transfer_amount).await?;
+
+    Ok(Outcome::Passed)
+}
 /// Checks whether the ledger applies deduplication of transactions correctly
 pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
@@ -598,6 +624,10 @@ pub fn icrc2_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
         ),
         test("icrc2:approve", icrc2_test_approve(env.clone())),
         test("icrc2:transfer_from", icrc2_test_transfer_from(env.clone())),
+        test(
+            "icrc2:transfer_from_self",
+            icrc2_test_transfer_from_self(env.clone()),
+        ),
     ]
 }
 
