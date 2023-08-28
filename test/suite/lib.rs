@@ -380,6 +380,7 @@ pub async fn icrc2_test_transfer_from_self(ledger_env: impl LedgerEnv) -> anyhow
 
     Ok(Outcome::Passed)
 }
+
 /// Checks whether the ledger applies deduplication of transactions correctly
 pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
