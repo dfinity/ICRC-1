@@ -373,7 +373,7 @@ pub async fn icrc2_test_transfer_from_self(ledger_env: impl LedgerEnv) -> anyhow
     )
     .await??;
 
-    // Transfered fee and payed additional fee, balance is now 0.
+    // Transfered fee and payed fee, balance is now 0.
     assert_balance(&ledger_env, p1_env.principal(), 0).await?;
     // Beneficiary should get the amount transferred.
     assert_balance(&ledger_env, p2_env.principal(), transfer_amount).await?;
