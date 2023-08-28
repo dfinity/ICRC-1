@@ -290,7 +290,7 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
         owner: p2_env.principal(),
         subaccount: Some([1; 32]),
     };
-    let approve_amount = Nat::from(1000000);
+    let approve_amount = Nat::from(100);
 
     approve(
         &p1_env,
@@ -372,7 +372,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     let initial_balance: Nat = fee.clone() * 2;
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
-    let approve_amount = Nat::from(1000000);
+    let approve_amount = Nat::from(100);
     let now = time_nanos(&ledger_env);
 
     // Expiration in the past
@@ -451,7 +451,7 @@ pub async fn icrc2_test_approve_expected_allowance(
     let initial_balance: Nat = fee.clone() * 2;
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
-    let approve_amount = Nat::from(1000000);
+    let approve_amount = Nat::from(100);
 
     approve(
         &p1_env,
@@ -460,7 +460,7 @@ pub async fn icrc2_test_approve_expected_allowance(
     .await??;
 
     // Wrong expected allowance
-    let new_approve_amount = Nat::from(2000000);
+    let new_approve_amount = Nat::from(200);
     match approve(
         &p1_env,
         ApproveArgs::approve_amount(new_approve_amount.clone(), p2_env.principal())
