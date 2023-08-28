@@ -345,7 +345,7 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
     // Insufficient funds to pay the fee for a second approval
     match approve(
         &p1_env,
-        ApproveArgs::approve_amount(Nat::from(10), p2_env.principal()),
+        ApproveArgs::approve_amount(fee.clone() * 3, p2_env.principal()),
     )
     .await?
     {
