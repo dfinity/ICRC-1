@@ -85,11 +85,14 @@ async fn assert_balance(
 
 async fn assert_allowance(
     ledger_env: &impl LedgerEnv,
-    from: Account,
-    spender: Account,
-    expected_allowance: Nat,
+    from: impl Into<Account>,
+    spender: impl Into<Account>,
+    expected_allowance: impl Into<Nat>,
     expires_at: Option<u64>,
 ) -> anyhow::Result<()> {
+    let from: Account = from.into();
+    let spender: Account = spender.into();
+    let expected_allowance: Nat = expected_allowance.into();
     let allowance = allowance(
         ledger_env,
         AllowanceArgs {
@@ -302,8 +305,8 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
 
     assert_allowance(
         &p1_env,
-        p1_env.principal().into(),
-        p2_env.principal().into(),
+        p1_env.principal(),
+        p2_env.principal(),
         approve_amount,
         None,
     )
@@ -342,6 +345,11 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
         },
     }
 
+    assert_allowance(&p1_env, p1_env.principal(), p2_env.principal(), 0, None).await?;
+
+    assert_balance(&ledger_env, p1_env.principal(), initial_balance.clone()).await?;
+    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+
     let expiration = time_nanos(&ledger_env) + 1000000000000000;
     approve(
         &p1_env,
@@ -352,8 +360,8 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
 
     assert_allowance(
         &p1_env,
-        p1_env.principal().into(),
-        p2_env.principal().into(),
+        p1_env.principal(),
+        p2_env.principal(),
         approve_amount.clone(),
         Some(expiration),
     )
@@ -367,6 +375,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     .await?;
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
 
+    // Change expiration
     let new_expiration = expiration - 100;
     approve(
         &p1_env,
@@ -377,8 +386,8 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
 
     assert_allowance(
         &p1_env,
-        p1_env.principal().into(),
-        p2_env.principal().into(),
+        p1_env.principal(),
+        p2_env.principal(),
         approve_amount.clone(),
         Some(new_expiration),
     )
@@ -387,32 +396,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     assert_balance(
         &ledger_env,
         p1_env.principal(),
-        initial_balance.clone() - fee.clone() - fee.clone(),
-    )
-    .await?;
-    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
-
-    let new_expiration = expiration + 100;
-    approve(
-        &p1_env,
-        ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal())
-            .expires_at(new_expiration),
-    )
-    .await??;
-
-    assert_allowance(
-        &p1_env,
-        p1_env.principal().into(),
-        p2_env.principal().into(),
-        approve_amount.clone(),
-        Some(new_expiration),
-    )
-    .await?;
-
-    assert_balance(
-        &ledger_env,
-        p1_env.principal(),
-        initial_balance - fee.clone() - fee.clone() - fee,
+        initial_balance - fee.clone() - fee,
     )
     .await?;
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
@@ -464,8 +448,8 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
 
     assert_allowance(
         &p1_env,
-        p1_env.principal().into(),
-        p2_env.principal().into(),
+        p1_env.principal(),
+        p2_env.principal(),
         Nat::from(1),
         None,
     )
