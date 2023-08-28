@@ -378,8 +378,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     // Expiration in the past
     match approve(
         &p1_env,
-        ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal())
-            .expires_at(now - 100),
+        ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal()).expires_at(now - 1),
     )
     .await?
     {
