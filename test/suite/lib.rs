@@ -336,7 +336,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     {
         Ok(_) => {
             return Err(anyhow::Error::msg(
-                "expected expired approval, got Ok result",
+                "expected ApproveError::Expired, got Ok result",
             ))
         }
         Err(e) => match e {
@@ -390,6 +390,78 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
         p2_env.principal(),
         approve_amount.clone(),
         Some(new_expiration),
+    )
+    .await?;
+
+    assert_balance(
+        &ledger_env,
+        p1_env.principal(),
+        initial_balance - fee.clone() - fee,
+    )
+    .await?;
+    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+
+    Ok(Outcome::Passed)
+}
+
+pub async fn icrc2_test_approve_expected_allowance(
+    ledger_env: impl LedgerEnv,
+) -> anyhow::Result<Outcome> {
+    let fee = transfer_fee(&ledger_env).await?;
+    let transfer_amount = Nat::from(10_000);
+    let initial_balance: Nat = transfer_amount.clone() + fee.clone() * 2;
+    let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
+    let p2_env = ledger_env.fork();
+    let approve_amount = transfer_amount.clone() + fee.clone();
+
+    approve(
+        &p1_env,
+        ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal()),
+    )
+    .await??;
+
+    // Wrong expected allowance
+    let new_approve_amount = Nat::from(10);
+    match approve(
+        &p1_env,
+        ApproveArgs::approve_amount(new_approve_amount.clone(), p2_env.principal())
+            .expected_allowance(Nat::from(100)),
+    )
+    .await?
+    {
+        Ok(_) => {
+            return Err(anyhow::Error::msg(
+                "expected ApproveError::AllowanceChanged, got Ok result",
+            ))
+        }
+        Err(e) => match e {
+            ApproveError::AllowanceChanged { current_allowance } => {
+                if current_allowance != approve_amount {
+                    bail!(
+                        "wrong current_allowance, expected {}, got: {}",
+                        approve_amount,
+                        current_allowance
+                    );
+                }
+            }
+            _ => return Err(e).context("expected ApproveError::AllowanceChanged"),
+        },
+    }
+
+    // Correct expected allowance
+    approve(
+        &p1_env,
+        ApproveArgs::approve_amount(new_approve_amount.clone(), p2_env.principal())
+            .expected_allowance(approve_amount),
+    )
+    .await??;
+
+    assert_allowance(
+        &p1_env,
+        p1_env.principal(),
+        p2_env.principal(),
+        new_approve_amount,
+        None,
     )
     .await?;
 
@@ -695,6 +767,10 @@ pub fn icrc2_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
         test(
             "icrc2:approve_expiration",
             icrc2_test_approve_expiration(env.clone()),
+        ),
+        test(
+            "icrc2:approve_expected_allowance",
+            icrc2_test_approve_expected_allowance(env.clone()),
         ),
         test("icrc2:transfer_from", icrc2_test_transfer_from(env.clone())),
     ]
