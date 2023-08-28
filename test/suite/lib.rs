@@ -283,9 +283,13 @@ pub async fn icrc2_test_supported_standards(ledger: impl LedgerEnv) -> anyhow::R
 
 pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
-    let initial_balance: Nat = fee.clone();
+    let initial_balance: Nat = fee.clone() * 2;
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
+    let p2_subaccount = Account {
+        owner: p2_env.principal(),
+        subaccount: Some([1; 32]),
+    };
     let approve_amount = Nat::from(1000000);
 
     approve(
@@ -303,8 +307,40 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
     )
     .await?;
 
+    assert_allowance(&p1_env, p1_env.principal(), p2_subaccount.clone(), 0, None).await?;
+
+    assert_balance(&ledger_env, p1_env.principal(), fee.clone()).await?;
+    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+    assert_balance(&ledger_env, p2_subaccount.clone(), 0).await?;
+
+    // Approval for a subaccount.
+    approve(
+        &p1_env,
+        ApproveArgs::approve_amount(approve_amount.clone() * 2, p2_subaccount.clone()),
+    )
+    .await??;
+
+    assert_allowance(
+        &p1_env,
+        p1_env.principal(),
+        p2_env.principal(),
+        approve_amount.clone(),
+        None,
+    )
+    .await?;
+
+    assert_allowance(
+        &p1_env,
+        p1_env.principal(),
+        p2_subaccount.clone(),
+        approve_amount.clone() * 2,
+        None,
+    )
+    .await?;
+
     assert_balance(&ledger_env, p1_env.principal(), 0).await?;
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+    assert_balance(&ledger_env, p2_subaccount, 0).await?;
 
     // Insufficient funds to pay the fee for a second approval
     match approve(
@@ -363,7 +399,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     assert_balance(&ledger_env, p1_env.principal(), initial_balance.clone()).await?;
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
 
-    // Expiration in the future
+    // Correct expiration in the future
     let expiration = time_nanos(&ledger_env) + 1000000000000000;
     approve(
         &p1_env,
