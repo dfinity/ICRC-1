@@ -290,7 +290,7 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
         owner: p2_env.principal(),
         subaccount: Some([1; 32]),
     };
-    let approve_amount = Nat::from(100);
+    let approve_amount = fee.clone();
 
     approve(
         &p1_env,
@@ -372,7 +372,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     let initial_balance: Nat = fee.clone() * 2;
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
-    let approve_amount = Nat::from(100);
+    let approve_amount = fee.clone();
     let now = time_nanos(&ledger_env);
 
     // Expiration in the past
@@ -400,7 +400,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
 
     // Correct expiration in the future
-    let expiration = time_nanos(&ledger_env) + 1000000000000000;
+    let expiration = u64::MAX;
     approve(
         &p1_env,
         ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal())
@@ -421,7 +421,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
 
     // Change expiration
-    let new_expiration = expiration - 100;
+    let new_expiration = expiration - 1;
     approve(
         &p1_env,
         ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal())
@@ -451,7 +451,7 @@ pub async fn icrc2_test_approve_expected_allowance(
     let initial_balance: Nat = fee.clone() * 2;
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
-    let approve_amount = Nat::from(100);
+    let approve_amount = fee.clone();
 
     approve(
         &p1_env,
@@ -460,11 +460,11 @@ pub async fn icrc2_test_approve_expected_allowance(
     .await??;
 
     // Wrong expected allowance
-    let new_approve_amount = Nat::from(200);
+    let new_approve_amount: Nat = fee.clone() * 2;
     match approve(
         &p1_env,
         ApproveArgs::approve_amount(new_approve_amount.clone(), p2_env.principal())
-            .expected_allowance(Nat::from(300)),
+            .expected_allowance(fee.clone() * 2),
     )
     .await?
     {
