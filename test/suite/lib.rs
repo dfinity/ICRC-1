@@ -362,7 +362,6 @@ pub async fn icrc2_test_transfer_from_self(ledger_env: impl LedgerEnv) -> anyhow
     let p2_env = ledger_env.fork();
 
     // icrc2_transfer_from does not require approval if spender == from
-    let transfer_amount = transfer_amount;
     transfer_from(
         &p1_env,
         TransferFromArgs::transfer_from(
