@@ -401,7 +401,7 @@ pub async fn icrc2_test_transfer_from_insufficient_funds(
             _ => return Err(e).context("expected TransferFromError::InsufficientFunds"),
         },
     }
-    
+
     // p1_env balance was reduced by the approval fee.
     assert_balance(&ledger_env, p1_env.principal(), transfer_amount).await?;
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
@@ -415,6 +415,49 @@ pub async fn icrc2_test_transfer_from_insufficient_funds(
         approve_amount,
     )
     .await?;
+
+    Ok(Outcome::Passed)
+}
+
+pub async fn icrc2_test_transfer_from_insufficient_allowance(
+    ledger_env: impl LedgerEnv,
+) -> anyhow::Result<Outcome> {
+    let fee = transfer_fee(&ledger_env).await?;
+    let transfer_amount = fee.clone();
+    let initial_balance: Nat = transfer_amount.clone() + fee.clone();
+    let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
+    let p2_env = ledger_env.fork();
+    let p3_env = ledger_env.fork();
+
+    match transfer_from(
+        &p2_env,
+        TransferFromArgs::transfer_from(
+            transfer_amount.clone(),
+            p3_env.principal(),
+            p1_env.principal(),
+        ),
+    )
+    .await?
+    {
+        Ok(_) => {
+            return Err(anyhow::Error::msg(
+                "expected TransferFromError::InsufficientAllowance, got Ok result",
+            ))
+        }
+        Err(e) => match e {
+            TransferFromError::InsufficientAllowance { allowance } => {
+                if allowance != 0 {
+                    bail!("wrong allowance, expected 0, got: {}", allowance);
+                }
+            }
+            _ => return Err(e).context("expected TransferFromError::InsufficientAllowance"),
+        },
+    }
+
+    // Balances are not changed.
+    assert_balance(&ledger_env, p1_env.principal(), initial_balance).await?;
+    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+    assert_balance(&ledger_env, p3_env.principal(), 0).await?;
 
     Ok(Outcome::Passed)
 }
@@ -692,6 +735,10 @@ pub fn icrc2_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
         test(
             "icrc2:transfer_from_insufficient_funds",
             icrc2_test_transfer_from_insufficient_funds(env.clone()),
+        ),
+        test(
+            "icrc2:transfer_from_insufficient_allowance",
+            icrc2_test_transfer_from_insufficient_allowance(env.clone()),
         ),
         test(
             "icrc2:transfer_from_self",
