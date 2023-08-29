@@ -305,6 +305,58 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
 pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     // Charge account with some tokens plus two times the transfer fee, once for approving and once for transferring
+    let transfer_amount = fee.clone();
+    let initial_balance: Nat = transfer_amount.clone() * 2 + fee.clone() * 2;
+    let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
+    let p2_env = ledger_env.fork();
+    let p3_env = ledger_env.fork();
+
+    // Approve amount needs to be the transferred amount + the fee for transferring
+    let approve_amount: Nat = transfer_amount.clone() + fee.clone();
+
+    approve(
+        &p1_env,
+        ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal()),
+    )
+    .await??;
+
+    // Transferred amount has to be smaller than the approved amount minus the fee for transfering tokens
+    let transfer_amount = approve_amount - fee.clone() - Nat::from(1);
+    transfer_from(
+        &p2_env,
+        TransferFromArgs::transfer_from(
+            transfer_amount.clone(),
+            p3_env.principal(),
+            p1_env.principal(),
+        ),
+    )
+    .await??;
+
+    assert_balance(
+        &ledger_env,
+        p1_env.principal(),
+        // Balance should be the initial balance minus two times the fee, once for the approve and once for the transfer, and the transferred amount
+        initial_balance - fee.clone() - fee - transfer_amount.clone(),
+    )
+    .await?;
+    // Balance of spender should not change
+    assert_balance(&ledger_env, p2_env.principal(), 0).await?;
+    // Beneficiary should get the amount transferred
+    assert_balance(&ledger_env, p3_env.principal(), transfer_amount).await?;
+
+    assert_allowance(
+        &p1_env,
+        p1_env.principal().into(),
+        p2_env.principal().into(),
+        Nat::from(1),
+    )
+    .await?;
+    Ok(Outcome::Passed)
+}
+
+pub async fn icrc2_test_transfer_from_insufficient_funds(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+    let fee = transfer_fee(&ledger_env).await?;
+    // Charge account with some tokens plus two times the transfer fee, once for approving and once for transferring
     let transfer_amount = Nat::from(10_000);
     let initial_balance: Nat = transfer_amount.clone() * 2 + fee.clone() * 2;
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
@@ -353,6 +405,7 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
     .await?;
     Ok(Outcome::Passed)
 }
+
 
 pub async fn icrc2_test_transfer_from_self(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
