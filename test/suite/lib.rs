@@ -401,11 +401,13 @@ pub async fn icrc2_test_transfer_from_insufficient_funds(
             _ => return Err(e).context("expected TransferFromError::InsufficientFunds"),
         },
     }
-    // Balances and allowance should stay the same.
+    
+    // p1_env balance was reduced by the approval fee.
     assert_balance(&ledger_env, p1_env.principal(), transfer_amount).await?;
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
     assert_balance(&ledger_env, p3_env.principal(), 0).await?;
 
+    // Allowance is not changed.
     assert_allowance(
         &p1_env,
         p1_env.principal().into(),
@@ -413,6 +415,7 @@ pub async fn icrc2_test_transfer_from_insufficient_funds(
         approve_amount,
     )
     .await?;
+
     Ok(Outcome::Passed)
 }
 
