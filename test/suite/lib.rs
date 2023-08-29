@@ -6,10 +6,10 @@ use icrc1_test_env::icrc1::{
     token_symbol, transfer, transfer_fee,
 };
 use icrc1_test_env::icrc2::{allowance, approve, transfer_from};
-use icrc1_test_env::AllowanceArgs;
 use icrc1_test_env::ApproveArgs;
 use icrc1_test_env::TransferFromArgs;
 use icrc1_test_env::{Account, LedgerEnv, Transfer, TransferError, Value};
+use icrc1_test_env::{AllowanceArgs, TransferFromError};
 use std::future::Future;
 use std::pin::Pin;
 use std::time::SystemTime;
@@ -354,27 +354,26 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
     Ok(Outcome::Passed)
 }
 
-pub async fn icrc2_test_transfer_from_insufficient_funds(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
+pub async fn icrc2_test_transfer_from_insufficient_funds(
+    ledger_env: impl LedgerEnv,
+) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
-    // Charge account with some tokens plus two times the transfer fee, once for approving and once for transferring
-    let transfer_amount = Nat::from(10_000);
-    let initial_balance: Nat = transfer_amount.clone() * 2 + fee.clone() * 2;
+    let transfer_amount = fee.clone();
+    // The initial balance is not enough to cover the fee for approval and transfer_from.
+    let initial_balance: Nat = transfer_amount.clone() + fee.clone();
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
     let p3_env = ledger_env.fork();
 
-    // Approve amount needs to be the transferred amount + the fee for transferring
+    // Approve sufficient amount.
     let approve_amount: Nat = transfer_amount.clone() + fee.clone();
-
     approve(
         &p1_env,
         ApproveArgs::approve_amount(approve_amount.clone(), p2_env.principal()),
     )
     .await??;
 
-    // Transferred amount has to be smaller than the approved amount minus the fee for transfering tokens
-    let transfer_amount = approve_amount - fee.clone() - Nat::from(1);
-    transfer_from(
+    match transfer_from(
         &p2_env,
         TransferFromArgs::transfer_from(
             transfer_amount.clone(),
@@ -382,30 +381,40 @@ pub async fn icrc2_test_transfer_from_insufficient_funds(ledger_env: impl Ledger
             p1_env.principal(),
         ),
     )
-    .await??;
-
-    assert_balance(
-        &ledger_env,
-        p1_env.principal(),
-        // Balance should be the initial balance minus two times the fee, once for the approve and once for the transfer, and the transferred amount
-        initial_balance - fee.clone() - fee - transfer_amount.clone(),
-    )
-    .await?;
-    // Balance of spender should not change
+    .await?
+    {
+        Ok(_) => {
+            return Err(anyhow::Error::msg(
+                "expected TransferFromError::InsufficientFunds, got Ok result",
+            ))
+        }
+        Err(e) => match e {
+            TransferFromError::InsufficientFunds { balance } => {
+                if balance != transfer_amount {
+                    bail!(
+                        "wrong balance, expected {}, got: {}",
+                        transfer_amount,
+                        balance
+                    );
+                }
+            }
+            _ => return Err(e).context("expected TransferFromError::InsufficientFunds"),
+        },
+    }
+    // Balances and allowance should stay the same.
+    assert_balance(&ledger_env, p1_env.principal(), transfer_amount).await?;
     assert_balance(&ledger_env, p2_env.principal(), 0).await?;
-    // Beneficiary should get the amount transferred
-    assert_balance(&ledger_env, p3_env.principal(), transfer_amount).await?;
+    assert_balance(&ledger_env, p3_env.principal(), 0).await?;
 
     assert_allowance(
         &p1_env,
         p1_env.principal().into(),
         p2_env.principal().into(),
-        Nat::from(1),
+        approve_amount,
     )
     .await?;
     Ok(Outcome::Passed)
 }
-
 
 pub async fn icrc2_test_transfer_from_self(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
@@ -677,6 +686,10 @@ pub fn icrc2_test_suite(env: impl LedgerEnv + 'static + Clone) -> Vec<Test> {
         ),
         test("icrc2:approve", icrc2_test_approve(env.clone())),
         test("icrc2:transfer_from", icrc2_test_transfer_from(env.clone())),
+        test(
+            "icrc2:transfer_from_insufficient_funds",
+            icrc2_test_transfer_from_insufficient_funds(env.clone()),
+        ),
         test(
             "icrc2:transfer_from_self",
             icrc2_test_transfer_from_self(env.clone()),
