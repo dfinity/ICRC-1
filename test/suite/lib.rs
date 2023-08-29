@@ -383,9 +383,7 @@ pub async fn icrc2_test_transfer_from_insufficient_funds(
     )
     .await?
     {
-        Ok(_) => {
-            bail!("expected TransferFromError::InsufficientFunds, got Ok result"),
-        }
+        Ok(_) => bail!("expected TransferFromError::InsufficientFunds, got Ok result"),
         Err(e) => match e {
             TransferFromError::InsufficientFunds { balance } => {
                 if balance != transfer_amount {
@@ -437,9 +435,7 @@ pub async fn icrc2_test_transfer_from_insufficient_allowance(
     )
     .await?
     {
-        Ok(_) => {
-            bail!("expected TransferFromError::InsufficientAllowance, got Ok result"),
-        }
+        Ok(_) => bail!("expected TransferFromError::InsufficientAllowance, got Ok result"),
         Err(e) => match e {
             TransferFromError::InsufficientAllowance { allowance } => {
                 if allowance != 0 {
