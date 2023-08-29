@@ -349,11 +349,7 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
     )
     .await?
     {
-        Ok(_) => {
-            return Err(anyhow::Error::msg(
-                "expected ApproveError::InsufficientFunds, got Ok result",
-            ))
-        }
+        Ok(_) => bail!("expected ApproveError::InsufficientFunds, got Ok result"),
         Err(e) => match e {
             ApproveError::InsufficientFunds { balance } => {
                 if balance != 0 {
@@ -382,11 +378,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     )
     .await?
     {
-        Ok(_) => {
-            return Err(anyhow::Error::msg(
-                "expected ApproveError::Expired, got Ok result",
-            ))
-        }
+        Ok(_) => bail!("expected ApproveError::Expired, got Ok result"),
         Err(e) => match e {
             ApproveError::Expired { .. } => {}
             _ => return Err(e).context("expected ApproveError::Expired"),
@@ -467,11 +459,7 @@ pub async fn icrc2_test_approve_expected_allowance(
     )
     .await?
     {
-        Ok(_) => {
-            return Err(anyhow::Error::msg(
-                "expected ApproveError::AllowanceChanged, got Ok result",
-            ))
-        }
+        Ok(_) => bail!("expected ApproveError::AllowanceChanged, got Ok result"),
         Err(e) => match e {
             ApproveError::AllowanceChanged { current_allowance } => {
                 if current_allowance != approve_amount {
