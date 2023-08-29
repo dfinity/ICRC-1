@@ -357,7 +357,7 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
 pub async fn icrc2_test_transfer_from_self(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = fee.clone();
-    let initial_balance: Nat = fee.clone() * 2;
+    let initial_balance: Nat = transfer_amount.clone() + fee.clone();
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
 
