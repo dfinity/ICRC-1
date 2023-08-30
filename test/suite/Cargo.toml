@@ -13,6 +13,6 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0"
-candid = "0.8.0"
+candid = { workspace = true }
 futures = "0.3.24"
 icrc1-test-env = { version ="0.1.0", path = "../env" }
