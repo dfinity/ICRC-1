@@ -820,7 +820,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
     Ok(Outcome::Passed)
 }
 
-/// Checks the ICRC-2 transfer from endpoint for correct handling  of the insufficient bad fee error.
+/// Checks the ICRC-2 transfer from endpoint for correct handling of the insufficient bad fee error.
 pub async fn icrc1_test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
@@ -849,7 +849,7 @@ pub async fn icrc1_test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
     Ok(Outcome::Passed)
 }
 
-/// Checks the ICRC-2 transfer from endpoint for correct handling  of the future transfer error.
+/// Checks the ICRC-2 transfer from endpoint for correct handling of the future transfer error.
 pub async fn icrc1_test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
@@ -868,7 +868,7 @@ pub async fn icrc1_test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::R
     }
 }
 
-/// Checks the ICRC-2 transfer from endpoint for correct handling  of the length of the memo.
+/// Checks the ICRC-2 transfer from endpoint for correct handling of the length of the memo.
 pub async fn icrc1_test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
