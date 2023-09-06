@@ -281,6 +281,7 @@ pub async fn icrc2_test_supported_standards(ledger: impl LedgerEnv) -> anyhow::R
     Ok(Outcome::Passed)
 }
 
+/// Checks basic functionality of the ICRC-2 approve endpoint.
 pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let initial_balance: Nat = fee.clone() * 2;
@@ -363,6 +364,7 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
     Ok(Outcome::Passed)
 }
 
+/// Checks the ICRC-2 approve endpoint for correct handling of the expiration functionality.
 pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let initial_balance: Nat = fee.clone() * 2;
@@ -435,6 +437,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     Ok(Outcome::Passed)
 }
 
+/// Checks the ICRC-2 approve endpoint for correct handling of the expected allowance functionality.
 pub async fn icrc2_test_approve_expected_allowance(
     ledger_env: impl LedgerEnv,
 ) -> anyhow::Result<Outcome> {
@@ -497,6 +500,7 @@ pub async fn icrc2_test_approve_expected_allowance(
     Ok(Outcome::Passed)
 }
 
+/// Checks the basic functionality of the ICRC-2 transfer from endpoint.
 pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     // Charge account with some tokens plus two times the transfer fee, once for approving and once for transferring
@@ -550,6 +554,7 @@ pub async fn icrc2_test_transfer_from(ledger_env: impl LedgerEnv) -> anyhow::Res
     Ok(Outcome::Passed)
 }
 
+/// Checks the ICRC-2 transfer from endpoint for correct handling of the insufficient funds error.
 pub async fn icrc2_test_transfer_from_insufficient_funds(
     ledger_env: impl LedgerEnv,
 ) -> anyhow::Result<Outcome> {
@@ -612,6 +617,7 @@ pub async fn icrc2_test_transfer_from_insufficient_funds(
     Ok(Outcome::Passed)
 }
 
+/// Checks the ICRC-2 transfer from endpoint for correct handling of the insufficient allowance error.
 pub async fn icrc2_test_transfer_from_insufficient_allowance(
     ledger_env: impl LedgerEnv,
 ) -> anyhow::Result<Outcome> {
@@ -651,6 +657,7 @@ pub async fn icrc2_test_transfer_from_insufficient_allowance(
     Ok(Outcome::Passed)
 }
 
+/// Checks the ICRC-2 transfer from endpoint for correct handling of self transfers.
 pub async fn icrc2_test_transfer_from_self(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = fee.clone();
@@ -813,6 +820,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
     Ok(Outcome::Passed)
 }
 
+/// Checks the ICRC-2 transfer from endpoint for correct handling of the insufficient bad fee error.
 pub async fn icrc1_test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
@@ -841,6 +849,7 @@ pub async fn icrc1_test_bad_fee(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
     Ok(Outcome::Passed)
 }
 
+/// Checks the ICRC-2 transfer from endpoint for correct handling of the future transfer error.
 pub async fn icrc1_test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
@@ -859,6 +868,7 @@ pub async fn icrc1_test_future_transfer(ledger_env: impl LedgerEnv) -> anyhow::R
     }
 }
 
+/// Checks the ICRC-2 transfer from endpoint for correct handling of the length of the memo.
 pub async fn icrc1_test_memo_bytes_length(ledger_env: impl LedgerEnv) -> anyhow::Result<Outcome> {
     let fee = transfer_fee(&ledger_env).await?;
     let transfer_amount = Nat::from(10_000);
