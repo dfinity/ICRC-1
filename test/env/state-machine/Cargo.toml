@@ -1,6 +1,6 @@
 [package]
 name = "icrc1-test-env-state-machine"
-version = "0.1.0"
+version = "0.1.1"
 authors = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
@@ -17,4 +17,4 @@ candid = { workspace = true }
 async-trait = { workspace = true }
 hex = { workspace = true }
 ic-test-state-machine-client = { workspace = true }
-icrc1-test-env = { version = "0.1.0", path = "../" }
+icrc1-test-env = { version = "0.1.1", path = "../" }

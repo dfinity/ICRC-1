@@ -1,6 +1,6 @@
 [package]
 name = "icrc1-test-env-replica"
-version = "0.1.0"
+version = "0.1.1"
 authors = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
@@ -16,7 +16,7 @@ anyhow = { workspace = true }
 candid = { workspace = true }
 ic-agent = { workspace = true }
 rand = { workspace = true }
-ring = { worksapce = true }
+ring = "0.16.20"
 hex = { workspace = true }
 async-trait = { workspace = true }
-icrc1-test-env = { version = "0.1.0", path = "../" }
+icrc1-test-env = { version = "0.1.1", path = "../" }
