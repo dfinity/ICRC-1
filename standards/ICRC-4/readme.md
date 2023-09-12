@@ -162,9 +162,9 @@ type ValidateBatchArgs = record {
 
 ```
 
-    "max_transactions" : #Nat
-    "max_balances"  : #Nat
-    "batch_fee" : #Nat
+    "icrc4_max_transactions" : #Nat
+    "icrc4_max_balances"  : #Nat
+    "icrc4_batch_fee" : #Nat
 
 type Value = variant {
     Nat : nat;
