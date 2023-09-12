@@ -162,10 +162,10 @@ type ValidateBatchArgs = record {
 Returns the metadata for the ICRC-4 specification.
 
 ```candid "Methods" +=
-icrc4_metatdata : () -> (ICRC4Metada) query;
+icrc4_metatdata : () -> (ICRC4Metadata) query;
 ```
 ```candid "Type definitions" +=
-type ICRC4Metada = record {
+type ICRC4Metadata = record {
     max_transactions : opt nat;
     max_balances : opt nat;
     batch_fee: opt nat;
