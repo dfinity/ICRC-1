@@ -157,19 +157,26 @@ type ValidateBatchArgs = record {
 
 * The batch_fee is optional. If provided the users should expect the application to validate that the batch fee provided will pass.
 
-### query icrc4_metadata
+### icrc 4 metadata fields to add to icrc1 metadata field.
 
-Returns the metadata for the ICRC-4 specification.
 
-```candid "Methods" +=
-icrc4_metatdata : () -> (ICRC4Metadata) query;
 ```
-```candid "Type definitions" +=
-type ICRC4Metadata = record {
-    max_transactions : opt nat;
-    max_balances : opt nat;
-    batch_fee: opt nat;
+
+    "max_transactions" : #Nat
+    "max_balances"  : #Nat
+    "batch_fee" : #Nat
+
+type Value = variant {
+    Nat : nat;
+    Int : int;
+    Text : text;
+    Blob : blob;
 };
+
+service : {
+    icrc1_metadata : () -> (vec record { text; Value; }) query;
+}
+
 
 ```
 
