@@ -1,6 +1,54 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2023-08-22
+[Slide deck](n.a.), [recording](https://drive.google.com/file/d/116qMOaILlRxaRrpri1DnH0u4hkGOSKh-/view?usp=sharing)
+
+Due to only a few people attending, other topics of interest than ICRC-3 have been discussed.
+
+**Privacy-preserving ledger**
+* How could one get to a ledger (different standard) that does not allow anyone to read everyone's balances; this may be important to prevent people with lots of assets from being targeted in attacks
+  * ICP ledger would be a step towards this
+    * Attacker could only see information they should not get during the time they have access to a node and can read the blocks
+    * Can query all balances of all account ids, but cannot trace them back to the identities because of the hash being applied
+  * Can take the open source implementation of the ICP ledger and customize it (others have done this)
+    * Would be easy to change the decimals, currently not used and only metadata
+* Ethereum community is talking about cryptographic schemes to make this possible (stealth addresses)
+* Maybe pre-signing transactions and sending the bytes might be a solution; anybody can send the bytes; this removes the caller; whoever can read the caller can read the from address of the transaction; that could go in the direction of stronger privacy; but public key needs to be visible, so can still know who the caller is, so this idea seems not to work
+
+**Signed transactions**
+* Now CEXs using cold storage need to create a lot (2 thousand) of transactions with different timestamps so that one tx will be submittable (the IC checks that the timestamp is in a given interval)
+* Pre-signed transaction support at ledger level would solve this
+  * Sign payload to the canister; an anonymous user could submit
+    * IC does not validate, but canister
+  * Payload, public key, and signature; then ledger can verify
+  * Requirement is that payload must be deduplicated
+* This would be really helpful to have as standard
+* Could also be used as a cheque
+* Should be discussed in the WG in the future
+* Wallet canisters would be a good way also; there was opposition against this earlier
+  * Ethereum is doing this now with account abstraction and smart contract wallets
+* One question is what to allow to sign
+  * Any payload? Very generic
+
+Note: Generic tx signing in HW wallet (e.g., ledger) requires that content of what is being signed be displayed to the user
+
+**Future topics to work on**
+QR code / URL for payments
+* Created for NNS dapp
+* Would be nice to have a standard on this so everyone can use it; likely less heavy than the current topics
+* Plan is to invite David
+Batch transfers
+* Sale canister of SNS could benefit from this; now is making a call for each transaction
+* Origyn canister sending out royalties could also benefit
+Indexing
+* Important topic as well; complements ICRC-3 (access tx log) with querying the ledger, e.g., by account
+  * Basic indexing would be by account
+  * Can do also by memo; different indices would be useful for different use cases
+  * Must decide on how generic we want this to be
+  * Consumers: e.g., block explorers
+
+
 ## 2023-07-25
 [Slide deck](https://docs.google.com/presentation/d/1if2iZPLWSg6gV0siInuBBST_HXiLaVAfUlgGMdSse04/edit?usp=sharing)
 
