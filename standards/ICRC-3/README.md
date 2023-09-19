@@ -51,7 +51,7 @@ Servers must serve the transaction log as list of `Value` where each `Value` rep
 
 This hash function should be used by Ledgers to calculate the hash of the parent of a transaction and by clients to verify the downloaded transaction log.
 
-The hash function works is the [representation-independent hashing of structured data](https://internetcomputer.org/docs/current/references/ic-interface-spec#hash-of-map) used by the IC:
+The hash function is the [representation-independent hashing of structured data](https://internetcomputer.org/docs/current/references/ic-interface-spec#hash-of-map) used by the IC:
 - the hash of a `Blob` is the hash of the bytes themselves
 - the hash of a `Text` is the hash of the bytes representing the text
 - the hash of a `Nat` is the [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128) encoding of the number
