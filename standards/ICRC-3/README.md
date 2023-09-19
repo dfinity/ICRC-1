@@ -67,7 +67,7 @@ Each standard that adheres to `ICRC-3` must define the list of transactions type
 1. they must be of type `Map`
 1. they must have a field `tx: Map` which describes the transaction
 1. they must have a field `op: Text` inside `tx` which describes the type of transactions, e.g. "ICRC1_Burn" for `ICRC1_Burn` transactions
-1. all transactions with index >0 must have a top-level field called `phash: Blob` which contains the [hash](#value-hash) of the previous transactions. 
+1. all transactions with `index > 0` must have a top-level field called `phash: Blob` which contains the [hash](#value-hash) of the previous transactions. 
 
 In other words the schema must be:
 
