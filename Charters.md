@@ -1,8 +1,102 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2023-09-19
+[Slide deck](https://docs.google.com/presentation/d/1xQ2P8H-7D9PRuwV57lXEiK0Wzr9isMMD7AYOOEWylVA/edit?usp=sharing), [recording](https://drive.google.com/file/d/1PBwH3TBXoFx15_x3UiH4nhvsEA4IgY26/view?usp=drive_link)
+
+ICRC-3: Settling the remaining issues
+* Dieter walks through the pending changes to be applied to the ICRC-3 draft (see slides)
+  * icrc3_get_transactions should be a query
+  * ICRC2_Approve lacks expiration field
+  * Renaming of icrc3_get_transaction to icrc3_get_block
+    * No strong opinions in the group
+    * The standard editors will liaise with the people having brought this up and make a choice for naming accordingly
+  * Pruning of approvals
+* Representation of transfer and transfer_from as ops (main topic)
+  * Dieter presents the 3 options
+    * (1) transfer op (and block); transfer_from op extends transfer op (current)
+      * Simplest implementation
+      * transfer and transfer_from are semantically equivalent in terms of balance transfers (the fact who initiated the transfer does not matter for this, but is only additional information)
+      * ...
+    * (2) transfer and transfer_from as different ops (proposal)
+      * Cleanest theoretical separation between different operations: op code of the block unambiguously determines the operation at hand
+      * Semantically equivalent operations in terms of a core aspect are modeled as 2 separate operations: not expressing semantic equivalences in the model
+      * ...
+    * (3) transfer_from expressed as 2 blocks: A transfer operation as the first block and the transfer_from operation with the additional field as the second block, with the second one having a reference to the first (another proposal)
+      * Hard to handle w.r.t. fees as we would need to charge fees for 2 blocks now
+      * Very inefficient because of creating 2 blocks (the approve already creates one and incurs fees, but is necessary; this would be yet another block that is not necessary)
+      * Complicated as one needs to look at 2 blocks for a single operation
+  * Discussion on whether it is likely that someone will know ICRC-1 but not ICRC-2 operations when releasing ICRC-3
+    * ICRC-3 is released after ICRC-1 and ICRC-2; people know about both 1 and 2 when 3 will be released
+    * Clients (e.g., wallets): For some ledgers ICRC2 has already been implemented, but not for others; so some may not have ICRC-2 support yet; expected to be a temporary case
+  * Levi thinks both Option 1 and 2 work, but does not like very much the optional field
+  * Roman: for new block type need actually 2 block types: ckBTC use case: if withdraw from ledger, approve to withdraw; minter burns funds, so this is a burn_from; thus, for Option 2, will need transfer_from and burn_from for ckBTC and other upcoming ledgers; hopefully never need mint_from
+    * Option 1 is a simpler and much more natural choice for realizing this (add new optional field), Option 2 does not feel right
+    * Approach through which we arrived there: Handle transfer_from first and handle transfer as special case without duplicating the code
+  * Dieter: motivates that when viewing the options more abstractly, Option 1 also is the better choice because transfer and transfer_from are semantically equivalent in terms of a core functionality of the ledger; Dieter makes the proposal to rule out Option 3
+  * The group rules out Option (3)
+  * Dieter proposes to choose Option 1 over Option 2 and argues why he thinks this is the better choice (see slides, video)
+    * Option 1 is better in terms of wallet forward compatibility (least worse option in that terms)
+    * A strong driver for Option 1 is the semantic equivalence in an important category of transfer and transfer_from
+    * Option 1 results in a simpler and sleeker implementation
+    * Option 2 is conceptually cleaner
+    * If we settle for Option 1, some things need to be made clearer in the standard
+      * Don't reuse operations with different semantics
+      * Provide guidelines for when to use an approach like Option 1 and when one like Option 2
+      * Provide naming guidelines
+    * If we settle for Option 2
+      * We have worse forward compatibility
+      * We don't gain much over Option 1
+  * Discussion
+    * Levi wonders how burn and mint would look like in Option 1
+      * Roman: Burn is the same with an optional spender, transfer is the same with an optional spender; for mint we could not see why one would want mint_from; it feels wrong to delegate the minting to someone else
+      * Levi likes this
+      * Roman / DFINITY lean more towards Option 1 as this is the way that has been chosen for the implementation of all the ledgers
+        * Much simpler from the code perspective
+        * Much simpler from the indexing perspective: can easily index by account, for Option 2 we would have lots of duplicated code
+        * Using Option 1 has helped a lot with implementation; otherwise would have transfer_from and burn_from blocks
+      * Levi likes Option 1 and is OK to go with it
+        * Should make clear in the standard that when adding optional fields that they don't conflict with optional fields of other standards; e.g., extension of ICRC-1, but use the same optional spender field to mean something else
+        * Mario confirms that he will make this clear in the standard; fields defined by previous standards are preserved; they need to mean the same thing semantically, especially regarding the base properties of the ledger (such as the balances); e.g., if transfer says that from, to, account means a transfer of value on the ledger, this operation type cannot be changed to mean something else; of course, different non-conflicting operation types can be introduced
+        * Roman suggests that the operation in the block could be prefixed with the standard's name
+          * This is verbose, though, but might be OK if there are not too many optional fields (the base standard uses very efficient encoding anyway)
+        * Mario: Extensions to ICRC-1 and 2 need to adhere to some rules, e.g., the ones outlined above
+    * **The proposal of Option 1 is accepted by the WG**
+    * Levi asks about optional fee and timestamp
+      * Mario
+        * Timestamp should not be optional, this is a mistake
+        * Fee is optional and depends on the operation
+      * Roman: usually fee in block is optional: if tx specifies the fee explicitly, we use that one; if tx omits the fee, block contains the effective fee that the ledger picked; by looking at the block, you know exactly how much to subtract without reading other ledger state; ledger needs to ensure that one of them is present
+      * Mario will go over the proposal
+      * Roman: idea is that tx field contains whatever user requested; use it to compute tx hash, deduplicate
+        * Also want blocks to be replayable, if you look at the blocks, you have all the context required to rebuild the ledger state from scratch
+        * We use the fee collector feature in a similar way: there is a block field specifying who should receive the fees
+      * Roman clarifies that in the block there is an optional field effective_fee that contains the applied fee; set if the fee in the tx is missing
+      * Timestamp should be always present (will be fixed)
+      * Block timestamps are non-decreasing
+      * Discussion on some details (see video)
+    * Off-topic: Fee collector
+      * In ICRC-1 and 2 the fee is burned; this comes from the ICP ledger that runs on a system subnet that does not need cycles; for other ledgers, you may want to collect the fee to pay cycles for the ledger (ideal situation of a self-sustaining ledger); fee collector is a ledger account that receives the fees
+      * Fee collector block can change the fee collector account; from that point on, until the fee collector changes again, each subsequent block contains only the index of the block that defines the fee collector (saves space compared to storing the fee collector always)
+      * Fee collection is different to minting account; minting account is special; want normal account for fee collector so you can do all operations you need; for SNS, you can send it to the account that is used to buy cycles
+      * Trick used for fee collector for ckBTC, inspired by textual representation: account has same principal as canister, but subaccount is the subaccount "fee"
+        * Subaccount is all zeroes, then "fee" in hexadecimal; so the fee collector account in ckBTC is canister_principal.fee
+      * Fee collector could be another ICRC standard that extends ICRC-1 and ICRC-2 as it may be useful for others also
+    * Levi: Limiting approval lifetimes: next time
+* Changes to WG modality
+  * Should have higher speed
+  * Proposal to move more work to the time between sync meetings and work asynchronously on GitHub and the forum
+    * Potentially have more than 1 standard being worked on concurrently
+* Next topics
+  * Signed transactions
+  * QR code for payments
+  * Indexing
+* Mario / Roman to finish ICRC-3 spec following WG decisions
+  * Then can push it towards voting and get it out
+
+
 ## 2023-08-22
-[Slide deck](n.a.), [recording](https://drive.google.com/file/d/116qMOaILlRxaRrpri1DnH0u4hkGOSKh-/view?usp=sharing)
+Slide deck: n.a., [recording](https://drive.google.com/file/d/116qMOaILlRxaRrpri1DnH0u4hkGOSKh-/view?usp=sharing)
 
 Due to only a few people attending, other topics of interest than ICRC-3 have been discussed.
 
@@ -34,19 +128,19 @@ Due to only a few people attending, other topics of interest than ICRC-3 have be
 Note: Generic tx signing in HW wallet (e.g., ledger) requires that content of what is being signed be displayed to the user
 
 **Future topics to work on**
-QR code / URL for payments
-* Created for NNS dapp
-* Would be nice to have a standard on this so everyone can use it; likely less heavy than the current topics
-* Plan is to invite David
-Batch transfers
-* Sale canister of SNS could benefit from this; now is making a call for each transaction
-* Origyn canister sending out royalties could also benefit
-Indexing
-* Important topic as well; complements ICRC-3 (access tx log) with querying the ledger, e.g., by account
-  * Basic indexing would be by account
-  * Can do also by memo; different indices would be useful for different use cases
-  * Must decide on how generic we want this to be
-  * Consumers: e.g., block explorers
+* QR code / URL for payments
+  * Created for NNS dapp
+  * Would be nice to have a standard on this so everyone can use it; likely less heavy than the current topics
+  * Plan is to invite David
+* Batch transfers
+  * Sale canister of SNS could benefit from this; now is making a call for each transaction
+  * Origyn canister sending out royalties could also benefit
+* Indexing
+  * Important topic as well; complements ICRC-3 (access tx log) with querying the ledger, e.g., by account
+    * Basic indexing would be by account
+    * Can do also by memo; different indices would be useful for different use cases
+    * Must decide on how generic we want this to be
+    * Consumers: e.g., block explorers
 
 
 ## 2023-07-25
