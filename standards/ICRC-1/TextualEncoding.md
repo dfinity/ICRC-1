@@ -76,3 +76,4 @@ Account.toText(record {
 
 * [`ic-js`](https://github.com/dfinity/ic-js/tree/main/packages/ledger-icrc#gear-encodeicrcaccount) (JavaScript).
 * [`icrc-ledger-types`](https://docs.rs/icrc-ledger-types/0.1.2/icrc_ledger_types/icrc1/account/struct.Account.html) version `0.1.2` and higher (Rust).
+* [`icrc1`](https://github.com/NatLabs/icrc1) (Motoko)
