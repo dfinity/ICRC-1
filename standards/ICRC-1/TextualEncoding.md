@@ -71,3 +71,7 @@ Account.toText(record {
 | `k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae-6cc627i.01` | Error | The representation is not canonical: leading zeros are not allowed in subaccounts. |
 | `k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae.1` | Error | Missing check sum. |
 | `k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae-dfxgiyy.102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20` | OK: `{ owner = "k2t6j-2nvnp-4zjm3-25dtz-6xhaa-c7boj-5gayf-oj3xs-i43lp-teztq-6ae"; subaccount = opt blob "\01\02\03\04\05\06\07\08\09\0a\0b\0c\0d\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f\20" }` | |
+
+## Libraries
+
+To decode or encode ICRC-1 accounts in a JavaScript environment, please use [`ic-js`](https://github.com/dfinity/ic-js/tree/main/packages/ledger-icrc#gear-encodeicrcaccount).
