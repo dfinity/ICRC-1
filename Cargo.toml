@@ -18,7 +18,7 @@ ic-agent = "0.25.0"
 reqwest = "0.11"
 ic-test-state-machine-client = "3.0.0"
 rand = "0.8.5"
-serde = "=1.0.171"
+serde = "^1.0.184"
 tempfile = "3.3"
 thiserror = "1"
 tokio = { version = "1.20.1", features = ["macros"] }
