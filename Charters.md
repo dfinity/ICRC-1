@@ -1,6 +1,122 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2023-10-17
+Slide deck (n.a.), [recording](https://drive.google.com/file/d/1G2dN3Vy0XQQx0R8TH4GRsTKdHaInceNR)
+
+**ICRC-22: Payment requests**
+* David dal Busco presents the proposal he wrote up earlier this year
+* Other blockchains have standards to encode QR codes for payments
+* Often used in dapps or exchanges like Coinbase
+* Idea is doing something analogous for the IC
+* Basic idea
+  * Prefix the content with the token, but details t.b.d.
+  * Address as defined by the ICRC-1 textual encoding
+  * Parameters like amount to be added
+* Prior work
+  * Analogous work for Bitcoin, multiple standards there, one unifies everything
+  * EIP-681 for Ethereum for both Ether and ERC-20
+* Discussion
+  * Canister id or symbol for referring to the token
+  * Compatibility with [CAIP-10](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-10.md)
+    * CAIP is a way to specify addresses for any blockchain with a single standard; all major blockchains are more or less compatible with the standard
+    * Currently, our address representation is a little too long considering CAIP-10 limits
+    * Probably we need to change this representation to be compatible as the CAIP-10 imposes a limit for the address
+    * CAIP-10 specification requires to specify a network and address basically
+    * **Options** to address the exceeded size limit of ICRC-1 accounts
+      * Use a shortened textual representation; OK as no one is typing it in and QR codes have error correction built in; we could probably omit the checksum; would be new textual representation
+      * Remove dashes between character groups
+      * Use different encoding for parts of the account
+      * Trying to revise CAIP-10
+      * Ignore length requirement imposed by CAIP-10
+    * Expected that multi-chain wallets would use the chain-agnostic account representation for the QR code representation; this would be a typical use case
+    * Levi: Wouldn’t adopting CAIP-10 require to change our account representation everywhere?
+    * Ben: Checksum can be removed for QR code representation and added again once decoded if the application needs it; not ideal, but is a viable workaround
+    * Dieter: Can we influence the CAIP-10 standard to make this field a little longer? Likely the limit is rather arbitrary for CAIP-10
+    * Ben: We can propose, but the CAIP-10 standard is final
+    * Ben thinks in CAIP-10 the length limit is not very strongly specified
+    * Levi: Changing textual representation might mean changing it everywhere
+    * Ben: We could also ignore the length requirement
+    * Levi: We could reach out to the CAIP people to extend the limit a little
+    * Dan thinks we should not ignore the length
+    * Dan will reach out to the CAIP people and check what will be possible; he knows the CTO of WalletConnect; fairly certain they wrote the CAIP standard; approaching them
+    * If we don’t succeed with the adaptation of CAIP-10, need to change our representation to cut the length down
+      * Could remove checksum
+      * Could remove dashes between the character groups: advantage: would not need to recalculate the checksum, only add dashed in known places
+      * Essentially, need textual representation for machine and not human interpretation
+      * Someone tried to change encoding from hexadecimal to base64; resulted in similarly reduced length
+  * How to identify the token to make the payment in
+    * Using canister id or token symbol for identifying the token?
+    * Token could be represented by smart contract id of the token ledger; with token symbol, you might have multiple ones with the same name and there is no central registry; need to disambiguate; address would solve that
+    * Chain id and smart contract; depending on chain id, the smart contract field is in an encoding according to the respective chain; would be x-chain compatible and would solve the token disambiguation
+  * Amount
+    * Use decimal points?
+    * Most natural would be to use the base unit of the ledger account; e.g., on Ethereum 1 Ether is 1E18 wei (1 * 10^18 wei)
+    * This would require a scientific notation (1E8 for 1*10^8) to specify the amount
+    * Could use 2.014E18 to mean 2.014 * 10^18; combines decimal and scientific
+    * This is how WIP-681 handles it
+    * People like this
+    * This is aligned with the crypto native way to express everything in the base unit
+    * **Decision:** Allow scientific notation with decimal representation to make it easy to read and have amount represented in terms of the ledger’s base unit
+  * Token principal / ledger address
+    * Do we need to be chain agnostic, isn’t this IC specific
+    * If put chain id first, does not make sense to be multi chain; chain id specifies already the chain and standards one needs to use; for Ethereum, they specify ethereum as schema
+    * X-chain payments don’t fit in here; for Ethereum there is already EIP-681, for Bitcoin there are other standards being used; a X-chain wallets would use all of them, for the respective network
+    * Gravitating towards an ICP-only standard because all chains have their own standard already; they are all very similar to this one
+  * Ben: EIP-681 does allow one to specify a function name; would this make sense for us too?
+    * Means it can capture any ledger standard and any function call
+    * Ben: EIP-681 can specify encoding; for us needs to be encoded into Candid; not sure how
+      * On Ethereum you can attach 32 bytes encoded somehow and it lets you specify whether it is an address or unit256
+      * Frontend implementation is easy; if have function name and signature, know what to do
+      * On IC, need to encode it into Candid; not sure how this works
+      * Levi: Can encode method parameters into URI parameters
+      * Can easily do this for transfer and approve
+      * David: specification restricted to payments
+      * Ben: EIP-681 is called payments; but is more general: executing something from within wallet; DEX can specify that if you scan a QR code, you make a token swap on their DEX; not sure how often this is used; need to decide what scope we want to have
+      * Question on focus: payments or more generically any function calls; the latter may be a generic follow-up standard even; scope question to be decided on; seems like orthogonal extension to payment standard; getting simpler thing done quickly might be a good path forward
+        * Roman commented in GitHub that he would like to have the approve method captured
+          * If want approve captured, need to make it generic
+        * Proposal: exhaustively specify few transaction types for payments for ICRC-1 and approvals for ICRC-2 now and possibly extend later if needed
+        * People agree to this
+      * How to capture method? Differentiate fields and add new transaction parameter; specify the fields for each supported method; extend later to further methods
+      * We need schema prefix; icp:mainnet
+      * From schema prefix they know it’s ICP and ICP mainnet; anything else can be inferred from this and interpreted
+  * Token encoded as smart contract canister id; Do we want symbol there also?
+    * Someone could lie about symbol
+    * Not necessary to include in URI: consumer is wallet, can always verify and display more; can have internal registry of things; but if we require both canister address and token symbol, it is easier to phish the user as someone can spin up any canister; no need for human interpretability of URI
+    * Agree, we should not encode the token symbol in addition to the canister address
+  * Main open point is how to represent address compliant with CAIP-10 standard
+    * Think already how to represent the address more concisely; another form of textual representation that is shorter
+    * More information on CAIP: [forum post on CAIP](https://forum.dfinity.org/t/chain-agnostic-improvement-proposal-caip-for-icp/16957/23), [CAIP-19](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-19.md)
+* Next steps
+  * Dieter volunteers to update the specification
+  * Dan to check with his contacts on lifting the length limit of CAIP-10
+
+**Other work items to address in the next meeting**
+* [ICRC-23](https://github.com/dfinity/ICRC/issues/23) might be something interesting to discuss next
+  * For HTTP requests
+  * Canisters expose more than 1 interface: normal smart contract interface and HTTP interface
+  * No specification around the HTTP interface
+  * Austin talked about specifying some semantics for this
+    * Basically reserving some endpoints like metrics and specify common behaviour for canisters
+  * Austin
+    * Same issues w.r.t. namespaces as in function names in ICRC proposals themselves; e.g., if have same method name defined in two ICRCs, then cannot implement combo canister that has the same-name methods of both standards; have to pick one or the other
+    * This would extend this idea to canister HTTP interface; e.g., reserve something under the dash; expose HTTP function or HTTP lookup, if service wants to expose JSON data (some Web API), we need to be able to define this and say how to do that to avoid collisions later
+    * First came up with ICRC-3 to expose the ledger history as JSON
+    * Probably some people around that know more about HTTP paths, construction of URNs, URLs, URIs, IRIs …
+    * Would need to think about what is the best use case for system-based standard-based HTTP method exposures
+  * David: Need someone from trust team in this discussion; suggests Nate from Trust team
+  * Austin: Certification v2 coming out
+    * Cannot currently certify every combination of skip/take in a pagination interface, for example
+    * Maybe v3 would solve that; could have additional functionality for JSON data
+    * Relevant for raw as well if don’t care about certification; just expose data; e.g., have ICRC that produces a payment QR code in the canister, so it’s easy to create certified QR code for payments; expose that through HTTP as a use case
+  * David
+    * /metrics comes to mind as a use case as well; DFINITY does this for governance …; get raw metrics data
+  * Austin: maybe a symbol less used than “/“, e.g., “_” or “--“ that indicates the system root where ICRCs can put their stipulated endpoints
+* [ICRC-4](https://github.com/skilesare/ICRC-1/blob/Icrc4/standards/ICRC-4/readme.md): Batch transfers 
+  * Could talk about this also in one of the upcoming meetings
+
+
 ## 2023-09-19
 [Slide deck](https://docs.google.com/presentation/d/1xQ2P8H-7D9PRuwV57lXEiK0Wzr9isMMD7AYOOEWylVA/edit?usp=sharing), [recording](https://drive.google.com/file/d/1PBwH3TBXoFx15_x3UiH4nhvsEA4IgY26/view?usp=drive_link)
 
