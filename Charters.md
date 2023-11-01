@@ -1,7 +1,7 @@
 # Ledger & Tokenization Working Group Charters
 
 
-## 2023-10-30
+## 2023-10-31
 Slide deck (n.a.), [recording](https://drive.google.com/file/d/1qc1iND7UXKG6l4eQtXdt-L3haMpnCQ-y/view?usp=sharing)
 
 **ICRC-23**
