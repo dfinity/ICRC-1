@@ -1,6 +1,143 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2023-10-30
+Slide deck (n.a.), [recording](https://drive.google.com/file/d/1qc1iND7UXKG6l4eQtXdt-L3haMpnCQ-y/view?usp=sharing)
+
+**ICRC-23**
+* Dieter recaps the basic ideas behind ICRC-23
+  * "Meta-standard" that defines namespacing, allowing ICRC standards to define HTTP namespaces
+  * Nothing standardized yet w.r.t to canister HTTP interface
+  * Goal: avoid clashes of namespaces
+* Austin
+  * This is mainly about deciding on a pattern tp apply and making sure it makes sense from relevant angles
+  * Made [formal recommendation](https://github.com/dfinity/ICRC/issues/23#issuecomment-1787282250) to use `---` to indicate the ICRC namespace in the URL
+  * Each ICRC standard gets a namespace using its number, see the [proposal](https://github.com/dfinity/ICRC/issues/23)
+    * E.g., ICRC-3 could define HTTP API to fetch blocks: `https://{canisterid}.icp0.io/---/icrc3/block/53` for a hypothetical ICRC-3 method
+  * Things to talk about
+    * What symbol to use to separate the ICRC namespace?
+    * ...
+  * Typically, IC has separation betw. asset canisters and more functional canisters; nothing standardized yet
+  * Avoid clashes: agreement required because global namespace is shared on the IC
+  * Problem is if multiple standards define the same method, e.g., transfer, and they already have many users
+    * Namespace collisions, lost composability
+* Nate McGrath
+  * No alternative suggestions to `---`, finds it OK to use
+  * There will be follow-up proposals for HTTP standards based on this standard
+  * Could provide best practice that HTTP specifications should be OpenAPI or Swagger
+  * Could also establish best practice to apply REST best practices for API design
+* Austin
+  * SHOULD use URL patterns
+  * Hard to come to IC that uses agent pattern as opposed to REST pattern everyone knows
+  * HTTP tougher for POSTs as authentication problem needs to be solved
+    * Could recommend header to put the signature in
+  * Probably separate issue, more like a recommendation for applications in general that expose ICRC REST interface
+  * Probably not for this WG to discuss this
+* Nate: outside of ICRC, people should be able to implement whatever they want
+* Austin: can make recommendation to follow some pattern, unless technical reason to not do so
+* Dieter wonders about implications on asset certification and the trust team
+  * Nate: thinks this should not have impact on either
+    * Ideas for certification w.r.t. pagination, but only for single ordered list
+    * Once when getting into sorting or filtering, it is hard / impossible to handle this with certification
+  * Austin: could return data back as JSON, each JSON object has certification witness of data item; explodes data size
+    * Then can just parse the JSON and certify each data element
+    * More like RDF-style database
+    * Question whether we have enough processing power
+  * Nate: already possible if do hashing of individual items client side
+    * Processing power more question for those who host gateways
+    * Main drawback of above approach: if certify each element individually and return array of elements and ask gateway to certify each one individually, it is not able to assert that the correct items were returned, only able to assert that valid items were returned; replica could decide to return different items that should be in a filtered list; e.g., have list of 1000 items, filter them, get back 10 items: able to assert that there are 10 valid items, but replica could return 10 different items not included in the filtered list; has not been able to figure out how to resolve this
+  * Austin: good point, not clear whether this is a solvable problem
+  * Nate: Also have replicated query feature; this is better suited for this use case; on endpoint we want gateway to skip certification; with client, can replicate it multiple times and see whether canister responses match; probably better approach here; a little slower, but still much faster than update call
+  * Discussion about zkWASM execution; outcome: cool technology, but not relevant in the near term; would be very challenging to apply this to ICP
+  * Implications of certification for this standard
+    * Don't need to take much of certificatio into account
+    * Users SHOULD consider their certification strategy following the applicable best practices
+    * Can go deeper in the scope of more specific implementations of ICRC standards; each standard will have their own requirements for certification
+      * Simple ones maybe can do response verification out of the box
+      * Other ones may require newer versions of certification
+      * Some may not work at all and there we can use the replicated query approach
+    * Guidance should be given in this standard
+      * Nate: Would be possible to an extent
+    * Nate: should not make any recommendations w.r.t. raw; wants to get rid of it
+      * If there is endpoint that should not be certified with response verification v2, can tell to not certify; then this decision to skip certification goes through consensus; if raw, every replica can decide to not certify this endpoint
+      * Want to make this transition as easy as possible
+    * Austin: would not make recommendations on raw
+    * Maybe sufficient: Everyone should handle certification following best practices
+* **Next steps**
+  * Dieter will provide a first draft PR of the standard (as time fits)
+  * Austin happy to help to polish it
+
+**ICRC-22**
+* Length limit for accounts is still a problem
+  * 128-byte limit defined by CAIP-10
+    * Seems to be enforced in current implementations
+    * Seems hard to change the standard now as it is final and there have been similar discussions from other people, so far without success of changes
+  * Ideas
+    * Cut out dashes
+    * Use different encoding
+    * Remove checksum
+    * ...
+  * Adapted representation would be a machine-readable textual representation
+  * CAIP seems to have chosen 128-byte limit as rather arbitrary limit considered large enough
+  * Ben: would prefer to cut out dashes as it is easier to add them back than the checksum
+    * People agree
+    * Ben to check whether cutting out the dashes is sufficient to be within the limit
+  * Austin: Quantum-resistant principals in the future may be larger than CAIP limit
+    * Standards would need to accommodate this
+* Network identifier(s)
+  * `icp:<hash of NNS public key>` (i.e., `icp:737ba355e855bd4b61279056603e0550` for ICP mainnet) is the right format to use for the network identifier, not `icp:mainnet`
+  * The fact that NNS subnet recovery could result in a new key and thus new identifier is conceptually clean
+    * Hard fork of the network in this scenario, even though the network state is unchanged; old network no longer operational, new network started with the same state
+    * This specific scenario of NNS subnet recovery has not been discussed
+  * Discussed that private, enterprise, testnets using IC protocol could be spun up and they should have their own respective ids in order to be addressable
+* How generic should the standard be? Payments vs. generic method calls
+  * Last time we said it should handle ICRC-1 and ICRC-2 transfer, approve, transfer_from, and not be fully generic
+  * Maybe fully generic approach is feasible with reasonable extra effort
+  * Dieter walks through [proposal](https://github.com/dfinity/ICRC/issues/22#issuecomment-1784947777)
+    * transfer has 1 argument: `TransferArgs`; there are two viable approaches to encode this
+    *   Candid-style encoding of each method argument, here the `TransferArgs`
+    *   Canonicalizing each method argument (flattening out the structures), here flattening the `TransferArgs` record
+    * Easiest is to extract a list of arguments and put them as query paramters in the URI: enough to cover important standards easily and similar to ERC-681
+    * Completely generic may be not much more complex, standard could be very similar
+  * Options
+    * Candid encoding (generic approach)
+      * List of Candid-encoded arguments; not human readable, but libraries in many languages available
+    * Canonicalized representation of the method arguments
+      * Arguments need to be decomposed recursively into their constituents and those must be query parameters
+  * Both options allow for any kind of sequence of structures to be encoded
+  * Seems to be agreement that it may not be too much harder to have generic approach when using Candid
+  * Would be different to how Bitcoin and Ethereum do it
+  * If using Candid, would not matter that account is too long as it's hidden in the Candid element
+  * Problems with Candid approach?
+    * Ben does not see issues
+    * When crafting the URI one already does the encoding, maybe we don't want this
+    * Would need to decode the Candid elements in the wallet to show fields (e.g., the amount) to user
+    * Is there a good reason to have query parameters? URIs in principal use query arguments
+  * Length limits of URIs: not in theory, but is implementation dependent
+  * Candid designed to be concise, optimized for inter-canister communication
+  * Candid would serve the purpose very well
+  * Ben likes idea of using Candid
+  * Would fee etc. already be contained or set by the wallet?
+    * Timestamp can only be contained if URI generated on the fly; if static, not there
+    * Optional fields can be left out without issues
+    * Non-optional fields are harder to handle as they must be populated in the Candid element
+    * In ERC-681, wallet can change anything it needs to change
+    * Ben: Link should specify everything required, wallet can fill in other fields
+      * Could be methods that a wallet does not know about
+      * If want user to fill in something, e.g., the amount: provide static QR code everyone would use; should we have way to specify that certain fields need to be filled in by the user?
+      * Problem: Amount not being in Candid element violates spec of `TransferArgs` as it is not `opt`
+      * Ben suggests `field=<Candid type>` syntax, e.g., `amount=<nat>` (if angle brackets are allowed in the URI): the meaning of an angle-bracketed type is that the corresponding element must be provided by user; we need to check whether we can use angle brackets
+      * Would need to set amount to `0` in the Candid-encoded element to be a valid encoding and the wallet then sets it properly based on the user-provided value
+        * Unit value or dummy value for type: nat: 0, blob: empty blob, text: "" etc.
+      * Ben: alternative: if we can have type that differentiates between flattened arguments and Candid encoding options being used, we can have both options available
+        * `.../record/icrc1_transfer/list_of_candid_encoded_call_arguments` to have Candid
+        * Flattened list of structures is not universal, is a compromise
+  * Needs more thinking
+* Next steps
+  * Ben to check whether cutting out the dashes from the ICRC-1 textual representation solves length issue
+  * People to think about the open points of the draft
+
+
 ## 2023-10-17
 Slide deck (n.a.), [recording](https://drive.google.com/file/d/1G2dN3Vy0XQQx0R8TH4GRsTKdHaInceNR)
 
