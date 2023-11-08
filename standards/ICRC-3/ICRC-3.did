@@ -1,36 +1,36 @@
-type Value = variant { 
-    Blob : blob; 
-    Text : text; 
+type Value = variant {
+    Blob : blob;
+    Text : text;
     Nat : nat; // do we need this or can we just use Int?
     Int : int;
-    Array : vec Value; 
-    Map : vec record { text; Value }; 
+    Array : vec Value;
+    Map : vec record { text; Value };
 };
 
-type GetTransactionsArgs = vec record { start : nat; length : nat };
+type GetBlocksArgs = vec record { start : nat; length : nat };
 
-// A function for fetching archived transactions.
-type GetTransactionsFn = func (GetTransactionsArgs) -> (GetTransactionsResult) query;
-
-type GetTransactionsResult = record {
-    // Total number of transactions in the
-    // transaction log
+type GetBlocksResult = record {
+    // Total number of blocks in the
+    // block log
     log_length : nat;
-    
-    // System certificate for the hash of the
-    // latest transaction in the chain.
-    // Only present if `icrc3_get_transactions`
-    // is called in a non-replicated query context.
-    certificate : opt blob;
 
-    transactions : vec record { id : nat; transaction: Value };
+    blocks : vec record { id : nat; block: Value };
 
-    archived_transactions : vec record {
-        args : GetTransactionsArgs;
-        callback : GetTransactionsFn;
+    archived_blocks : vec record {
+        args : GetBlocksArgs;
+        callback : GetBlocksFn;
     };
 };
 
+type DataCertificate = record {
+  // See https://internetcomputer.org/docs/current/references/ic-interface-spec#certification
+  certificate : blob;
+
+  // CBOR encoded hash_tree
+  hash_tree : blob;
+};
+
 service : {
-    icrc3_get_transactions : GetTransactionsFn;
+  icrc3_get_tip_certificate : () -> (opt DataCertificate) query;
+  icrc3_get_blocks : (GetBlocksArgs) -> (GetBlocksResult) query;
 };
