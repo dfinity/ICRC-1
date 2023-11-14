@@ -87,7 +87,7 @@ expected output: 9f64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806
 
 ```ignorelang
 input: Array([Nat(3), Text("foo"), Blob(b'\x05\x06')])
-expected output:
+expected output: 514a04011caa503990d446b7dec5d79e19c221ae607fb08b2848c67734d468d6
 ```
 
 ```ignorelang
