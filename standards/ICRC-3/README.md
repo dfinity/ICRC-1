@@ -81,7 +81,7 @@ Validation of block `i` is done by checking the block hash against
 1. it MUST be a [`Value`](#value) of variant `Map`
 2. it MUST contain a field `tx: Map`
     1. `tx` MUST contain a field `op: Text`, aka operation, which uniquely describes the type of the Block. `op` values `approve`, `burn`, `mint` and `xfer` are reserved for ICRC-1 and ICRC-2 Blocks
-2. it MUST contain a field `phash: Blob` which is the [hash](#value-hash) its parent if it has a parent block
+2. it MUST contain a field `phash: Blob` which is the [hash](#value-hash) of its parent if it has a parent block
 
 ## Interaction with other standards
 
