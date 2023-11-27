@@ -96,13 +96,13 @@ ICRC-1 and ICRC-2 use the `tx` field to store input from the user and use the ex
 
 A generic ICRC-1 or ICRC-2 Block:
 
-1. it MUST contain a field `ts: u64` which is the timestamp of when the block was added to the Ledger
+1. it MUST contain a field `ts: Nat64` which is the timestamp of when the block was added to the Ledger
 2. if the `tx` field doesn't specify the fee then it MUST contain a field `fee: Nat` which specifies the fee payed to add this block to the Ledger
 3. its field `tx`
     1. MUST contain a field `amt: Nat` that represents the amount
     2. MUST contain the `fee: Nat` if the top-level `fee` is not set which is when the user didn't specify the expected `fee`
     3. CAN contain the `memo: Blob` field if specified by the user
-    4. CAN contain the `ts: u64` field if specified by the user
+    4. CAN contain the `ts: Nat64` field if specified by the user
 
 ### Account Type
 
@@ -131,7 +131,7 @@ ICRC-1 Account is represented as an `Array` containing the `owner` bytes and opt
 2. it MUST contain a field `tx.from: Account`
 3. it MUST contain a field `tx.spender: Account`
 4. it CAN contain a field `tx.expected_allowance: Nat` if set by the user
-5. it CAN contain a field `tx.expires_at: u64` if set by the user
+5. it CAN contain a field `tx.expires_at: Nat64` if set by the user
 
 ## Specification
 
