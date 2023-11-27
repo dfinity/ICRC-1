@@ -130,7 +130,7 @@ ICRC-1 Account is represented as an `Array` containing the `owner` bytes and opt
 1. the `tx.op` field MUST be `"approve"`
 2. it MUST contain a field `tx.from: Account`
 3. it MUST contain a field `tx.spender: Account`
-4. it CAN contain a field `tx.expected_allowance: u64` if set by the user
+4. it CAN contain a field `tx.expected_allowance: Nat` if set by the user
 5. it CAN contain a field `tx.expires_at: u64` if set by the user
 
 ## Specification
