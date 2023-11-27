@@ -66,7 +66,7 @@ Pseudocode for representation independent hashing of Value, together with test v
 
 ## Blocks Verification
 
-The Ledger MUST certify the last block (tip) recorded. The Ledger MUST allow to download the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate contains a tree with the certified data and the signature. The tree MUST contain two labelled values (leafs):
+The Ledger MUST certify the last block (tip) recorded. The Ledger MUST allow to download the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate is comprised of a tree containing the certified data and the signature. The tree MUST contain two labelled values (leafs):
 1. `last_block_index`: the index of the last block in the chain. The values must be expressed as [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128)
 2. `last_block_hash`: the hash of the last block in the chain
 
