@@ -46,7 +46,7 @@ type Value = variant {
 };
 ```
 
-Servers must serve the block log as list of `Value` where each `Value` represent a single block in the block log.
+Servers must serve the block log as a list of `Value` where each `Value` represent a single block in the block log.
 
 ## Value Hash
 
