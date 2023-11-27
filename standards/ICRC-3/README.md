@@ -57,8 +57,8 @@ This hash function should be used by Ledgers to calculate the hash of the parent
 The hash function is the [representation-independent hashing of structured data](https://internetcomputer.org/docs/current/references/ic-interface-spec#hash-of-map) used by the IC:
 - the hash of a `Blob` is the hash of the bytes themselves
 - the hash of a `Text` is the hash of the bytes representing the text
-- the hash of a `Nat` is the [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128) encoding of the number
-- the hash of an `Int` is the [`sleb128`](https://en.wikipedia.org/wiki/LEB128#Signed_LEB128) encoding of the number
+- the hash of a `Nat` is the hash of the [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128) encoding of the number
+- the hash of an `Int` is the hash of the [`sleb128`](https://en.wikipedia.org/wiki/LEB128#Signed_LEB128) encoding of the number
 - the hash of an `Array` is the hash of the concatenation of the hashes of all the elements of the array
 - the hash of a `Map` is the hash of the concatenation of all the hashed items of the map sorted lexicographically. A hashed item is the tuple composed by the hash of the key and the hash of the value.
 
