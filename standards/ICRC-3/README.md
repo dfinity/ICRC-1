@@ -39,7 +39,7 @@ This loss of information is not an option for `ICRC-3`. The client must receive 
 type Value = variant {
     Blob : blob;
     Text : text;
-    Nat : nat; // do we need this or can we just use Int?
+    Nat : nat;
     Int : int;
     Array : vec Value;
     Map : vec record { text; Value };
@@ -67,7 +67,7 @@ Pseudocode for representation independent hashing of Value, together with test v
 ## Blocks Verification
 
 The Ledger MUST certify the last block (tip) recorded. The Ledger MUST allow to download the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate contains a tree with the certified data and the signature. The tree MUST contain two labelled values (leafs):
-1. `last_block_index`: the index of the last block in the chain. The values must be expressed as big-endian
+1. `last_block_index`: the index of the last block in the chain. The values must be expressed as [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128)
 2. `last_block_hash`: the hash of the last block in the chain
 
 Clients SHOULD download the tip certificate first and then download the block backward starting from `last_block_index` and validate the blocks in the process.
@@ -76,44 +76,62 @@ Validation of block `i` is done by checking the block hash against
 1. if `i + 1 < len(chain)` then the parent hash `phash` of the block `i+1`
 2. otherwise the `last_block_hash` in the tip certificate.
 
+## Generic Block Schema
+
+1. it MUST be a [`Value`](#value) of variant `Map`
+2. it MUST contain a field `tx: Map`
+    1. `tx` MUST contain a field `op: Text`, aka operation, which uniquely describes the type of the Block. `op` values `approve`, `burn`, `mint` and `xfer` are reserved for ICRC-1 and ICRC-2 Blocks
+2. it MUST contain a field `phash: Blob` which is the [hash](#value-hash) its parent if it has a parent block
+
 ## Interaction with other standards
 
-Each standard that adheres to `ICRC-3` must define the list of transactions types they define and/or extend together with their `Value` schema and the function that converts a [`Value`](#value) to that type. Transaction types are well-typed records that are easy to consume by clients.
+Each standard that adheres to `ICRC-3` MUST define the list of block schemas that it introduces. Each block schema MUST:
 
-`Value`s representing blocks must have the following schema properties:
-1. they must be of type `Map`
-1. they must have a field `tx: Map` which describes the transaction inside the block
-1. they must have a field `op: Text` inside `tx` which describes the type of transactions, e.g. "ICRC1_Burn" for `ICRC1_Burn` transactions
-1. all blocks with `index > 0` must have a top-level field called `phash: Blob` which contains the [hash](#value-hash) of the previous block.
+1. extend the [Generic Block Schema](#generic-block-schema)
+2. specify the expected value of `tx.op`. This MUST be unique accross all the standards. `approve`, `burn`, `mint` and `xfer` are reserved for ICRC-1 and ICRC-2
 
-In other words the schema must be:
+## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
 
-```
-type ICRC1_Block = {
-    // The hash of the parent Transaction
-    "phash" : Blob?;
+ICRC-1 and ICRC-2 use the `tx` field to store input from the user and use the external block to store data set by the Ledger. For instance, the amount of a transaction is stored in the field `tx.amt` because it has been specified by the user, while the time when the block was added to the Ledger is stored in the field `ts` because it is set by the Ledger.
 
-    // The timestamp of when the block was
-    // added to the Ledger
-    "ts": u64,
+A generic ICRC-1 or ICRC-2 Block:
 
-    // The effective fee of the block. This is
-    // empty if the user specified a fee in the
-    // transaction tx, otherwise it contains the
-    // fee
-    "fee": Nat?,
+1. it MUST contain a field `ts: u64` which is the timestamp of when the block was added to the Ledger
+2. if the `tx` field doesn't specify the fee then it MUST contain a field `fee: Nat` which specifies the fee payed to add this block to the Ledger
+3. its field `tx`
+    1. MUST contain a field `amt: Nat` that represents the amount
+    2. MUST contain the `fee: Nat` if the top-level `fee` is not set which is when the user didn't specify the expected `fee`
+    3. CAN contain the `memo: Blob` field if specified by the user
+    4. CAN contain the `ts: u64` field if specified by the user
 
-    // The transaction inside the block
-    "tx" : {
-        "op" : Text;
-        ...
-    };
-};
-```
+### Account Type
 
-where the `...` in `"tx"` are the rest of the fields for the specific transaction.
+ICRC-1 Account is represented as an `Array` containing the `owner` bytes and optionally the subaccount bytes.
 
-For instance, [`ICRC-1`](https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1) should define three transactions types - `ICRC1_Mint`, `ICRC1_Burn` and `ICRC1_Transfer` - and the function to convert a `Value` to them in order to adhere to the `ICRC-3` standard.
+### Burn Block Schema
+
+1. the `tx.op` field MUST be `"burn"`
+2. it MUST contain a field `tx.from: Account`
+
+#### Mint Block Schema
+
+1. the `tx.op` field MUST be `"mint"`
+2. it MUST contain a field `tx.to: Account`
+
+#### Transfer Block Schema
+
+1. the `tx.op` field MUST be `"xfer"`
+2. it MUST contain a field `tx.from: Account`
+3. it MUST contain a field `tx.to: Account`
+4. it CAN contain a field `tx.spender: Account`
+
+#### Approve Block Schema
+
+1. the `tx.op` field MUST be `"approve"`
+2. it MUST contain a field `tx.from: Account`
+3. it MUST contain a field `tx.spender: Account`
+4. it CAN contain a field `tx.expected_allowance: u64` if set by the user
+5. it CAN contain a field `tx.expires_at: u64` if set by the user
 
 ## Specification
 
@@ -166,95 +184,5 @@ type DataCertificate = record {
 
 service : {
   icrc3_get_tip_certificate : () -> (opt DataCertificate) query;
-};
-```
-
-## Transaction Types
-
-### [ICRC-1](../ICRC-1/README.md)
-
-#### Account Schema
-
-Account is represented as an `Array` containing the `owner` bytes and optionally the subaccount bytes:
-
-```
-type Account = [ blob(principal); blob(subaccount)? ];
-```
-
-
-#### Base Operation Schema
-
-This schema describes the common `Value` schema for all ICRC-1 operations.
-
-```
-type ICRC1_Common = {
-
-  // The amount in the transaction
-  "amt" : Nat;
-
-  // The expected fee set by the user
-  "fee" : Nat?;
-
-  // The memo added by the user
-  "memo" : Blob?;
-
-  // The time at which the transaction
-  // was created by the user. When set,
-  // the Ledger must deduplicate the
-  // transaction
-  "ts" : u64?;
-};
-```
-
-#### ICRC1_Burn Schema
-
-```
-type ICRC1_Burn = ICRC1_Common and {
-  "op" : "burn";
-  "from" : Account;
-};
-```
-
-#### ICRC1_Mint Schema
-
-```
-type ICRC1_Mint = ICRC1_Common and {
-  "op": "mint";
-  "to": Account;
-};
-```
-
-#### ICRC1_Transfer Schema
-
-```
-type ICRC1_Transfer = ICRC1_Common and {
-  "op": "xfer";
-  "from": Account;
-  "to": Account;
-};
-```
-
-### [ICRC-2](../ICRC-2/README.md)
-
-
-#### ICRC2_Approve Schema
-
-```
-type ICRC2_Approve = ICRC1_Common and {
-  "op": "approve";
-  "from": Account;
-  "spender": Account;
-  "expected_allowance": u64?;
-  "expires_at": u64?;
-};
-```
-
-#### ICRC2_TransferFrom Schema
-
-> Note: ICRC2_TransferFrom extends [ICRC1_Transfer](#icrc1_transfer-schema)
-
-```
-type ICRC2_TransferFrom = ICRC1_Transfer and {
-  "spender" : Account?;
 };
 ```
