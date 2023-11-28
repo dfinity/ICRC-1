@@ -33,7 +33,9 @@ The block log is a list of blocks where each block contains the hash of its pare
 The [candid](https://github.com/dfinity/candid) format supports sharing information even when the client and the server involved do not have the same schema (see the [Upgrading and subtyping](https://github.com/dfinity/candid/blob/master/spec/Candid.md#upgrading-and-subtyping) section of the candid spec). While this mechanism allows to evolve services and clients
 independently without breaking them, it also means that a client may not receive all the information that the server is sending, e.g. in case the client schema lacks some fields that the server schema has.
 
-This loss of information is not an option for `ICRC-3`. The client must receive the same exact data the server sent. For this reason, `ICRC-3` introduces the `Value` type which never changes:
+This loss of information is not an option for `ICRC-3`. The client must receive the same exact data the server sent in order to verify it. Verification is done by hashing the data and checking that the result is consistent with what has been certified by the server.
+
+For this reason, `ICRC-3` introduces the `Value` type which never changes:
 
 ```
 type Value = variant {
