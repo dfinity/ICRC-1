@@ -98,13 +98,13 @@ ICRC-1 and ICRC-2 use the `tx` field to store input from the user and use the ex
 
 A generic ICRC-1 or ICRC-2 Block:
 
-1. it MUST contain a field `ts: Nat64` which is the timestamp of when the block was added to the Ledger
+1. it MUST contain a field `ts: Nat` which is the timestamp of when the block was added to the Ledger
 2. if the `tx` field doesn't specify the fee then it MUST contain a field `fee: Nat` which specifies the fee payed to add this block to the Ledger
 3. its field `tx`
     1. MUST contain a field `amt: Nat` that represents the amount
     2. MUST contain the `fee: Nat` if the top-level `fee` is not set which is when the user didn't specify the expected `fee`
     3. CAN contain the `memo: Blob` field if specified by the user
-    4. CAN contain the `ts: Nat64` field if specified by the user
+    4. CAN contain the `ts: Nat` field if specified by the user
 
 ### Account Type
 
@@ -115,10 +115,44 @@ ICRC-1 Account is represented as an `Array` containing the `owner` bytes and opt
 1. the `tx.op` field MUST be `"burn"`
 2. it MUST contain a field `tx.from: Account`
 
+Example:
+```
+variant { Map = vec {
+    record { "phash"; variant {
+        Blob = blob "\a1\a9p\f5\17\e5\e2\92\87\96(\c8\f1\88iM\0d(tN\f4-~u\19\88\83\d8_\b2\01\ec"
+    }};
+    record { "ts"; variant { Nat = 1_701_108_969_851_098_255 : nat }};
+    record { "tx"; variant { Map = vec {
+        record { "op"; variant { Text = "burn" } };
+        record { "amt"; variant { Nat = 1_228_990 : nat } };
+        record { "from"; variant { Array = vec {
+                variant { Blob = blob "\00\00\00\00\020\00\07\01\01" };
+                variant { Blob = blob "&\99\c0H\7f\a4\a5Q\af\c7\f4;\d9\e9\ca\e5 \e3\94\84\b5c\b6\97/\00\e6\a0\e9\d3p\1a" };
+        }}};
+        record { "memo"; variant { Blob = blob "\82\00\83x\223K7Bg3LUkiXZ5hatPT1b9h3XxJ89DYSU2e\19\07\d0\00"
+        }};
+    }}};
+}};
+```
+
 #### Mint Block Schema
 
 1. the `tx.op` field MUST be `"mint"`
 2. it MUST contain a field `tx.to: Account`
+
+Example:
+```
+variant { Map = vec {
+    record { "ts"; variant { Nat = 1_675_241_149_669_614_928 : nat } };
+    record { "tx"; variant { Map = vec {
+        record { "op"; variant { Text = "mint" } };
+        record { "amt"; variant { Nat = 100_000 : nat } };
+        record { "to"; variant { Array = vec {
+                variant { Blob = blob "Z\d0\ea\e8;\04*\c2CY\8b\delN\ea>]\ff\12^. WGj0\10\e4\02" };
+        }}};
+    }}};
+}};
+```
 
 #### Transfer Block Schema
 
@@ -127,13 +161,57 @@ ICRC-1 Account is represented as an `Array` containing the `owner` bytes and opt
 3. it MUST contain a field `tx.to: Account`
 4. it CAN contain a field `tx.spender: Account`
 
+Example:
+```
+variant { Map = vec {
+    record { "fee"; variant { Nat = 10 : nat } };
+    record { "phash"; variant { Blob =
+        blob "h,,\97\82\ff.\9cx&l\a2e\e7KFVv\d1\89\beJ\c5\c5\ad,h\5c<\ca\ce\be"
+    }};
+    record { "ts"; variant { Nat = 1_701_109_006_692_276_133 : nat } };
+    record { "tx"; variant { Map = vec {
+        record { "op"; variant { Text = "xfer" } };
+        record { "amt"; variant { Nat = 609_618 : nat } };
+        record { "from"; variant { Array = vec {
+                variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
+                variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
+        }}};
+        record { "to"; variant { Array = vec {
+            variant { Blob = blob " \ef\1f\83Zs\0a?\dc\d5y\e7\ccS\9f\0b\14a\ac\9f\fb\f0bf\f3\a9\c7D\02" };
+            variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
+        }}};
+    }}};
+}};
+```
+
 #### Approve Block Schema
 
 1. the `tx.op` field MUST be `"approve"`
 2. it MUST contain a field `tx.from: Account`
 3. it MUST contain a field `tx.spender: Account`
 4. it CAN contain a field `tx.expected_allowance: Nat` if set by the user
-5. it CAN contain a field `tx.expires_at: Nat64` if set by the user
+5. it CAN contain a field `tx.expires_at: Nat` if set by the user
+
+Example:
+```
+variant { Map = vec {
+    record { "fee"; variant { Nat = 10 : nat } };
+    record { "phash"; variant {
+        Blob = blob ";\f7\bet\b6\90\b7\ea2\f4\98\a5\b0\60\a5li3\dcXN\1f##2\b5\db\de\b1\b3\02\f5"
+    }};
+    record { "ts"; variant { Nat = 1_701_167_840_950_358_788 : nat } };
+    record { "tx"; variant { Map = vec {
+        record { "op"; variant { Text = "approve" } };
+        record { "amt"; variant { Nat = 18_446_744_073_709_551_615 : nat } };
+        record { "from"; variant { Array = vec {
+                variant { Blob = blob "\16c\e1\91v\eb\e5)\84:\b2\80\13\cc\09\02\01\a8\03[X\a5\a0\d3\1f\e4\c3{\02" };
+        }}};
+        record { "spender"; variant { Array = vec {
+            variant { Blob = blob "\00\00\00\00\00\e0\1dI\01\01" };
+        }}};
+    }}};
+}}};
+```
 
 ## Specification
 
