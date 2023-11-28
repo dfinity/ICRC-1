@@ -4,28 +4,28 @@ package(default_visibility = ["//visibility:public"])
 exports_files(["replica", "ic-starter", "canister_sandbox", "sandbox_launcher","ic-test-state-machine"])
 """
 
-IC_COMMIT_HASH = "02138563741c87cefed2b223e31f25b59623307a"
+IC_COMMIT_HASH = "09c3000df0a54c470994ceb5bc33bd8457b02fe7"
 
 BINARY_HASHES = {
     "ic-starter.gz": {
-        "linux": "b491c82cae8ebed2e1dc39dbc884c82ce2b4b5a3b67514e37c4edcaca65f296a",
-        "mac os x": "7f690883abeca846c29a84fd77340ce1812abeb2e23a48f30dcc961603cffd49",
+        "linux": "8d8c51033cb2cd20049ca4e048144b895684d7a4fdbd07719476797b53ebafb5",
+        "mac os x": "1f33354049b6c83c8be06344d913a8bcfdb61ba9234706a8bf3cdb3d620723ab",
     },
     "replica.gz": {
-        "linux": "12d1e52f240ec5c6c4a1b78c01e0dddcd05de93bcbec18c6d9b3fdbc5b5a713c",
-        "mac os x": "757def96a7efdbe05fb4291a8f8a9fda194965cfc5cec2edabb82fa825119b22",
+        "linux": "2cd30cca1818b86785b3d9b808612b7c286252363806c70d196c2fcfa48d1188",
+        "mac os x": "f320fec5733182e1ceb0dd03d19dc5bec01a1bf7763eb282e3fe14b1e1a6e18b",
     },
     "canister_sandbox.gz": {
-        "linux": "f4f3d4f1661adc6ba038af0723e7fc794fc38f445a7947a500305c5771442139",
-        "mac os x": "b60d3ea3534bb68acaa639d348a5354021d9a3a91271c3c6b0c964e2ee98de2b",
+        "linux": "11849a543a162f0f25b3dc10f17c177ea054e4fdb8a8c86509c7f87988ce2913",
+        "mac os x": "4acdd46cf9b1e5be987f6ce72d0118bf9039162e3ff80cd32056da136f753011",
     },
     "sandbox_launcher.gz": {
-        "linux": "eaacaab81203b6a8a34a5c96c413d4e2491c30e02a881597cb5cf62fe85146b8",
-        "mac os x": "8aaff3721cb239454e50f51a0fd0e8e7f834b379354f5a0f8d874ff1d805c0b0",
+        "linux": "96c416bf98724aa3bf72053d06d559f007f8655261b48f435f9104b605c8f77f",
+        "mac os x": "ed0bc2eeaf282012c8475ddf1ca3369488dc80d385e5b194d2823ae84514ff8a",
     },
     "ic-test-state-machine.gz": {
-        "linux": "0e29029a7774ea19a37dd670ce105cb54b7e492f246f95adc506b95a32ade8ab",
-        "mac os x": "3d9bbee8f92b4aaf48e1e390689ea96797fe9cb379fcd803bdfef36393d1233a",
+        "linux": "2fb622770cfdf815f74f0e2fbaa51795c74ecba334883a4762507aef90352c15",
+        "mac os x": "c8c7a6daa921b243cb6f1825dd7f80a7a7543234476d50f7becda072b1725c5c",
     },
 }
 
