@@ -99,7 +99,7 @@ ICRC-1 and ICRC-2 use the `tx` field to store input from the user and use the ex
 A generic ICRC-1 or ICRC-2 Block:
 
 1. it MUST contain a field `ts: Nat` which is the timestamp of when the block was added to the Ledger
-2. if the `tx` field doesn't specify the fee then it MUST contain a field `fee: Nat` which specifies the fee payed to add this block to the Ledger
+2. if the operation requires a fee and if the `tx` field doesn't specify the fee then it MUST contain a field `fee: Nat` which specifies the fee payed to add this block to the Ledger
 3. its field `tx`
     1. MUST contain a field `amt: Nat` that represents the amount
     2. MUST contain the `fee: Nat` field if the user specifies the fee in the request. If the user does not specify the fee in the request, then this field is not set and the top-level `fee` is set.
