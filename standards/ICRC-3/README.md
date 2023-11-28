@@ -9,7 +9,7 @@
 A Block contains a Transaction. Transactions are an enumeration of different types of operation (e.g. burn, mint, transfer, approve, ....).
 
 `ICRC-3` specifies:
-1. A generic format for sharing the block log without information loss. This includes the fields that a block must have.
+1. A generic format for sharing the block log without information loss. This includes the fields that a block must have
 2. A mechanism to verify the block log on the client side to allow downloading the block log via query calls
 3. A way for new standards to define new transactions types compatible with ICRC-3
 4. Two new endpoints, one to get the blocks and one to get the last block (tip) certification
@@ -227,6 +227,25 @@ type Value = variant {
     Map : vec record { text; Value };
 };
 
+type GetArchivesArgs = record {
+    // The last archive seen by the client.
+    // The Ledger will return archives coming
+    // after this one if set, otherwise it
+    // will return the first archives.
+    from : opt principal;
+};
+
+type GetArchivesResult = vec {
+    // The id of the archive
+    canister_id : principal;
+
+    // The first block in the archive
+    start : nat;
+
+    // The last block in the archive
+    end : nat;
+}
+
 type GetBlocksArgs = vec record { start : nat; length : nat };
 
 type GetBlocksResult = record {
@@ -240,11 +259,12 @@ type GetBlocksResult = record {
     // to the Ledger, i.e. archived blocks
     archived_blocks : vec record {
         args : GetBlocksArgs;
-        callback : func (GetTransactionsArgs) -> (GetTransactionsResult) query;
+        callback : func (GetBlocksArgs) -> (GetBlocksResult) query;
     };
 };
 
 service : {
+    icrc3_get_archives : (GetArchivesArgs) -> (GetArchivesResult) query;
     icrc3_get_blocks : (GetBlocksArgs) -> (GetBlocksResult) query;
 };
 ```
