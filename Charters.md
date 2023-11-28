@@ -1,6 +1,115 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2023-11-14
+Slide deck (n.a.), [[recording](https://drive.google.com/file/d/1qc1iND7UXKG6l4eQtXdt-L3haMpnCQ-y/view?usp=sharing](https://drive.google.com/file/d/1Hz3kI8_Bg5mu_kmywQuIhv4E3-Xwxckc/view?usp=share_link))
+
+**ICRC-3**
+
+* Mario give an overview of current proposal, there have been changes in the recent weeks
+* Plan for this meeting is to address all questions
+* Naming: Called *block log*, not transaction log as it used to be
+  * Was controversial change
+  * Reason: on IC, always blocks used for ledgers, not transactions
+  * This was feedback he received
+* Overview of ICRC-3
+  * Generic format for sharing block logs
+  * Verifying block log on client side; don't certify every block, but only most recent block
+  * New standards can define new transactions
+  * Two new endpoints: getting blocks and getting last block
+* Value
+  * Rationale: sharing data in Candid, Protobuf etc. has downside of possibly loosing some data if client does not have same schema as server; client decodes only what it knows
+    * Don't want ledger to have rigid block format
+    * `Value` used to encode data; `Value` will not change over time, can represent any type of information, like JSON
+    * Client understands the structure of `Value` as it never changes
+* `Value` hash
+  * Based on *representation independent hashing* of IC
+  * Allows us that everyone can compute hash of a `Value` in the same way
+  * Representation independent hashing now defined as part of ICRC-3, incl. test vectors
+    * Based on IC's representation independent hashing
+  * Austin: array is missing expected output; mistake that needs to be fixed
+    * Austin points out his rep-indy-hash library in Motoko: RepIndyHash.mo
+    * `Value` does not do a good job in guiding user what they should do with certain data types; how to encode bool? text true or nat 0, 1?
+    * Mario: we don't have bool because it's not present in the definition of representation independent hashing
+    * We agree that it would be nice if there were a way to represent this; pick lowest-cost data type like an integer
+    * Dieter wonders why we repeat the specification of the hashing
+      * The representation independent hashing of IC is on CBOR values, still need to explain how hasing is done on Candid values
+      * Mario will have a look whether we need to re-specify it or whether we can reuse the IC specification for this
+* Block verification
+  * Has been refined since the discussions with the WG
+  * Client downloading blocks
+    * `get_tip_certificate`: retrieve certificate; contains `last_block_index` and `last_block_hash` at least; this allows the canister to add anything else in there if needed
+    * Validate certificate; signed by a canister on right subnet
+    * Verify that hash tree contains the hash of custom data from canister; use `certified_data_path`; verify hash tree; ...; know certified hash of most recent block
+  * Can download blocks starting from last block; check hash backwards to validate chain
+  * Mario / Bodgan want to explain this properly in some document in the future
+  * Austin's question on namespacing
+    * Spec assumes that `last_block_index` and `last_block_hash` are top-level leaves in hash tree of canister
+    * What if canister contains more than one standard / token?
+    * Valid point, currently assuming that certificate is used for ICRC ledgers
+    * Mario thinks it would be weird to use token name as namespace, but he is open; no strong opinion
+    * Austin: agrees now: ICRC-1/-2 have no concept of multi-token ledger; thus ICRC-3 does not necessarily need this either; multi-token ledger would be different standard
+  * Discussion on whether block can contain multiple transactions
+    * Mario: effectively, a block contains one transaction; in theory, could it be multiple
+    * We consider one token per ledger in ICRC standard, ICRC-3 should agree
+    * Austin: if we want to be really safe, we can add icrc3 prefix in leaf
+    * Mario: current ledgers don't have this in place; but endpoint is prefixed, this was reason to not prefix the output
+    * Austin: probably not an urgent issue to have this now to be able to certify also other things in a ledger canister; thinks it's fine if the current scheme is fine if already deployed
+    * Ben: batch tx: 1 block vs. 1000 blocks
+    * Mario: block is very cheap; the 1-tx-per-block is by design; 1 hash per block
+      * This will be explicit in the standard
+    * Changing to multiple tx would not be straightforward; encoding in `Value`; representation independent hashing would still work
+    * Ben: Want to use ICRC-3 also for ICRC-7 where by default the API is batched
+    * Mario: in theory you could have multiple; constrained to map; map typically used for structs; needs to think about it a bit more; not clear what side effects it would have; ICRC-3 would have to specify the encoding of multiple txs in a block
+      * Can do a benchmark to see whether a hash per block is expensive for batch tx; blocks should be very cheap; Mario will try this out before considering multiple tx per block
+    * Bogdan: Can't we use the recursive structure of Value to encode a batch?
+    * Mario: if you want to bend the rules a lot, can have special op that contains list of txs
+    * Dieter: important part of handling batch is that it can save space (not all values are repeated in all txs of a batch)
+      * Ben: yes, would have same `from` in all txs in batch; also save on hashes
+    * Mario: why not add new data type for batch transfer?
+      * Ben: all block explorers etc. need to know about this then
+        * If time needed to have a block per tx is not that much larger, we should keep it
+    * Mario: need to decide whether this is a blocker for the standard
+* Levi
+  * Can we remove the `tx : Map` (point 2) in the "Interaction with other standards" section?
+    * Then standards can define their own schema
+  * Mario: needs to understand whether it makes sense; makes it more complex to write explorers; need to consider recursive types of txs
+* Interaction with other standards
+  * Top level is `Map`
+  * Then `tx` that defines what transaction contains
+  * ICRC-1/-2 defined as `ICRC1_Block`
+  * Discussion on required top-level fields
+    * Should every ICRC-3 block have a top-level timestamp?
+      * Austin: Optional top-level things make things more complicated for generic implementation
+      * Timestamp in tx is sent by user, one in top-level is set by ledger
+      * Ben: thinks top-level timestamp should not be optional; expected by explorers
+    * ICRC-7 will likely not have a fee, thus not needed
+    * Mario: can always add new fields; information ledger sets itself; tx is what user sets with submitted transaction; example: SNS and ckBTC ledger have a fee collector: 2 additional fields at top level that represent fee collector for that block; by using `Value` instead of Candid record, client can calculate correct hash as it receives the fields; when it converts into ICRC-3 block, the fields are lost
+    * Why is fee not in tx data?
+      * It can be in either; if user specifies fee, it's only in tx; if they don't, it's only on top level; it's either one or the other, never both
+    * Should we specify necessary fields for any other standard? not only focus on ICRC-1/-2?
+    * We could remove fee for ICRC-3 and have it only in implementations that require it
+    * Austin: more information is usually better, just not too much
+    * Levi: should have only in ICRC-3 what is necessary for the general concept to work, everything else is defined per standard
+    * Fee
+      * Austin: Assumption it is paid in native currency of ledger; need not always be the case, could be cycles or another currency
+        * Might require more complex representation to represent fee in the general case
+      * Mario: convinced that we can remove `fee` from ICRC-3 and leave it to specific standard
+    * Austin: could have best practice that `tx` and `ts` should always be there
+    * Discussion on moving `op` a level up; cannot do so because ledgers are already deployed; cannot realistically update the ledgers any more, no control over SNSs any more
+    * Agreement to remove `ts` and `fee`
+    * Dieter: ICRC-1 is finished and cannot be extended any more to put those scheme elements there; Where would we put them? Need to put those somewhere
+      * We can put the block format for ICRC-1 and ICRC-2 in ICRC3; future standards can put their specifics into their standard
+    * Clarify that ICRC-3 is not tied to ICRC-1/-2, but is generic
+    * Mario will improve specification on interaction with other standards and why we define ICRC-1/-2 blocks inside ICRC-3
+    * The group agrees to have a section with generic block format and one for ICRC-1/-2 block format
+      * What's there describes the ICRC-1 block, so can remain
+* Mario wonders whether the pseudocode format for block spec we used is clear
+  * Optional: It's not the element that's optional, it's the entire line; need to make this clearer
+* Next time
+  * Look at the performed changes
+
+
 ## 2023-10-31
 Slide deck (n.a.), [recording](https://drive.google.com/file/d/1qc1iND7UXKG6l4eQtXdt-L3haMpnCQ-y/view?usp=sharing)
 
