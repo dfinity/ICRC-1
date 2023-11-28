@@ -1,5 +1,5 @@
 use candid::Principal;
-use ic_agent::agent::http_transport::ReqwestHttpReplicaV2Transport;
+use ic_agent::agent::http_transport::reqwest_transport::ReqwestHttpReplicaV2Transport;
 use ic_agent::identity::BasicIdentity;
 use ic_agent::Agent;
 use icrc1_test_env_replica::ReplicaLedger;

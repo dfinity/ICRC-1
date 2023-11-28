@@ -158,7 +158,7 @@ async fn test_replica() {
                 owner: p1.sender().unwrap(),
                 subaccount: None
             },
-            amount: Nat::from(100_000_000)
+            amount: Nat::from(100_000_000u32)
         }],
         minting_account: Account {
             owner: agent.get_principal().unwrap(),
@@ -167,7 +167,7 @@ async fn test_replica() {
         token_name: "Test token".to_string(),
         token_symbol: "XTK".to_string(),
         decimals: 8,
-        transfer_fee: Nat::from(10_000),
+        transfer_fee: Nat::from(10_000u16),
     })
     .unwrap();
 
@@ -197,7 +197,7 @@ async fn test_state_machine() {
                 owner: p1.sender().unwrap(),
                 subaccount: None
             },
-            amount: Nat::from(100_000_000)
+            amount: Nat::from(100_000_000U32)
         }],
         minting_account: Account {
             owner: minter.sender().unwrap(),
@@ -206,7 +206,7 @@ async fn test_state_machine() {
         token_name: "Test token".to_string(),
         token_symbol: "XTK".to_string(),
         decimals: 8,
-        transfer_fee: Nat::from(10_000),
+        transfer_fee: Nat::from(10_000u16),
     })
     .unwrap();
 
