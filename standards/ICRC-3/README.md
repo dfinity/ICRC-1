@@ -104,7 +104,7 @@ A generic ICRC-1 or ICRC-2 Block:
     1. MUST contain a field `amt: Nat` that represents the amount
     2. MUST contain the `fee: Nat` if the top-level `fee` is not set which is when the user didn't specify the expected `fee`
     3. CAN contain the `memo: Blob` field if specified by the user
-    4. CAN contain the `ts: Nat` field if specified by the user
+    4. CAN contain the `ts: Nat` field if the user sets the `created_at_time` field in the request.
 
 ### Account Type
 
