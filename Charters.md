@@ -2,7 +2,7 @@
 
 
 ## 2023-11-14
-Slide deck (n.a.), [[recording](https://drive.google.com/file/d/1qc1iND7UXKG6l4eQtXdt-L3haMpnCQ-y/view?usp=sharing](https://drive.google.com/file/d/1Hz3kI8_Bg5mu_kmywQuIhv4E3-Xwxckc/view?usp=share_link))
+Slide deck (n.a.), [recording](https://drive.google.com/file/d/1Hz3kI8_Bg5mu_kmywQuIhv4E3-Xwxckc/view?usp=share_link)
 
 **ICRC-3**
 
