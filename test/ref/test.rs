@@ -197,7 +197,7 @@ async fn test_state_machine() {
                 owner: p1.sender().unwrap(),
                 subaccount: None
             },
-            amount: Nat::from(100_000_000U32)
+            amount: Nat::from(100_000_000u32)
         }],
         minting_account: Account {
             owner: minter.sender().unwrap(),
