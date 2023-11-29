@@ -102,7 +102,7 @@ A generic ICRC-1 or ICRC-2 Block:
 2. if the operation requires a fee and if the `tx` field doesn't specify the fee then it MUST contain a field `fee: Nat` which specifies the fee payed to add this block to the Ledger
 3. its field `tx`
     1. MUST contain a field `amt: Nat` that represents the amount
-    2. MUST contain the `fee: Nat` field if the user specifies the fee in the request. If the user does not specify the fee in the request, then this field is not set and the top-level `fee` is set.
+    2. MUST contain the `fee: Nat` field for operations that require a fee if the user specifies the fee in the request. If the user does not specify the fee in the request, then this field is not set and the top-level `fee` is set.
     3. CAN contain the `memo: Blob` field if specified by the user
     4. CAN contain the `ts: Nat` field if the user sets the `created_at_time` field in the request.
 
