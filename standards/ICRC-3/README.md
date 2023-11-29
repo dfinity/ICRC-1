@@ -90,7 +90,14 @@ Validation of block `i` is done by checking the block hash against
 Each standard that adheres to `ICRC-3` MUST define the list of block schemas that it introduces. Each block schema MUST:
 
 1. extend the [Generic Block Schema](#generic-block-schema)
-2. specify the expected value of `tx.op`. This MUST be unique accross all the standards. `approve`, `burn`, `mint` and `xfer` are reserved for ICRC-1 and ICRC-2
+2. specify the expected value of `tx.op`. This MUST be unique accross all the standards. `approve`, `burn`, `mint` and `xfer` are reserved for ICRC-1 and ICRC-2. An ICRC-x standard MUST use namespacing for its op identifiers using the scheme:
+```
+op = icrc_number op_name
+icrc_number = nonzero_digit *digit
+nonzero digit = "1" "2" "3" "4" "5" "6" "7" "8" "9"
+digit = "0" "1" "2" "3" "4" "5" "6" "7" "8" "9"
+op_name = a-z *(alphanumeric \ "_" \ "-")
+```
 
 ## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
 
