@@ -106,6 +106,8 @@ A generic ICRC-1 or ICRC-2 Block:
     3. CAN contain the `memo: Blob` field if specified by the user
     4. CAN contain the `ts: Nat` field if the user sets the `created_at_time` field in the request.
 
+Operations that require paying a fee: Transfer, and Approve. 
+
 ### Account Type
 
 ICRC-1 Account is represented as an `Array` containing the `owner` bytes and optionally the subaccount bytes.
