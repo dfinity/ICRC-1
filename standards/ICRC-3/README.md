@@ -253,7 +253,7 @@ type GetArchivesResult = vec record {
 
     // The last block in the archive
     end : nat;
-}
+};
 
 type GetBlocksArgs = record { start : nat; length : nat };
 
