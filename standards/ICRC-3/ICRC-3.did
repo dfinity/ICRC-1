@@ -15,7 +15,7 @@ type GetArchivesArgs = record {
     from : opt principal;
 };
 
-type GetArchivesResult = vec {
+type GetArchivesResult = record {
     // The id of the archive
     canister_id : principal;
 
