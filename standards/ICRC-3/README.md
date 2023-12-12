@@ -244,7 +244,7 @@ type GetArchivesArgs = record {
     from : opt principal;
 };
 
-type GetArchivesResult = vec {
+type GetArchivesResult = vec record {
     // The id of the archive
     canister_id : principal;
 
@@ -255,7 +255,7 @@ type GetArchivesResult = vec {
     end : nat;
 }
 
-type GetBlocksArgs = vec record { start : nat; length : nat };
+type GetBlocksArgs = record { start : nat; length : nat };
 
 type GetBlocksResult = record {
     // Total number of blocks in the block log
