@@ -26,7 +26,7 @@ type GetArchivesResult = vec record {
     end : nat;
 };
 
-type GetBlocksArgs = vec record { start : nat; length : nat };
+type GetBlocksArgs = record { start : nat; length : nat };
 
 type GetBlocksResult = record {
     // Total number of blocks in the
