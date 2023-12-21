@@ -1,6 +1,57 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2023-11-28
+Slide deck (), [recording](https://drive.google.com/file/d/1N55ZqH7P3Nak8yOIGJGbEGQeiiB5_cS8/view?usp=share_link)
+
+**ICRC-3**
+
+* Mario made changes to ICRC-3 based on WG feedback
+* Presentation of proposal for the standard
+* Generic block schema
+  * ICRC-3 block is of type map
+  * Contains tx of type map
+  * tx must contain an operation
+  * Hash
+  * Removed timestamp and fee
+  * This is more generic than before for other standards also
+* For other standards, we can prefix operation with ICRC number for namespacing purposes
+* Future opcodes should prepend or append ICRC standard number to the opcode
+* This is conservative and keeps it wide open to compatibility with future standards
+* New standard adds new fields to the generic schema and defines its operation
+* Generic ICRC-1/-2 schema
+  * Must contain timestamp when block was created
+  * Fee must be added to block if tx does not contain fee field (when it's specified by user): reason: people should be able to recompute balances, even if fee not set by user
+  * Tx
+* Schemas for the different transactions
+* People on call agree that the proposal is suitable
+* Questions on the PR that have been answered
+  * Why use `Value`?
+    * Gist is that if mix well-structured data with a `Value`, makes it more complex in code
+  * Austin: ICRC-30 approvals
+    * In ICRC-1, if too many accounts, those with smallest amounts are trashed
+    * If in ICRC-2, there are too many approvals, are they removed?
+      * Yes, approvals can be pruned
+      * If not enough, small balances can be burned in ICRC-1
+  * Can we choose direction of iteration when querying blocks?
+    * Goal of ICRC-3 is to access block log with simple API
+    * Should keep it simple and not allow both directions
+    * Discussion on indexes
+* Presentation of block verification
+  * Specified now also for the empty ledger
+* Can go into voting at the WG level
+* SNS ledgers are compatible with the proposal
+* Discussion on fee in schema of blocks
+* Next steps
+  * Forum post
+  * WG vote
+  * NNS proposal
+* Topics for next meeting
+  * ICRC-4?
+  * Indexing to complement ICRC-3 for wallets
+  * Pre-signed transactions
+
+
 ## 2023-11-14
 Slide deck (n.a.), [recording](https://drive.google.com/file/d/1Hz3kI8_Bg5mu_kmywQuIhv4E3-Xwxckc/view?usp=share_link)
 
