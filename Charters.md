@@ -1,8 +1,89 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2023-12-12
+Slide deck: n.a., [recording](https://drive.google.com/file/d/1Aqq3tJWh4ke0XPba42KX5MttYaoWFKQN/view?usp=share_link)
+
+**Fee collector**
+
+* Not standardized yet
+* ICRC-1 ledgers have `fee_col` and `fee_col_block` fields
+* `fee_col` is account to which fees should be goind
+* `fee_col_block` is index of block where fee collector account has been defined
+* Both fields cannot be set together
+* Done like this to save space
+* Those fields are part of a transaction when you make a transfer or approve
+* Proposal to make new standard for the fee collector
+  * Proposal is efficient
+* Without standard, clients cannot recompute the balances of a ledger
+* Why not simply implement as transfer?
+  * Doubles size of ledger, that's why it's not done
+  * Also, fee "transaction" is not a real transaction, but part of another one
+* Austin: What about adaptive fees, based on who you are or what you are doing?
+  * Could have fees dynamically go to different people? E.g., if you refer someone, fees could go to them for 6 months
+  * Interesting, but probably for another standard
+* Austin
+  * Should define this quickly as a standard
+* Dieter
+  * Fee collector as explained is implemented in the ledger and cannot be changed any more
+  * This should be one instance that we standardize
+  * Should be open for other implementations thereof in the future
+* Austin
+  * Should have a small ICRC that defines the files required for the fee collector
+  * Then everyone who builds an index canister or wallet can do so
+* Dieter
+  * Fee collector references back to block that defines the account for saving space
+* Dieter and Mario can do such a standard
+  * Early next year
+* Austin
+  * This proposal might even support different fee collectors used by different txs
+  * Update: not sure, because how would you decide which block to use for which tx
+* Austin
+  * Would prefer to have a specific fee collector block type
+  * We think it's implemented the other way
+  * People agree that a separate block type would be best
+
+**ICRC-4 batch transactions**
+
+* May want to align it with the batch patterns of ICRC-7
+  * This one is maybe more general, though, in terms of what batch tx means
+* ICLighthouse comments
+  * Wanted atomicity
+  * Did not like pre-validate
+    * It checks whether it is expected to go through; but does not guarantee, which is already better than not having it
+    * Might be fine to leave it out of the standard
+* Batch fees
+  * Batch txs are cheaper than a batch as there is no ingress fee
+    * Note that long-term storage is a major component of the fee
+    * Would have one fee per batch, but no individual fees per tx
+  * Issues with single batch fee: Who pays the fee?
+  * Which block would fee go into?
+    * Not clear for a batch fee
+  * Simpler to have fee per tx, can be lower to reflect cheaper batch tx
+    * Might be metadata that specifies lower fee for batch tx
+    * This would be the easiest way to handle fees for batch tx
+  * Can think of both small and large batches; large: token distributions
+  * Cycles cost are much cheaper than the fees
+    * Reason is eternal storage of the ledger history
+  * Probably remain with fee per tx
+* How much to align ICRC-4 with ICRC-7 batch API
+  * As much as we can, clearly
+  * ICRC-4 is more generic; no token ids
+  * ICRC-7 is somewhat more constrained
+  * Timestamp and memo at the top level, all tx of batch have same memo
+    * ICRC-7 has memo on the top level for deduplication reasons
+    * Do we want to have a memo for each tx
+      * Update: later, Austin concluded that we may not want separate memo per tx in ICRC-7
+    * Tx memo use cases: tipping, games
+    * Top-level memo is constraining those use cases
+    * Would write both memos to the blocks if we had tx memos
+    * Deduplication responds with block index in case of resubmission; this is an issue for ICRC-7
+      * Can return first block, but that still needs to be specified
+* Austin will fork ICRC-4 and provide an updated version
+
+
 ## 2023-11-28
-Slide deck (), [recording](https://drive.google.com/file/d/1N55ZqH7P3Nak8yOIGJGbEGQeiiB5_cS8/view?usp=share_link)
+Slide deck: n.a., [recording](https://drive.google.com/file/d/1N55ZqH7P3Nak8yOIGJGbEGQeiiB5_cS8/view?usp=share_link)
 
 **ICRC-3**
 
