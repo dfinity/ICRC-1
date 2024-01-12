@@ -1,6 +1,50 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2024-01-09
+Slide deck: n.a., [recording](https://drive.google.com/file/d/1L2lmgsyN4J3ORWVceMEOToI-XLCmTwUp/view?usp=share_link)
+
+**ICRC-4 batch transactions**
+
+* Austin has updated the ICRC-7 draft to be more aligned with ICRC-7
+  * Made it as simple as possible
+  * Did not deal with batch approval and transfer_from
+* Austin walks us through the [ICRC-4 draft](https://github.com/skilesare/ICRC/blob/main/ICRCs/ICRC-4/ICRC-4.md)
+  * `icrc_4transfer_batch` method
+    * Memo and creation timstamp at the top level only
+      * Used for deduplication
+      * In non-batch regular implementation: Deduping representation independent hash of each user-provided tx
+      * For batch: different: use representation independent hash of all BatchTransferArgs, not of timestamp and memo and other batch-level data; would be lots of extra work to include this also; logic of non-batch tx cannot be reused fully
+    * Bogdan wonders why the memo and timestamp is not in every tx, but only the batch; creationt timestamop might be shared even, but memo should not
+      * With archive canisters, space should not be that much a limiting factor
+      * Thinks Austin's proposal is harder to implement than it needs to be because of not exactly reusing all non-batch logic, but being required to implement something extra
+      * If atomic objects we care about are tx, and batching is just a mechanism to transport them to the ledger, would be easier to not make those optimizations
+    * Bogdan
+      * Creation time should be the same for all elements in the batch, can be provided at the top level
+      * Memo should be defined per transaction
+      * This makes everthing more composable as tx contained in a batch can be handled like non-batch tx
+    * Austin argues why not to replicate the memo
+      * Memo could point to data for all tx in a batch; similar for ICRC-7
+      * Indeed, only a per-batch memo takes away some composability
+    * Bogdan
+      * If creation timestamp would have been mandatory from beginning on, it would have simplified a lot, but this was taken over from an earlier design
+      * Bogdan thinks it became optional like this historically: we looked at the related Bitcoin data structure; there you set the Bitcoin chain height locally; if clients do not have it, they cannot submit it; we used the subnet chain height also initally, but changed it to time, but kept the optional qualifier; no good reason any more for it to be optional
+      * Can we imagine a situation where creation timestamp should not be shared?
+      * If we can make creation time mandatory, everything is run through deduplication; would be simpler; no real benefit of having it optional, it's historically motivated
+      * Every certified response from the IC contains time, so should not be problem to provide proper timestamp for a client
+    * Proposal
+      * Creation timestamp at the batch level only;
+      * Memo in each transaction of the batch
+      * We should also specify that the creation timestamp should be propagated to each transaction when processing the batch as this is required for applying the same logic for deduplication as for non-batch transactions
+      * Creation timestamp should be propagated to the individual transactions of the batch; then the same algorithm can be used for deduplication
+    * ICRC-7 should be updated to be in line with those decisions
+      * Have both creation timestamp and memo in each transaction as well
+  * Batch fees per tx
+    * Austin: Allow for specifying alternative fee per tx for batch tx?
+      * Is a variable fee OK? implemented by claiming very high fee and charging something lower based on dynamic information
+    * We decided to keep the batch fee as it is optional, but it gives extra flexibility
+
+
 ## 2023-12-12
 Slide deck: n.a., [recording](https://drive.google.com/file/d/1Aqq3tJWh4ke0XPba42KX5MttYaoWFKQN/view?usp=share_link)
 
