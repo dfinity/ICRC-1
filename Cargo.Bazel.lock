@@ -1,5 +1,5 @@
 {
-  "checksum": "942cd82014b8c6eda3ee0d7071384fcc88385b6eba317f44e868d48d42a9589b",
+  "checksum": "e043e2e8975a80ddea9541376c4d638403581d88f3e857f5c7bdf34cac2ac9bf",
   "crates": {
     "addr2line 0.21.0": {
       "name": "addr2line",
@@ -4931,9 +4931,9 @@
       },
       "license": "Apache-2.0"
     },
-    "icrc1-test-env 0.1.1": {
+    "icrc1-test-env 0.1.2": {
       "name": "icrc1-test-env",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "repository": null,
       "targets": [
         {
@@ -4982,13 +4982,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2"
       },
       "license": "Apache-2.0"
     },
-    "icrc1-test-env-replica 0.1.1": {
+    "icrc1-test-env-replica 0.1.2": {
       "name": "icrc1-test-env-replica",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "repository": null,
       "targets": [
         {
@@ -5045,13 +5045,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2"
       },
       "license": "Apache-2.0"
     },
-    "icrc1-test-env-state-machine 0.1.1": {
+    "icrc1-test-env-state-machine 0.1.2": {
       "name": "icrc1-test-env-state-machine",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "repository": null,
       "targets": [
         {
@@ -5100,13 +5100,13 @@
           ],
           "selects": {}
         },
-        "version": "0.1.1"
+        "version": "0.1.2"
       },
       "license": "Apache-2.0"
     },
-    "icrc1-test-replica 0.1.1": {
+    "icrc1-test-replica 0.1.2": {
       "name": "icrc1-test-replica",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "repository": null,
       "targets": [
         {
@@ -5146,13 +5146,13 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.1.1"
+        "version": "0.1.2"
       },
       "license": "Apache-2.0"
     },
-    "icrc1-test-runner 0.1.1": {
+    "icrc1-test-runner 0.1.2": {
       "name": "icrc1-test-runner",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "repository": null,
       "targets": [],
       "library_target_name": null,
@@ -5190,13 +5190,13 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.1.1"
+        "version": "0.1.2"
       },
       "license": "Apache-2.0"
     },
-    "icrc1-test-suite 0.1.1": {
+    "icrc1-test-suite 0.1.2": {
       "name": "icrc1-test-suite",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "repository": null,
       "targets": [
         {
@@ -5232,7 +5232,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.1.1"
+        "version": "0.1.2"
       },
       "license": "Apache-2.0"
     },
@@ -12486,12 +12486,12 @@
   },
   "binary_crates": [],
   "workspace_members": {
-    "icrc1-test-env 0.1.1": "test/env",
-    "icrc1-test-env-replica 0.1.1": "test/env/replica",
-    "icrc1-test-env-state-machine 0.1.1": "test/env/state-machine",
-    "icrc1-test-replica 0.1.1": "test/replica",
-    "icrc1-test-runner 0.1.1": "test/runner",
-    "icrc1-test-suite 0.1.1": "test/suite"
+    "icrc1-test-env 0.1.2": "test/env",
+    "icrc1-test-env-replica 0.1.2": "test/env/replica",
+    "icrc1-test-env-state-machine 0.1.2": "test/env/state-machine",
+    "icrc1-test-replica 0.1.2": "test/replica",
+    "icrc1-test-runner 0.1.2": "test/runner",
+    "icrc1-test-suite 0.1.2": "test/suite"
   },
   "conditions": {
     "aarch64-linux-android": [
