@@ -9,7 +9,7 @@ genrule(
     srcs = [":README.md"],
     outs = ["ICRC-2-generated.did"],
     cmd_bash = "$(location @lmt) $(SRCS); mv ICRC-2.did $@",
-    tools = ["@lmt"],
+    exec_tools = ["@lmt"],
 )
 
 didc_subtype_test(
