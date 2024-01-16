@@ -358,7 +358,7 @@ pub async fn icrc2_test_approve(ledger_env: impl LedgerEnv) -> anyhow::Result<Ou
     .await?
     {
         Ok(_) => bail!("expected ApproveError::InsufficientFunds, got Ok result"),
-        Err(e) => match e {
+        Err(e) => match Fe {
             ApproveError::InsufficientFunds { balance } => {
                 if balance != 0u8 {
                     bail!("wrong balance, expected 0, got: {}", balance);
