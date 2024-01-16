@@ -941,7 +941,7 @@ dependencies = [
 
 [[package]]
 name = "icrc1-test-env"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -952,7 +952,7 @@ dependencies = [
 
 [[package]]
 name = "icrc1-test-env-replica"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -966,7 +966,7 @@ dependencies = [
 
 [[package]]
 name = "icrc1-test-env-state-machine"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -978,7 +978,7 @@ dependencies = [
 
 [[package]]
 name = "icrc1-test-replica"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ic-agent",
  "reqwest",
@@ -988,7 +988,7 @@ dependencies = [
 
 [[package]]
 name = "icrc1-test-runner"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "candid",
@@ -1003,7 +1003,7 @@ dependencies = [
 
 [[package]]
 name = "icrc1-test-suite"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "candid",
