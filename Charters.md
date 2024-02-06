@@ -1,6 +1,64 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2024-01-23
+Slide deck: n.a., [recording](https://drive.google.com/file/d/16oo3MZ9ewLzK7ndjdGZsBipXp1dj9VxL/view?usp=share_link)
+
+**ICRC-4**
+
+* Make batch "flat"; sequence of ICRC-1 operations
+  * Easier to implement
+* Re-edited ICRC-4 with this in mind
+  * https://github.com/skilesare/ICRC/blob/main/ICRCs/ICRC-4/ICRC-4.md#icrc4_transfer_batch
+* TransferArgs now the same as those of ICRC-1
+* Creation timestamp still opt, otherwise clients that have clock off might have weird errors
+  * Match ICRC-1 now, thus opt
+* TransferError
+  * Has now BatchTerminated variant
+* Error
+  * Top-level error if something happens before anything is processed
+  * Or flat structure where if we hit batch error, we can terminate batch in last processed record
+  * Or flat and need to provide some result for everything
+* Original ICRC-4 draft
+  * Query for prevalidate that would prevalidate so you can get better assurance of success of an update call coming later, but no guarantee
+  * May not need this any more in the current design
+* Implementation can be made atomic by prevalidating and then executing
+* TransferBatchResult can be `vec opt variant` of either `Ok` or `Err`
+* BatchTerminated error
+  * Could put in position of item it was about to process or after everything else
+  * **Decision: BatchTermination error at index that caused error**
+    * Error with item it was about to pick up
+    * Then length of input is equal to length of output
+* **Can trim `null` values at the end of the response sequence**
+  * In line with semantics of some languages where you get `null` when accessing an array with an index outside its size
+* **Potentially nulls in the middle for non-processed elements**
+* **Queries also use positional arguments**
+* **Queries should not trap if too many request items, but return fewer**
+  * If fewer items returned, caller knows something may have gone wrong
+  * **Don't trap unless really unavoidable**
+  * Better to recommend to return max items if asked for more
+  * Ledger may return empty response if too many requests sent
+* Dieter to draft update of ICRC-7 and ICRC-37 to reflect those changes in NFT domain
+  * Change queries to have positional responses also 
+* Batch fees
+  * Advertise a fee, ledger can always charge a reduced fee for batch tx than advertised
+* Deduplication exactly the same as ICRC-1 as it's a list of ICRC-1 txs
+* NFT standard
+  * Explain patterns
+    * Input len = output len (ask for an output for each input)
+    * Prev / take
+  * May make simple queries that do not use pagination also a batch interface
+    * `owner_of`
+    * `balance_of`
+  * We keep the prev / take methods as they are defined
+  * Maybe remove batch from all skip / take interfaces
+* Possible way for batch prev / take
+  * Return record with index / result pair; index refers to index position of account in request
+    * Seems complicated, we don't want to go with this approach now
+* Might never do batch for prev / take, would be the simplest
+  * In ICRC-37 we have one that combines those, might remove batch from this method
+
+
 ## 2024-01-09
 Slide deck: n.a., [recording](https://drive.google.com/file/d/1L2lmgsyN4J3ORWVceMEOToI-XLCmTwUp/view?usp=share_link)
 
@@ -11,11 +69,11 @@ Slide deck: n.a., [recording](https://drive.google.com/file/d/1L2lmgsyN4J3ORWVce
   * Did not deal with batch approval and transfer_from
 * Austin walks us through the [ICRC-4 draft](https://github.com/skilesare/ICRC/blob/main/ICRCs/ICRC-4/ICRC-4.md)
   * `icrc_4transfer_batch` method
-    * Memo and creation timstamp at the top level only
+    * Memo and creation timestamp at the top level only
       * Used for deduplication
       * In non-batch regular implementation: Deduping representation independent hash of each user-provided tx
       * For batch: different: use representation independent hash of all BatchTransferArgs, not of timestamp and memo and other batch-level data; would be lots of extra work to include this also; logic of non-batch tx cannot be reused fully
-    * Bogdan wonders why the memo and timestamp is not in every tx, but only the batch; creationt timestamop might be shared even, but memo should not
+    * Bogdan wonders why the memo and timestamp is not in every tx, but only the batch; creation timestamp might be shared even, but memo should not
       * With archive canisters, space should not be that much a limiting factor
       * Thinks Austin's proposal is harder to implement than it needs to be because of not exactly reusing all non-batch logic, but being required to implement something extra
       * If atomic objects we care about are tx, and batching is just a mechanism to transport them to the ledger, would be easier to not make those optimizations
