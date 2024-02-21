@@ -1,6 +1,30 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2024-02-06
+Slide deck: n.a., [recording](https://drive.google.com/file/d/1-oVa5VPl09cd8AMbcF2Npwnt1IUhveWG/view?usp=share_link)
+
+* Should ICRC-4 have a separate method for querying metadata?
+  * Decision
+    * Metadata is exposed by the `icrc1_metadata` method of the base std
+      * Simpler for developers
+    * ICRC-4 should expose the ICRC-4 metadata via individual methods
+  * This should also be established as best practice for the ICRC series
+  * This should also be implemented in ICRC-7 / ICRC-37
+* ICRC-4 is a valuable standard, particularly for XNet use cases
+  * DEXs
+* Additional metadata we should have in the ledger
+  * Deduplication window
+    * Vesselin implements a library that retries txs; needs to know what window is
+    * Currently this is  a fixed value
+  * Also permitted_drift should go in
+  * Decision: We add this to ICRC-1 and ICRC-7
+    * ICRC-1: Requires a new ICRC extension standard as ICRC-1 is already final
+    * ICRC-7: Add to the current draft
+  * This time window and memo size apply to all extensions of a base standard as well
+  * Note: An implementation of ICRC-1 can add the items as metadata already now without a standard being done, but without any icrcX_ prefix
+
+
 ## 2024-01-23
 Slide deck: n.a., [recording](https://drive.google.com/file/d/16oo3MZ9ewLzK7ndjdGZsBipXp1dj9VxL/view?usp=share_link)
 
