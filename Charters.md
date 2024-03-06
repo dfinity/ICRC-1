@@ -1,6 +1,49 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2024-02-20
+Slide deck: n.a., [recording]()
+
+**Batching / scalability**
+* 90 msg per round possible for a canister to another ledger on other subnet
+  * Strong argument for batch transactions
+* Bitfinity is also single canister
+  * Also constrained by throughput when interacting with to ICRC ledger
+* Batching for transfer_from / approve?
+* approve for Infu's middlewear
+  * Someone approves
+    * Get notified
+    * Can make tx right away
+* Timo's ledger solves the problem of how to scale to VISA level of txs / sec
+  * Can have receiver on every subnet
+    * Can handle many incoming tx
+    * Receivers batch tx and send them to canonical ledger for processing
+    * Combines ingress capacity of multiple subnets
+* DoS potential of someone using DEX to DoS DEX <-> ICP ledger tx/s
+  * DEXs should lobby ICRC-4
+    * Bitfinity, Sonic, ICSwap, ICDEX
+
+**Various**
+* Vesselin makes ICRC-1 launcher for easy asset creation
+  * User needs to refill their own cycles
+  * Launching service wants to allow canister to be handed over to SNS (future)
+* Discussion about PanIndustrial ledger
+  * PanIndustrial ledger is fork of earlier bounty
+  * https://github.com/orgs/PanIndustrial-Org/repositories
+
+**Working Group**
+* Need to get more participation in the WG
+* How to get external participation for implementation?
+* Need to get broader support and participation
+* Maybe bounty or reputation payments for participating and contributing in WG
+  * Reputation system
+
+**Possible next steps**
+* Presigned txs?
+* ICRC-8 could be considered by this WG
+* Eventually approve / transfer_from batch methods
+
+
 ## 2024-02-06
 Slide deck: n.a., [recording](https://drive.google.com/file/d/1-oVa5VPl09cd8AMbcF2Npwnt1IUhveWG/view?usp=share_link)
 
