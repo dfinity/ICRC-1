@@ -1,6 +1,35 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2024-03-05
+[Slide deck](https://docs.google.com/presentation/d/1xQ2P8H-7D9PRuwV57lXEiK0Wzr9isMMD7AYOOEWylVA/edit?usp=sharing), [recording](https://drive.google.com/file/d/1L2lmgsyN4J3ORWVceMEOToI-XLCmTwUp/view?usp=share_link)
+
+**ICRC-3**
+* Obtained feedback from inside and outside of DFINITY
+  * Important, wanted to have this feedback in the standard
+* Proposed change
+  * Remove `tx.op: text` to be more generic
+    * Keep it in ICRC-1 and ICRC-2 block specificaitons for compatibility with existing ledgers
+  * Add top-level field `type: text`
+    * For standard types use <ICRC_number><name>, example: 1xfer for ICRC-1 transfers
+    * Non-standard types: cannot guarantee uniqueness
+  * Backwards compatibility essentially means there are two versions
+  * Can we have fields that are not part of the hash?
+    * MP: he and security team would not like to do this; rogue machine could change fields; everything in block should be hashed
+      * Tradeoff towards security
+* Proposed change
+  * Originally, `icrc1_supported_standards` was palnned to be used
+  * Problem: Some ledgers may not support ICRC-1
+  * Expose separate endpoint in ICRC-3
+    * Optional schema pointer for referring to schema (once we have a standard)
+* The group accepts the changes
+* We want to move this forward as quickly as possible
+* The group thinks that another WG vote is not required for this update
+* Next steps for WG
+  * Update ICRC-3 draft
+  * Let it go through an NNS vote
+
+
 ## 2024-02-20
 Slide deck: n.a., [recording](https://drive.google.com/file/d/1p6QsL8cETQ8ImPNlZggCsclzJyqKCtHv/view?usp=share_link)
 
