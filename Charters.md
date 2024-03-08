@@ -2,7 +2,7 @@
 
 
 ## 2024-02-20
-Slide deck: n.a., [recording]()
+Slide deck: n.a., [recording](https://drive.google.com/file/d/1p6QsL8cETQ8ImPNlZggCsclzJyqKCtHv/view?usp=share_link)
 
 **Batching / scalability**
 * 90 msg per round possible for a canister to another ledger on other subnet
