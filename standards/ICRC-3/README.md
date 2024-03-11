@@ -215,7 +215,10 @@ variant { Map = vec {
 
 #### Transfer Block Schema
 
-1. the `type` field MUST be `"1xfer"` or the `tx.op` field MUST be `"xfer"`
+1. the `type` field MUST be
+    1. `"2xfer"` if the Ledger supports ICRC-2
+    2. `"1xfer"` if the Ledger doesn't support ICRC-2
+1. if `type` is not set then `tx.op` field MUST be `"xfer"`
 2. it MUST contain a field `tx.from: Account`
 3. it MUST contain a field `tx.to: Account`
 4. it CAN contain a field `tx.spender: Account`
@@ -268,7 +271,7 @@ variant { Map = vec {
 
 #### Approve Block Schema
 
-1. the `type` field MUST be `"1approve"` or `tx.op` field MUST be `"approve"`
+1. the `type` field MUST be `"2approve"` or `tx.op` field MUST be `"approve"`
 2. it MUST contain a field `tx.from: Account`
 3. it MUST contain a field `tx.spender: Account`
 4. it CAN contain a field `tx.expected_allowance: Nat` if set by the user
@@ -277,7 +280,7 @@ variant { Map = vec {
 Example with `type`:
 ```
 variant { Map = vec {
-    record { "type"; "variant" { Text = "1approve" }};
+    record { "type"; "variant" { Text = "2approve" }};
     record { "fee"; variant { Nat = 10 : nat } };
     record { "phash"; variant {
         Blob = blob ";\f7\bet\b6\90\b7\ea2\f4\98\a5\b0\60\a5li3\dcXN\1f##2\b5\db\de\b1\b3\02\f5"
