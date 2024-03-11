@@ -12,7 +12,15 @@ A Block contains a Transaction. Transactions are an enumeration of different typ
 1. A generic format for sharing the block log without information loss. This includes the fields that a block must have
 2. A mechanism to verify the block log on the client side to allow downloading the block log via query calls
 3. A way for new standards to define new transactions types compatible with ICRC-3
-4. Two new endpoints, one to get the blocks and one to get the last block (tip) certification
+4. Four new endpoints
+    1. one to get the blocks
+    2. one to get the last block (tip) certification
+    3. one to list the supported block types
+    4. one to list the archive nodes
+
+## Archive Nodes
+
+The Ledger must expose an endpoint `icrc3_get_archives` listing all the canisters containing its blocks.
 
 ## Block Log
 
@@ -81,16 +89,16 @@ Validation of block `i` is done by checking the block hash against
 ## Generic Block Schema
 
 1. it MUST be a [`Value`](#value) of variant `Map`
-2. it MUST contain a field `tx: Map`
-    1. `tx` MUST contain a field `op: Text`, aka operation, which uniquely describes the type of the Block. `op` values `approve`, `burn`, `mint` and `xfer` are reserved for ICRC-1 and ICRC-2 Blocks
 2. it MUST contain a field `phash: Blob` which is the [hash](#value-hash) of its parent if it has a parent block
+3. it SHOULD contain a field `type: String` which uniquely describes the type of the Block. If this field is not set then the block type fallsback to [ICRC-1 and ICRC-2](#icrc-1-and-icrc-2-block-schema) for backward compatibility purposes
+
 
 ## Interaction with other standards
 
 Each standard that adheres to `ICRC-3` MUST define the list of block schemas that it introduces. Each block schema MUST:
 
 1. extend the [Generic Block Schema](#generic-block-schema)
-2. specify the expected value of `tx.op`. This MUST be unique accross all the standards. `approve`, `burn`, `mint` and `xfer` are reserved for ICRC-1 and ICRC-2. An ICRC-x standard MUST use namespacing for its op identifiers using the scheme:
+2. specify the expected value of `type`. This MUST be unique accross all the standards. An ICRC-x standard MUST use namespacing for its op identifiers using the scheme:
 ```
 op = icrc_number op_name
 icrc_number = nonzero_digit *digit
@@ -98,6 +106,12 @@ nonzero digit = "1" "2" "3" "4" "5" "6" "7" "8" "9"
 digit = "0" "1" "2" "3" "4" "5" "6" "7" "8" "9"
 op_name = a-z *(alphanumeric \ "_" \ "-")
 ```
+
+For instance, `1xfer` is the identifier of the ICRC-1 transfer operation.
+
+## Supported Standards
+
+An ICRC-3 compatible Ledger MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`. The Ledger MUST return only blocks with `type` set to one of the values returned by this endpoint.
 
 ## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
 
@@ -113,7 +127,9 @@ A generic ICRC-1 or ICRC-2 Block:
     3. CAN contain the `memo: Blob` field if specified by the user
     4. CAN contain the `ts: Nat` field if the user sets the `created_at_time` field in the request.
 
-Operations that require paying a fee: Transfer, and Approve. 
+Operations that require paying a fee: Transfer, and Approve.
+
+The type of a generic ICRC-1 or ICRC-2 Block is define by either the field `type` or the field `tx.op`. The first approach is preferred, the second one exists for backward compatibility.
 
 ### Account Type
 
@@ -121,10 +137,30 @@ ICRC-1 Account is represented as an `Array` containing the `owner` bytes and opt
 
 ### Burn Block Schema
 
-1. the `tx.op` field MUST be `"burn"`
+1. the `type` field MUST be `"1burn"` or `tx.op` field MUST be `"burn"`
 2. it MUST contain a field `tx.from: Account`
 
-Example:
+Example with `type`:
+```
+variant { Map = vec {
+    record { "type"; "variant" { Text = "1burn" }};
+    record { "phash"; variant {
+        Blob = blob "\a1\a9p\f5\17\e5\e2\92\87\96(\c8\f1\88iM\0d(tN\f4-~u\19\88\83\d8_\b2\01\ec"
+    }};
+    record { "ts"; variant { Nat = 1_701_108_969_851_098_255 : nat }};
+    record { "tx"; variant { Map = vec {
+        record { "amt"; variant { Nat = 1_228_990 : nat } };
+        record { "from"; variant { Array = vec {
+                variant { Blob = blob "\00\00\00\00\020\00\07\01\01" };
+                variant { Blob = blob "&\99\c0H\7f\a4\a5Q\af\c7\f4;\d9\e9\ca\e5 \e3\94\84\b5c\b6\97/\00\e6\a0\e9\d3p\1a" };
+        }}};
+        record { "memo"; variant { Blob = blob "\82\00\83x\223K7Bg3LUkiXZ5hatPT1b9h3XxJ89DYSU2e\19\07\d0\00"
+        }};
+    }}};
+}};
+```
+
+Example without `type`:
 ```
 variant { Map = vec {
     record { "phash"; variant {
@@ -146,10 +182,24 @@ variant { Map = vec {
 
 #### Mint Block Schema
 
-1. the `tx.op` field MUST be `"mint"`
+1. the `type` field MUST be `"1mint"` or the `tx.op` field MUST be `"mint"`
 2. it MUST contain a field `tx.to: Account`
 
-Example:
+Example with `type`:
+```
+variant { Map = vec {
+    record { "type"; "variant" { Text = "1mint" }};
+    record { "ts"; variant { Nat = 1_675_241_149_669_614_928 : nat } };
+    record { "tx"; variant { Map = vec {
+        record { "amt"; variant { Nat = 100_000 : nat } };
+        record { "to"; variant { Array = vec {
+                variant { Blob = blob "Z\d0\ea\e8;\04*\c2CY\8b\delN\ea>]\ff\12^. WGj0\10\e4\02" };
+        }}};
+    }}};
+}};
+```
+
+Example without `type`:
 ```
 variant { Map = vec {
     record { "ts"; variant { Nat = 1_675_241_149_669_614_928 : nat } };
@@ -165,12 +215,35 @@ variant { Map = vec {
 
 #### Transfer Block Schema
 
-1. the `tx.op` field MUST be `"xfer"`
+1. the `type` field MUST be `"1xfer"` or the `tx.op` field MUST be `"xfer"`
 2. it MUST contain a field `tx.from: Account`
 3. it MUST contain a field `tx.to: Account`
 4. it CAN contain a field `tx.spender: Account`
 
-Example:
+Example with `type`:
+```
+variant { Map = vec {
+    record { "type"; "variant" { Text = "1xfer" }};
+    record { "fee"; variant { Nat = 10 : nat } };
+    record { "phash"; variant { Blob =
+        blob "h,,\97\82\ff.\9cx&l\a2e\e7KFVv\d1\89\beJ\c5\c5\ad,h\5c<\ca\ce\be"
+    }};
+    record { "ts"; variant { Nat = 1_701_109_006_692_276_133 : nat } };
+    record { "tx"; variant { Map = vec {
+        record { "amt"; variant { Nat = 609_618 : nat } };
+        record { "from"; variant { Array = vec {
+                variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
+                variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
+        }}};
+        record { "to"; variant { Array = vec {
+            variant { Blob = blob " \ef\1f\83Zs\0a?\dc\d5y\e7\ccS\9f\0b\14a\ac\9f\fb\f0bf\f3\a9\c7D\02" };
+            variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
+        }}};
+    }}};
+}};
+```
+
+Example without `type`:
 ```
 variant { Map = vec {
     record { "fee"; variant { Nat = 10 : nat } };
@@ -195,13 +268,34 @@ variant { Map = vec {
 
 #### Approve Block Schema
 
-1. the `tx.op` field MUST be `"approve"`
+1. the `type` field MUST be `"1approve"` or `tx.op` field MUST be `"approve"`
 2. it MUST contain a field `tx.from: Account`
 3. it MUST contain a field `tx.spender: Account`
 4. it CAN contain a field `tx.expected_allowance: Nat` if set by the user
 5. it CAN contain a field `tx.expires_at: Nat` if set by the user
 
-Example:
+Example with `type`:
+```
+variant { Map = vec {
+    record { "type"; "variant" { Text = "1approve" }};
+    record { "fee"; variant { Nat = 10 : nat } };
+    record { "phash"; variant {
+        Blob = blob ";\f7\bet\b6\90\b7\ea2\f4\98\a5\b0\60\a5li3\dcXN\1f##2\b5\db\de\b1\b3\02\f5"
+    }};
+    record { "ts"; variant { Nat = 1_701_167_840_950_358_788 : nat } };
+    record { "tx"; variant { Map = vec {
+        record { "amt"; variant { Nat = 18_446_744_073_709_551_615 : nat } };
+        record { "from"; variant { Array = vec {
+                variant { Blob = blob "\16c\e1\91v\eb\e5)\84:\b2\80\13\cc\09\02\01\a8\03[X\a5\a0\d3\1f\e4\c3{\02" };
+        }}};
+        record { "spender"; variant { Array = vec {
+            variant { Blob = blob "\00\00\00\00\00\e0\1dI\01\01" };
+        }}};
+    }}};
+}}};
+```
+
+Example without `type`:
 ```
 variant { Map = vec {
     record { "fee"; variant { Nat = 10 : nat } };
@@ -293,5 +387,13 @@ type DataCertificate = record {
 
 service : {
   icrc3_get_tip_certificate : () -> (opt DataCertificate) query;
+};
+```
+
+### `icrc3_supported_block_types`
+
+```
+service : {
+    icrc3_supported_block_types : () -> (vec record { block_type : text; url : text }) query;
 };
 ```
