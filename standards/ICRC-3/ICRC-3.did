@@ -53,4 +53,5 @@ service : {
   icrc3_get_archives : (GetArchivesArgs) -> (GetArchivesResult) query;
   icrc3_get_tip_certificate : () -> (opt DataCertificate) query;
   icrc3_get_blocks : (GetBlocksArgs) -> (GetBlocksResult) query;
+  icrc3_supported_block_types : () -> (vec record { block_type : text; url : text }) query;
 };
