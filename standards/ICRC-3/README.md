@@ -7,14 +7,10 @@
 `ICRC-3` is a standard for accessing the block log of a Ledger on the [Internet Computer](https://internetcomputer.org).
 
 `ICRC-3` specifies:
-1. A generic format for sharing the block log without information loss. This includes the fields that a block must have
-2. A mechanism to verify the block log on the client side to allow downloading the block log via query calls
-3. A way for new standards to define new transactions types compatible with ICRC-3
-4. Four new endpoints
-    1. one to get the blocks
-    2. one to get the last block (tip) certification
-    3. one to list the supported block types
-    4. one to list the archive nodes
+1. A way to fetch the archive nodes of a Ledger
+2. A generic format for sharing the block log without information loss. This includes the fields that a block must have
+3. A mechanism to verify the block log on the client side to allow downloading the block log via query calls
+4. A way for new standards to define new transactions types compatible with ICRC-3
 
 ## Archive Nodes
 
@@ -86,10 +82,11 @@ Validation of block `i` is done by checking the block hash against
 
 ## Generic Block Schema
 
-1. it MUST be a [`Value`](#value) of variant `Map`
-2. it MUST contain a field `phash: Blob` which is the [hash](#value-hash) of its parent if it has a parent block
-3. it SHOULD contain a field `type: String` which uniquely describes the type of the Block. If this field is not set then the block type fallsback to [ICRC-1 and ICRC-2](#icrc-1-and-icrc-2-block-schema) for backward compatibility purposes
+An ICRC-3 compliant Block
 
+1. MUST be a Value of variant Map
+2. MUST contain a field phash: Blob which is the hash of its parent if it has a parent block
+3. SHOULD contain a field type: String which uniquely describes the type of the Block. If this field is not set then the block type fallsback to ICRC-1 and ICRC-2 for backward compatibility purposes
 
 ## Interaction with other standards
 
