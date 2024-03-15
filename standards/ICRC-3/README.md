@@ -6,8 +6,6 @@
 
 `ICRC-3` is a standard for accessing the block log of a Ledger on the [Internet Computer](https://internetcomputer.org).
 
-A Block contains a Transaction. Transactions are an enumeration of different types of operation (e.g. burn, mint, transfer, approve, ....).
-
 `ICRC-3` specifies:
 1. A generic format for sharing the block log without information loss. This includes the fields that a block must have
 2. A mechanism to verify the block log on the client side to allow downloading the block log via query calls
