@@ -93,7 +93,8 @@ An ICRC-3 compliant Block
 Each standard that adheres to `ICRC-3` MUST define the list of block schemas that it introduces. Each block schema MUST:
 
 1. extend the [Generic Block Schema](#generic-block-schema)
-2. specify the expected value of `btype`. This MUST be unique accross all the standards. An ICRC-x standard MUST use namespacing for its op identifiers using the scheme:
+2. specify the expected value of `btype`. This MUST be unique accross all the standards. An ICRC-x standard MUST use namespacing for its op identifiers using the following scheme of using the ICRC standard's number as prefix to the name followed by an operation name that must begin with a letter:
+
 ```
 op = icrc_number op_name
 icrc_number = nonzero_digit *digit
