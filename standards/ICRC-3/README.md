@@ -98,9 +98,9 @@ Each standard that adheres to `ICRC-3` MUST define the list of block schemas tha
 ```
 op = icrc_number op_name
 icrc_number = nonzero_digit *digit
-nonzero digit = "1" "2" "3" "4" "5" "6" "7" "8" "9"
-digit = "0" "1" "2" "3" "4" "5" "6" "7" "8" "9"
-op_name = a-z *(alphanumeric \ "_" \ "-")
+nonzero_digit = "1" / "2" / "3" / "4" / "5" / "6" / "7" / "8" / "9"
+digit = "0" / nonzero_digit
+op_name = a-z *(a-z / digit / "_" / "-")
 ```
 
 For instance, `1xfer` is the identifier of the ICRC-1 transfer operation.
