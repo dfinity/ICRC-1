@@ -126,7 +126,7 @@ A generic ICRC-1 or ICRC-2 Block:
 
 Operations that require paying a fee: Transfer, and Approve.
 
-The type of a generic ICRC-1 or ICRC-2 Block is defined by either the field `btype` or the field `tx.op`. The first approach is preferred, the second one exists for backward compatibility. If both are specified then `tx.op` should be ignored and `btype` should be used.
+The type of a generic ICRC-1 or ICRC-2 Block is defined by either the field `btype` or the field `tx.op`. The first approach is preferred, the second one exists for backward compatibility. If both are specified then `btype` defines the type of the block regardless of `tx.op`.
 
 `icrc3_supported_block_types` should always return all the `btype`s supported by the Ledger even if the Ledger doesn't support the `btype` field yet. For example, if the Ledger supports mint blocks using the backward compatibility schema, i.e. without `btype`, then the endpoint `icrc3_supported_block_types` will have to return `"1mint"` among the supported block types.
 
