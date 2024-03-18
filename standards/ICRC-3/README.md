@@ -84,16 +84,16 @@ Validation of block `i` is done by checking the block hash against
 
 An ICRC-3 compliant Block
 
-1. MUST be a Value of variant Map
-2. MUST contain a field phash: Blob which is the hash of its parent if it has a parent block
-3. SHOULD contain a field type: String which uniquely describes the type of the Block. If this field is not set then the block type fallsback to ICRC-1 and ICRC-2 for backward compatibility purposes
+1. MUST be a `Value` of variant `Map`
+2. MUST contain a field `phash: Blob` which is the hash of its parent if it has a parent block
+3. SHOULD contain a field `btype: String` which uniquely describes the type of the Block. If this field is not set then the block type fallsback to ICRC-1 and ICRC-2 for backward compatibility purposes
 
 ## Interaction with other standards
 
 Each standard that adheres to `ICRC-3` MUST define the list of block schemas that it introduces. Each block schema MUST:
 
 1. extend the [Generic Block Schema](#generic-block-schema)
-2. specify the expected value of `type`. This MUST be unique accross all the standards. An ICRC-x standard MUST use namespacing for its op identifiers using the scheme:
+2. specify the expected value of `btype`. This MUST be unique accross all the standards. An ICRC-x standard MUST use namespacing for its op identifiers using the scheme:
 ```
 op = icrc_number op_name
 icrc_number = nonzero_digit *digit
@@ -106,7 +106,7 @@ For instance, `1xfer` is the identifier of the ICRC-1 transfer operation.
 
 ## Supported Standards
 
-An ICRC-3 compatible Ledger MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`. The Ledger MUST return only blocks with `type` set to one of the values returned by this endpoint.
+An ICRC-3 compatible Ledger MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`. The Ledger MUST return only blocks with `btype` set to one of the values returned by this endpoint.
 
 ## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
 
@@ -117,14 +117,17 @@ A generic ICRC-1 or ICRC-2 Block:
 1. it MUST contain a field `ts: Nat` which is the timestamp of when the block was added to the Ledger
 2. if the operation requires a fee and if the `tx` field doesn't specify the fee then it MUST contain a field `fee: Nat` which specifies the fee payed to add this block to the Ledger
 3. its field `tx`
-    1. MUST contain a field `amt: Nat` that represents the amount
-    2. MUST contain the `fee: Nat` field for operations that require a fee if the user specifies the fee in the request. If the user does not specify the fee in the request, then this field is not set and the top-level `fee` is set.
-    3. CAN contain the `memo: Blob` field if specified by the user
-    4. CAN contain the `ts: Nat` field if the user sets the `created_at_time` field in the request.
+    1. CAN contain a field `op: String` that uniquely defines the type of operation
+    2. MUST contain a field `amt: Nat` that represents the amount
+    3. MUST contain the `fee: Nat` field for operations that require a fee if the user specifies the fee in the request. If the user does not specify the fee in the request, then this field is not set and the top-level `fee` is set.
+    4. CAN contain the `memo: Blob` field if specified by the user
+    5. CAN contain the `ts: Nat` field if the user sets the `created_at_time` field in the request.
 
 Operations that require paying a fee: Transfer, and Approve.
 
-The type of a generic ICRC-1 or ICRC-2 Block is define by either the field `type` or the field `tx.op`. The first approach is preferred, the second one exists for backward compatibility.
+The type of a generic ICRC-1 or ICRC-2 Block is defined by either the field `btype` or the field `tx.op`. The first approach is preferred, the second one exists for backward compatibility. If both are specified then `tx.op` should be ignored and `btype` should be used.
+
+`icrc3_supported_block_types` should always return all the `btype`s supported by the Ledger even if the Ledger doesn't support the `btype` field yet. For example, if the Ledger supports mint blocks using the backward compatibility schema, i.e. without `btype`, then the endpoint `icrc3_supported_block_types` will have to return `"1mint"` among the supported block types.
 
 ### Account Type
 
@@ -132,13 +135,13 @@ ICRC-1 Account is represented as an `Array` containing the `owner` bytes and opt
 
 ### Burn Block Schema
 
-1. the `type` field MUST be `"1burn"` or `tx.op` field MUST be `"burn"`
+1. the `btype` field MUST be `"1burn"` or `tx.op` field MUST be `"burn"`
 2. it MUST contain a field `tx.from: Account`
 
-Example with `type`:
+Example with `btype`:
 ```
 variant { Map = vec {
-    record { "type"; "variant" { Text = "1burn" }};
+    record { "btype"; "variant" { Text = "1burn" }};
     record { "phash"; variant {
         Blob = blob "\a1\a9p\f5\17\e5\e2\92\87\96(\c8\f1\88iM\0d(tN\f4-~u\19\88\83\d8_\b2\01\ec"
     }};
@@ -155,7 +158,7 @@ variant { Map = vec {
 }};
 ```
 
-Example without `type`:
+Example without `btype`:
 ```
 variant { Map = vec {
     record { "phash"; variant {
@@ -177,13 +180,13 @@ variant { Map = vec {
 
 #### Mint Block Schema
 
-1. the `type` field MUST be `"1mint"` or the `tx.op` field MUST be `"mint"`
+1. the `btype` field MUST be `"1mint"` or the `tx.op` field MUST be `"mint"`
 2. it MUST contain a field `tx.to: Account`
 
-Example with `type`:
+Example with `btype`:
 ```
 variant { Map = vec {
-    record { "type"; "variant" { Text = "1mint" }};
+    record { "btype"; "variant" { Text = "1mint" }};
     record { "ts"; variant { Nat = 1_675_241_149_669_614_928 : nat } };
     record { "tx"; variant { Map = vec {
         record { "amt"; variant { Nat = 100_000 : nat } };
@@ -194,7 +197,7 @@ variant { Map = vec {
 }};
 ```
 
-Example without `type`:
+Example without `btype`:
 ```
 variant { Map = vec {
     record { "ts"; variant { Nat = 1_675_241_149_669_614_928 : nat } };
@@ -210,18 +213,18 @@ variant { Map = vec {
 
 #### Transfer Block Schema
 
-1. the `type` field MUST be
+1. the `btype` field MUST be
     1. `"2xfer"` if the Ledger supports ICRC-2
     2. `"1xfer"` if the Ledger doesn't support ICRC-2
-1. if `type` is not set then `tx.op` field MUST be `"xfer"`
+1. if `btype` is not set then `tx.op` field MUST be `"xfer"`
 2. it MUST contain a field `tx.from: Account`
 3. it MUST contain a field `tx.to: Account`
 4. it CAN contain a field `tx.spender: Account`
 
-Example with `type`:
+Example with `btype`:
 ```
 variant { Map = vec {
-    record { "type"; "variant" { Text = "1xfer" }};
+    record { "btype"; "variant" { Text = "1xfer" }};
     record { "fee"; variant { Nat = 10 : nat } };
     record { "phash"; variant { Blob =
         blob "h,,\97\82\ff.\9cx&l\a2e\e7KFVv\d1\89\beJ\c5\c5\ad,h\5c<\ca\ce\be"
@@ -241,7 +244,7 @@ variant { Map = vec {
 }};
 ```
 
-Example without `type`:
+Example without `btype`:
 ```
 variant { Map = vec {
     record { "fee"; variant { Nat = 10 : nat } };
@@ -266,16 +269,16 @@ variant { Map = vec {
 
 #### Approve Block Schema
 
-1. the `type` field MUST be `"2approve"` or `tx.op` field MUST be `"approve"`
+1. the `btype` field MUST be `"2approve"` or `tx.op` field MUST be `"approve"`
 2. it MUST contain a field `tx.from: Account`
 3. it MUST contain a field `tx.spender: Account`
 4. it CAN contain a field `tx.expected_allowance: Nat` if set by the user
 5. it CAN contain a field `tx.expires_at: Nat` if set by the user
 
-Example with `type`:
+Example with `btype`:
 ```
 variant { Map = vec {
-    record { "type"; "variant" { Text = "2approve" }};
+    record { "btype"; "variant" { Text = "2approve" }};
     record { "fee"; variant { Nat = 10 : nat } };
     record { "phash"; variant {
         Blob = blob ";\f7\bet\b6\90\b7\ea2\f4\98\a5\b0\60\a5li3\dcXN\1f##2\b5\db\de\b1\b3\02\f5"
@@ -293,7 +296,7 @@ variant { Map = vec {
 }}};
 ```
 
-Example without `type`:
+Example without `btype`:
 ```
 variant { Map = vec {
     record { "fee"; variant { Nat = 10 : nat } };
