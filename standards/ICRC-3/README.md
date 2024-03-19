@@ -212,11 +212,11 @@ variant { Map = vec {
 }};
 ```
 
-#### Transfer Block Schema
+#### Transfer and Transfer From Block Schema
 
 1. the `btype` field MUST be
-    1. `"2xfer"` if the Ledger supports ICRC-2
-    2. `"1xfer"` if the Ledger doesn't support ICRC-2
+    1. `"2xfer"` for `icrc2_transfer_from` blocks
+    2. `"1xfer"` for `icrc1_transfer` blocks
 1. if `btype` is not set then `tx.op` field MUST be `"xfer"`
 2. it MUST contain a field `tx.from: Account`
 3. it MUST contain a field `tx.to: Account`
