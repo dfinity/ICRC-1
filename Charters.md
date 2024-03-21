@@ -1,6 +1,25 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2024-03-19
+Slide deck: n.a., [recording](https://drive.google.com/file/d/14ijVB081Bv-iyAlgq5v2uQhwHCgRNh6V/view?usp=share_link)
+
+**ICRC-3**
+* Discussion on the fee collector
+  * The fee collector should be standardized in order to be able to reconstruct an ICRC-3 ledger
+    * As part of this standard or a separate one
+    * Decision for going with a separate standard for the fee collector
+* The group agrees that it is now ready for voting
+  * Mario to post about it in the forum and initiate the NNS vote on Friday
+
+**ICRC-61**
+* The group incorporates some feedback on ICRC-61
+* ICRC-61 is odd for such a basic standard, an earlier number would be great
+  * ICRC-6 or 10 is reserved, ask Ben for getting this number
+  * Dieter to ping Ben about getting 10
+    * Update: Yes, we can use ICRC-10 for this purpose
+
+
 ## 2024-03-05
 [Slide deck](https://docs.google.com/presentation/d/1xQ2P8H-7D9PRuwV57lXEiK0Wzr9isMMD7AYOOEWylVA/edit?usp=sharing), [recording](https://drive.google.com/file/d/1L2lmgsyN4J3ORWVceMEOToI-XLCmTwUp/view?usp=share_link)
 
