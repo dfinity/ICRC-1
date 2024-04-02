@@ -2,7 +2,7 @@
 
 | Status |
 |:------:|
-| Draft  |
+| [Accepted](https://dashboard.internetcomputer.org/proposal/128824)  |
 
 `ICRC-3` is a standard for accessing the block log of a Ledger on the [Internet Computer](https://internetcomputer.org).
 
