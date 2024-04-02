@@ -1,7 +1,7 @@
 type Value = variant {
     Blob : blob;
     Text : text;
-    Nat : nat; // do we need this or can we just use Int?
+    Nat : nat;
     Int : int;
     Array : vec Value;
     Map : vec record { text; Value };
