@@ -1,6 +1,12 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2024-04-02
+[Slide deck](https://docs.google.com/presentation/d/1w952b-6ZYXgToY2tAKiIoAtjSrNsChgUu-8hJ4fOkfQ/edit#slide=id.g125c3b1bfa8_0_0), [recording](https://drive.google.com/file/d/1xT349-RL63eThU8VvHbqpbJ8jGIKiJwC/view?usp=share_link)
+
+No notes available, please see the recording for details.
+
+
 ## 2024-03-19
 Slide deck: n.a., [recording](https://drive.google.com/file/d/14ijVB081Bv-iyAlgq5v2uQhwHCgRNh6V/view?usp=share_link)
 
@@ -37,7 +43,7 @@ Slide deck: n.a., [recording](https://drive.google.com/file/d/14ijVB081Bv-iyAlgq
     * MP: he and security team would not like to do this; rogue machine could change fields; everything in block should be hashed
       * Tradeoff towards security
 * Proposed change
-  * Originally, `icrc1_supported_standards` was palnned to be used
+  * Originally, `icrc1_supported_standards` was planned to be used
   * Problem: Some ledgers may not support ICRC-1
   * Expose separate endpoint in ICRC-3
     * Optional schema pointer for referring to schema (once we have a standard)
