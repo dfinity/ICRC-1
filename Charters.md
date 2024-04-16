@@ -1,6 +1,34 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2024-05-16
+Slide deck: n.a., [recording](https://drive.google.com/file/d/1aJRN6XkmyTM-NOIG1QxXN2rLhhK-BGCc/view?usp=share_link)
+
+**ICRC-10**
+* Austin to look at the proposed changes
+* Move ahead with NNS vote
+
+**The high-performance ledger (hpl)**
+* Brief discussion of [The high-performance ledger](https://github.com/research-ag/hpl-io?tab=readme-ov-file) (hpl)
+
+**Security tokens**
+* Longer term, it would be great to have security tokens on ICP
+  * RWA is a growing field and ICP should be part of that
+* Austin suggests to think whether the following general pattern may apply also to security tokens
+  * A transaction proceeds in multiple stages
+    * A transaction is filed
+    * A transaction has to be settled, involving clearing steps to be completed
+      * E.g., KYC, regulatory treatment
+  * Maybe there is a pattern involving external signers (smart contracts) to realize this
+    * After filing, each tx gets assigned to or selected by transaction approvers / clearing agents who perform further checks
+    * Clearing agents can release transaction
+    * KYC agent or regulatory agent or some other agent picks up the transaction
+      * Can have any number of agents available; managed, e.g., through decentralized list of authorized signers
+  * The question is whether we can a pattern that is equally applicable to security tokens and other applications, meaning that security tokens would not need a separate treatment, but could be handled by such framework
+  * Can have DAO that needs to approve every tx that is over 10K tokens: submits DAO proposal and waits to hear back
+  * We should think about this approach when discussing security tokens
+
+
 ## 2024-04-02
 [Slide deck](https://docs.google.com/presentation/d/1w952b-6ZYXgToY2tAKiIoAtjSrNsChgUu-8hJ4fOkfQ/edit#slide=id.g125c3b1bfa8_0_0), [recording](https://drive.google.com/file/d/1xT349-RL63eThU8VvHbqpbJ8jGIKiJwC/view?usp=share_link)
 
