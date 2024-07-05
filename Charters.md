@@ -1,6 +1,10 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2024-06-25
+[Slide deck](https://docs.google.com/presentation/d/1p4i1IfMqXS_rjuNdM8rt3TU5VmsjOgs3xvVYeoEJwyU/edit?usp=share_link), [recording](https://drive.google.com/file/d/1G7rn64Lo14JkWA5K8PI-h4_rG4W7PyAa/view?usp=share_link)
+
+
 ## 2024-05-28
 [Slide deck](https://docs.google.com/presentation/d/1MZGdAOu0c4lq9FJjcaSkM6jVxk3rxPMrst3cfdP7Y0Y/edit?usp=share_link): n.a., [recording](https://drive.google.com/file/d/1mVGgbFfKyZYhQRF8mwyJKrS7PzIh3l4i/view?usp=share_link)
 
