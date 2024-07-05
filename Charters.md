@@ -6,7 +6,7 @@
 
 
 ## 2024-05-28
-[Slide deck](https://docs.google.com/presentation/d/1MZGdAOu0c4lq9FJjcaSkM6jVxk3rxPMrst3cfdP7Y0Y/edit?usp=share_link): n.a., [recording](https://drive.google.com/file/d/1mVGgbFfKyZYhQRF8mwyJKrS7PzIh3l4i/view?usp=share_link)
+[Slide deck](https://docs.google.com/presentation/d/1MZGdAOu0c4lq9FJjcaSkM6jVxk3rxPMrst3cfdP7Y0Y/edit?usp=share_link), [recording](https://drive.google.com/file/d/1mVGgbFfKyZYhQRF8mwyJKrS7PzIh3l4i/view?usp=share_link)
 
 
 ## 2024-05-16
