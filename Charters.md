@@ -30,7 +30,7 @@ Discussion on how ICRC standards can evolve
 
 
 ## 2024-07-23
-[recording]()
+[recording](https://drive.google.com/file/d/1m84POocFl0AMk7Qh7EgNx-abcFzdLjrv/view?usp=share_link)
 
 no minutes available
 
