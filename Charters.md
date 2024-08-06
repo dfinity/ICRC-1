@@ -1,6 +1,40 @@
 # Ledger & Tokenization Working Group Charters
 
 
+## 2024-08-06
+Slide deck: n.a., [recording]()
+
+**ICRC-22**
+* from_subaccount can maybe be left out
+* Do we need to support the ICP transfer function still?
+  * Example why we may need it
+    * ICDevs would like QR code to send to their neuron
+    * Only known account_id and not the subaccount, thus still need transfer function
+* Amount should be optional
+* Leave scientific notification in as it is taken over from the corresponding Ethereum standard
+* As previously discussed, we should use hash of public key as network id
+* Do we want a URI scheme?
+  * Check whether the current syntax is a URI scheme, otherwise maybe use one
+* Use cases for the standard
+  * Buying things on a shop, payment QR code printed on display
+  * Payment terminal
+
+**ICRC evolution**
+Discussion on how ICRC standards can evolve
+* Main outcome is that we cannot do anything right now
+  * It does not matter whether we would have version numbers or have the ICRC numbers
+    * In both cases, changes lead to a new identifier, essentially the same
+    * We remain with the identifiers we have now and don't want to change anything
+* Over time, it can happen that ICRCs are superseded by new ones and used less and eventually fade out of usage
+  * This is normal evolvment of the ecosystem and is nothing to be concerned about
+
+
+## 2024-07-23
+[recording]()
+
+no minutes available
+
+
 ## 2024-06-25
 [Slide deck](https://docs.google.com/presentation/d/1p4i1IfMqXS_rjuNdM8rt3TU5VmsjOgs3xvVYeoEJwyU/edit?usp=share_link), [recording](https://drive.google.com/file/d/1G7rn64Lo14JkWA5K8PI-h4_rG4W7PyAa/view?usp=share_link)
 
