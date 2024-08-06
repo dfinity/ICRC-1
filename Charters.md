@@ -2,7 +2,7 @@
 
 
 ## 2024-08-06
-Slide deck: n.a., [recording]()
+Slide deck: n.a., [recording](https://drive.google.com/file/d/1fDPV66L1tFTU4JfvtQ03BUWEHWTDz4tC/view?usp=share_link)
 
 **ICRC-22**
 * from_subaccount can maybe be left out
