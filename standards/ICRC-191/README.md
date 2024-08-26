@@ -57,17 +57,26 @@ The endpoint returns up to `taken` allowances of the from_account.owner, startin
 
 ## 4. Semantics
 
-Recall that outstanding allowances are (per the ICRC-2 standard) specified as a map from pairs of accounts, to allowances.  To specify the behavior of icrc191_list_allowances we require that the set of pairs (Account, Account) is ordered, lexicographically.
-Let `first_principal` be the lexicographically first principal `first_subaccount` be the lexicographically first subaccount (this is the default subaccount, i.e. the all-0 32 byte string).
-Let `caller_principal` be the principal of the caller.
+Outstanding allowances, as specified in the ICRC-2 standard, are represented as a map from pairs of accounts to allowances. To specify the behavior of `icrc191_list_allowances`, the set of pairs `(Account, Account)` is ordered lexicographically. Let `first_principal` be the lexicographically first principal, and `first_subaccount` be the lexicographically first subaccount (the default subaccount, i.e., the all-0 32-byte string). Let `caller_principal` be the principal of the caller.
 
+The `icrc191_list_allwances` method behaves as follows:
 
-If `from_account` is not provided, then this is instantiated with `Account{caller_principal, first_subaccount}`.  
-If `from_account.subaccount` is not specified then this is instantiated with `first_subaccount`.
-If `prev_spender` is not specified, then this is instantiated with `Account{first_principal, first_subaccount}`.
+* If `from_account` is not provided, it is instantiated as `Account{caller_principal, first_subaccount}`.  
+* If `from_account.subaccount` is not provided, it is instantiated with `first_subaccount`.
+* If `prev_spender` is not provided, it is instantiated with `Account{first_principal, first_subaccount}`.
 
-The endpoint returns the list of records of the form `(account_1, account_2, allowance), in lexicographic order starting with the allowance of `(from_account, prev_spender).
-The list is limited to at most `taken` entries, or some maximum number
+If the ledger implements the private version of the standard, then the endpoint returns the empty list if `from_account.owner ≠ caller_principal`.
+
+Otherwise, the endpoint returns a list of records of the form `(account_1, account_2, allowance)` in lexicographic order, starting with the allowance of `(from_account, prev_spender)` (if present), and where `account_1.owner = from_account.owner`. The list is limited to at most `taken` entries, or some maximum number of entries (that is an internal constant of the ledger).
+
 
 
 ## 5. Example Using Symbolic Values
+Assume that `first_principal` is
+
+Assume that allowances stored at some point by the ledger are:
+- A1 = ((p0,s0), (p1,s1), a1)
+- A2 = ((p0,s0), (p2,s2), a2)
+- A3 = ((p0,s1), (p3,s3), a3)
+- A4 = ((p1,s1), (p4,s4), a4)
+- A5 = ((p1,s2), (p5,s5), a5)
