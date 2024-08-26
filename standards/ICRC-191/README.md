@@ -52,19 +52,22 @@ type Allowance = record {
 }
 ```
 
+The endpoint returns up to `taken` allowances of the from_account.owner, starting with the allowance between `from_account` and `to_account`.
+
 
 ## 4. Semantics
 
-Recall that outstanding allowances are (per the ICRC-2 standard) specifdied as map from pairs of accounts, to allowances.  To specify the behavior of icrc191_list_allowances we make the assumption that the set of pairs (Account, Account) is ordered, lexicographically.
-Let first_principal be the first principal, in lexicographically, and first_subaccount be the first subaccount, lexicographically.
-
-If from_account is not specified, then this is instantiated with Account{caller_principal, first_subaccount}.  
-If prev_spender is not specified, then this is instantiated with Account{first_principal, first_subaccount}.
-
-The endpoint returns the list of records of the form (account_1, account_2, allowance), in lexicographic order starting with the allowance of (from_account,prev_spender). The list contains at most `taken` entries.
+Recall that outstanding allowances are (per the ICRC-2 standard) specified as a map from pairs of accounts, to allowances.  To specify the behavior of icrc191_list_allowances we require that the set of pairs (Account, Account) is ordered, lexicographically.
+Let `first_principal` be the lexicographically first principal `first_subaccount` be the lexicographically first subaccount (this is the default subaccount, i.e. the all-0 32 byte string).
+Let `caller_principal` be the principal of the caller.
 
 
+If `from_account` is not provided, then this is instantiated with `Account{caller_principal, first_subaccount}`.  
+If `from_account.subaccount` is not specified then this is instantiated with `first_subaccount`.
+If `prev_spender` is not specified, then this is instantiated with `Account{first_principal, first_subaccount}`.
+
+The endpoint returns the list of records of the form `(account_1, account_2, allowance), in lexicographic order starting with the allowance of `(from_account, prev_spender).
+The list is limited to at most `taken` entries, or some maximum number
 
 
-## 6. Example Using Symbolic Values
-- A detailed example illustrating the behavior of the `list_icrc2_allowances` method with symbolic values.
+## 5. Example Using Symbolic Values
