@@ -72,11 +72,19 @@ Otherwise, the endpoint returns a list of records of the form `(account_1, accou
 
 
 ## 5. Example Using Symbolic Values
-Assume that `first_principal` is
 
-Assume that allowances stored at some point by the ledger are:
+Assume that allowances stored at some point by the ledger are, in lexicographic order:
+
 - A1 = ((p0,s0), (p1,s1), a1)
 - A2 = ((p0,s0), (p2,s2), a2)
 - A3 = ((p0,s1), (p3,s3), a3)
 - A4 = ((p1,s1), (p4,s4), a4)
 - A5 = ((p1,s2), (p5,s5), a5)
+
+Then:
+
+- If `p0` calls the list allowances endpoint, with `from_account = (p0, s0)`, `prev_spender = None` and `take=4` the endpoint returns (A1, A2, A3), i.e. the endpoint only returns allowances of accounts belonging to `p0`, it is limited to allowances of `p0`, but not only to those having `(p0,s0)` as source of the allowance.
+
+- If `p0` calls the list allowances endpoint with `from_account = (p1,s0)`, `p0 ≠ p1`, and the ledger implements the private version of the endpoint, then the endpoint returns the empty array.
+
+- If `p0` calls the list allowances endpoint with `from_account = (p0,s0)`, `prev_spender = (p2,s)` for some `s1 < s < s2`, and `take = 2` the endpoint returns `A2, A3`, i.e. `(from_account, prev_spender)` is not in the list, the allowances returned start with the first available allowance between a pair of accounts greater than `(from_account, prev_spender)`.
