@@ -34,7 +34,7 @@ Compliant ledgers MUST also implement the following endpoint for programmaticall
 
 ```candid
 
-icrc106_get_index_principal: () -> GetIndexPrincipalsResult query;
+icrc106_get_index_principal: () -> (GetIndexPrincipalsResult) query;
 
 type GetIndexPrincipalResult = variant {
     Ok : principal;
@@ -57,6 +57,7 @@ The metadata entry `icrc106:index_principal` and the `icrc106_get_index_principa
 
 - The `icrc106:index_principal` metadata entry MUST represent the textual form of the principal returned by the `icrc106_get_index_principal` method.  
 - The `icrc106_get_index_principal` method MUST return the principal corresponding to the index canister associated with the ledger, as specified in the `icrc106:index_principal` metadata entry.
+- If the entry `icrc106:index_principal` does not exist or is not appropriately set, the endpoint should return `IndexPrincipalNotSet`.
 
 This requirement ensures that both mechanisms reliably point to the same index canister.
 
