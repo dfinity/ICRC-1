@@ -34,7 +34,7 @@ Compliant ledgers MUST also implement the following endpoint for programmaticall
 
 ```candid
 
-icrc106_get_index_principal: () -> (GetIndexPrincipalsResult) query;
+icrc106_get_index_principal: () -> (GetIndexPrincipalResult) query;
 
 type GetIndexPrincipalResult = variant {
     Ok : principal;
