@@ -103,7 +103,6 @@ digit = "0" / nonzero_digit
 op_name = a-z *(a-z / digit / "_" / "-")
 ```
 
-For instance, `1xfer` is the identifier of the ICRC-1 transfer operation.
 
 ## Supported Standards
 
@@ -111,14 +110,43 @@ An ICRC-3 compatible Ledger MUST expose an endpoint listing all the supported bl
 
 ## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
 
-ICRC-1 and ICRC-2 use the `tx` field to store input from the user and use the external block to store data set by the Ledger. For instance, the amount of a transaction is stored in the field `tx.amt` because it has been specified by the user, while the time when the block was added to the Ledger is stored in the field `ts` because it is set by the Ledger.
+This section describes how ICRC-1 and ICRC-2 operations are recorded in ICRC-3-compliant blocks.
+
+
+
+### No `btype` Field
+ICRC-1 and ICRC-2 blocks MUST NOT include a `btype` field. These standards use the legacy block format where the type of block is determined exclusively by the content of the `tx` field. ICRC-1 and ICRC-2 blocks use the `tx` field to store input from the user and use the external block to store data set by the Ledger. For instance, the amount of a transaction is stored in the field `tx.amt` because it has been specified by the user, while the time when the block was added to the Ledger is stored in the field `ts` because it is set by the Ledger.
+
+#### Block Structure Requirements
 
 A generic ICRC-1 or ICRC-2 Block:
+
+- **MUST** use the legacy format, i.e., it **MUST NOT** include a `"btype"` field.
+- **MUST** be a `Value::Map` containing at least the following fields:
+  - `"phash"`: `Blob` — the hash of the parent block.
+  - `"ts"`: `Nat` — the timestamp (set by the ledger at block creation).
+  - `"tx"`: `Value::Map` — representing the user’s transaction intent.
+- **CAN** include:
+  - `"fee"`: `Nat` — only if the ledger requires a fee and the user did not specify one in `tx.fee`.
+
+
+#### `tx` Field Semantics
+
+The `tx` field:
+
+- **MUST** represent the user intent derived from the method call.
+- **MUST** be encoded using the ICRC-3 `Value` type.
+- **MUST NOT** contain any fields that were not explicitly present in the original user call.
+- **MUST** follow the canonical mapping rules described in the next section.
+
+
+
+
 
 1. it MUST contain a field `ts: Nat` which is the timestamp of when the block was added to the Ledger
 2. if the operation requires a fee and if the `tx` field doesn't specify the fee then it MUST contain a field `fee: Nat` which specifies the fee payed to add this block to the Ledger
 3. its field `tx`
-    1. CAN contain a field `op: String` that uniquely defines the type of operation
+    1. MUST contain a field `op: String` that uniquely defines the type of operation
     2. MUST contain a field `amt: Nat` that represents the amount
     3. MUST contain the `fee: Nat` field for operations that require a fee if the user specifies the fee in the request. If the user does not specify the fee in the request, then this field is not set and the top-level `fee` is set.
     4. CAN contain the `memo: Blob` field if specified by the user
@@ -126,40 +154,40 @@ A generic ICRC-1 or ICRC-2 Block:
 
 Operations that require paying a fee: Transfer, and Approve.
 
-The type of a generic ICRC-1 or ICRC-2 Block is defined by either the field `btype` or the field `tx.op`. The first approach is preferred, the second one exists for backward compatibility. If both are specified then `btype` defines the type of the block regardless of `tx.op`.
 
 `icrc3_supported_block_types` should always return all the `btype`s supported by the Ledger even if the Ledger doesn't support the `btype` field yet. For example, if the Ledger supports mint blocks using the backward compatibility schema, i.e. without `btype`, then the endpoint `icrc3_supported_block_types` will have to return `"1mint"` among the supported block types.
 
 ### Account Type
 
-ICRC-1 Account is represented as an `Array` containing the `owner` bytes and optionally the subaccount bytes.
+ICRC-1 Account is represented as an `Array` containing the `owner` bytes and optionally the subaccount bytes.  Two examples of accounts, one with subaccount and the second without are below. 
+
+Example of account representation as an array with two blobs, one for the owner principal and the second for the subaccount:
+
+```
+variant { Array = vec {
+                variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
+                variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
+        }};
+```
+
+
+Example of account representation as an array with one blob encoding the owner principal.
+```
+variant { Array = vec {
+                variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
+            
+        }};
+```
+
 
 ### Burn Block Schema
 
-1. the `btype` field MUST be `"1burn"` or `tx.op` field MUST be `"burn"`
+1. the `btype` MUST not be set and `tx.op` field MUST be `"burn"`
 2. it MUST contain a field `tx.from: Account`
+3. it MUSAT contain a field `tx.amt: Nat`
+4. it MUST contain a field `tx.memo` if the `icrc1_transfer` call that creates the block has a memo field, and its value is the value of that field. 
 
-Example with `btype`:
-```
-variant { Map = vec {
-    record { "btype"; "variant" { Text = "1burn" }};
-    record { "phash"; variant {
-        Blob = blob "\a1\a9p\f5\17\e5\e2\92\87\96(\c8\f1\88iM\0d(tN\f4-~u\19\88\83\d8_\b2\01\ec"
-    }};
-    record { "ts"; variant { Nat = 1_701_108_969_851_098_255 : nat }};
-    record { "tx"; variant { Map = vec {
-        record { "amt"; variant { Nat = 1_228_990 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\00\00\00\00\020\00\07\01\01" };
-                variant { Blob = blob "&\99\c0H\7f\a4\a5Q\af\c7\f4;\d9\e9\ca\e5 \e3\94\84\b5c\b6\97/\00\e6\a0\e9\d3p\1a" };
-        }}};
-        record { "memo"; variant { Blob = blob "\82\00\83x\223K7Bg3LUkiXZ5hatPT1b9h3XxJ89DYSU2e\19\07\d0\00"
-        }};
-    }}};
-}};
-```
 
-Example without `btype`:
 ```
 variant { Map = vec {
     record { "phash"; variant {
