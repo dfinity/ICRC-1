@@ -182,7 +182,7 @@ variant { Array = vec {
 
 ### Burn Block Schema
 
-1. the `btype` MUST not be set and `tx.op` field MUST be `"burn"`
+1. the `btype` MUST NOT be set and `tx.op` field MUST be `"burn"`
 2. it MUST contain a field `tx.from: Account`
 3. it MUSAT contain a field `tx.amt: Nat`
 4. it MUST contain a field `tx.memo` if the `icrc1_transfer` call that creates the block has a memo field, and its value is the value of that field. 
