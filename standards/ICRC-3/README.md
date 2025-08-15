@@ -153,23 +153,36 @@ The following principles guide the evolution and interpretation of ICRC-3 and an
 
 ## Interaction with Other Standards
 
-Each standard that adheres to `ICRC-3` MUST define the list of block schemas that it introduces.  
-Each block schema MUST:
+Any standard that builds on ICRC-3 and defines new block types MUST clearly and unambiguously describe how those block types are recorded and interpreted.
 
-1. Extend the [Generic Block Schema](#generic-block-schema).
-2. Specify the expected value of `btype`. This MUST be unique across all standards.
-3. Describe the minimal `tx` structure required to interpret the block and determine its effect on ledger state.
-4. Define a canonical mapping from the method’s call parameters to the `tx` fields, including only parameters that are explicitly present in the user’s request.
+### When Defining a New Block Type
+For each block type introduced by a standard, the specification MUST:
 
-When defining how calls map to `tx`:
-- The `tx` must encode the user’s intent as passed in the method call.
-- Optional parameters not provided by the user MUST NOT appear in the `tx`.
-- If a top-level `fee` is present, it represents the effective fee charged by the ledger.  
-  If `tx.fee` is present, it represents the fee value specified by the user in the call.  
-  If both are absent, the fee is `0`.
-- The fee payer MUST be inferable from the block type alone.
-- Additional non-semantic fields may be added without requiring a new block type.  
-  Any new semantic fields that affect ledger state require a new block type definition.
+1. **Extend the [Generic Block Schema](#generic-block-schema)**.
+2. **Assign a unique `btype` value** that does not collide with any existing standard.
+3. **Describe the minimal `tx` structure** required to interpret the block and determine its effect on ledger state.
+4. **Specify the fee payer** for this block type.  
+   - The payer MUST be derivable from the block’s own fields (no external context or method-specific exceptions).
+   - This ensures the payer can be determined unambiguously by any ICRC-3-aware client.
+5. **Reference the [ICRC-3 effective fee rule](#principles-and-rules-for-icrc-3-blocks)** and state how it applies to this block type.  
+   - Clarify whether `tx.fee` is expected in user calls, when a top-level `fee` is present, and under what conditions either may be omitted.
+6. **Identify optional non-semantic fields** that may be added to `tx` without requiring a new block type.  
+   - Any change to the minimal semantic structure that affects ledger state requires defining a new `btype`.
+
+### When Defining a Canonical Mapping from Methods to Blocks
+For each method that produces a block:
+
+1. **Identify the `btype`** the method produces.
+2. **Define the canonical mapping** from the method’s call parameters to the `tx` fields of the resulting block:
+   - Include only parameters explicitly provided by the caller.
+   - Optional parameters not provided MUST NOT appear in `tx`.
+3. **Record fees according to the ICRC-3 fee rules**:
+   - `tx.fee` records the fee amount provided by the caller in the request.
+   - A top-level `fee` records the actual fee charged by the ledger.
+   - If both are absent, the fee is `0`.
+4. **Ensure operation names are namespaced** using the standard’s ICRC number as a prefix (see [Namespacing for Operations](#namespacing-for-operations)).
+
+This separation ensures that block semantics and method mappings are both specified with clarity and without cross-contamination.
 
 ### Namespacing for Operations
 
@@ -191,7 +204,9 @@ An ICRC-3 compatible Ledger MUST expose an endpoint listing all the supported bl
 
 ## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
 
-This section describes how ICRC-1 and ICRC-2 operations are recorded in ICRC-3-compliant blocks.
+
+This section describes how ICRC-1 and ICRC-2 operations are represented in ICRC-3-compliant blocks.  These blocks follow the **legacy format**, meaning they do not have a `btype` field.  
+Instead, their type is inferred directly from the content of the `tx` field, which records the canonical mapping of the original method call.
 
 
 
