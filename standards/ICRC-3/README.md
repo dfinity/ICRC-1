@@ -117,7 +117,7 @@ This section describes how ICRC-1 and ICRC-2 operations are recorded in ICRC-3-c
 ### No `btype` Field
 ICRC-1 and ICRC-2 blocks MUST NOT include a `btype` field. These standards use the legacy block format where the type of block is determined exclusively by the content of the `tx` field. ICRC-1 and ICRC-2 blocks use the `tx` field to store input from the user and use the external block to store data set by the Ledger. For instance, the amount of a transaction is stored in the field `tx.amt` because it has been specified by the user, while the time when the block was added to the Ledger is stored in the field `ts` because it is set by the Ledger.
 
-#### Block Structure Requirements
+#### Block Structure 
 
 A generic ICRC-1 or ICRC-2 Block:
 
@@ -138,24 +138,25 @@ The `tx` field:
 - **MUST** be encoded using the ICRC-3 `Value` type.
 - **MUST NOT** contain any fields that were not explicitly present in the original user call.
 - **MUST** follow the canonical mapping rules described in the next section.
+- **MUST** contain a field `op: String` with value one of "mint", "burn", "xfer", "approve"
+- **MUST** contain a field `amt: Nat` that represents the amount
+- **MUST**  contain the `fee: Nat` field for operations that require a fee if the user specifies the fee in the request. If the user does not specify the fee in the request, then this field is not set and the top-level `fee` is set.
+ - **CAN**  contain the `memo: Blob` field if specified by the user
+ - **CAN** contain the `ts: Nat` field if the user sets the `created_at_time` field in the request.
 
-
-
-
-
-1. it MUST contain a field `ts: Nat` which is the timestamp of when the block was added to the Ledger
-2. if the operation requires a fee and if the `tx` field doesn't specify the fee then it MUST contain a field `fee: Nat` which specifies the fee payed to add this block to the Ledger
-3. its field `tx`
-    1. MUST contain a field `op: String` that uniquely defines the type of operation
-    2. MUST contain a field `amt: Nat` that represents the amount
-    3. MUST contain the `fee: Nat` field for operations that require a fee if the user specifies the fee in the request. If the user does not specify the fee in the request, then this field is not set and the top-level `fee` is set.
-    4. CAN contain the `memo: Blob` field if specified by the user
-    5. CAN contain the `ts: Nat` field if the user sets the `created_at_time` field in the request.
 
 Operations that require paying a fee: Transfer, and Approve.
 
+### Compliance Reporting
 
-`icrc3_supported_block_types` should always return all the `btype`s supported by the Ledger even if the Ledger doesn't support the `btype` field yet. For example, if the Ledger supports mint blocks using the backward compatibility schema, i.e. without `btype`, then the endpoint `icrc3_supported_block_types` will have to return `"1mint"` among the supported block types.
+Although legacy ICRC-1 and ICRC-2 blocks do not include the `btype` field, ledgers **MUST** still report their supported block types via the `icrc3_supported_block_types` endpoint. By convention, the following identifiers are used to describe the types of these legacy blocks:
+
+- `"1burn"` for burn blocks
+- `"1mint"` for mint blocks
+- `"1xfer"` for `icrc1_transfer` blocks
+- `"2xfer"` for `icrc2_transfer_from` blocks
+- `"2approve"` for `icrc2_approve` blocks
+
 
 ### Account Type
 
@@ -180,171 +181,315 @@ variant { Array = vec {
 ```
 
 
-### Burn Block Schema
+### Canonical `tx` Mapping
 
-1. the `btype` MUST not be set and `tx.op` field MUST be `"burn"`
-2. it MUST contain a field `tx.from: Account`
-3. it MUSAT contain a field `tx.amt: Nat`
-4. it MUST contain a field `tx.memo` if the `icrc1_transfer` call that creates the block has a memo field, and its value is the value of that field. 
+Each ICRC-1 or ICRC-2 method call maps deterministically to the `tx` field of the resulting block. Only parameters provided by the user are included — optional fields that are omitted in the call MUST NOT appear in `tx`.
 
+All fields are encoded using the ICRC-3 `Value` type.
 
-```
-variant { Map = vec {
-    record { "phash"; variant {
-        Blob = blob "\a1\a9p\f5\17\e5\e2\92\87\96(\c8\f1\88iM\0d(tN\f4-~u\19\88\83\d8_\b2\01\ec"
-    }};
-    record { "ts"; variant { Nat = 1_701_108_969_851_098_255 : nat }};
-    record { "tx"; variant { Map = vec {
-        record { "op"; variant { Text = "burn" } };
-        record { "amt"; variant { Nat = 1_228_990 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\00\00\00\00\020\00\07\01\01" };
-                variant { Blob = blob "&\99\c0H\7f\a4\a5Q\af\c7\f4;\d9\e9\ca\e5 \e3\94\84\b5c\b6\97/\00\e6\a0\e9\d3p\1a" };
-        }}};
-        record { "memo"; variant { Blob = blob "\82\00\83x\223K7Bg3LUkiXZ5hatPT1b9h3XxJ89DYSU2e\19\07\d0\00"
-        }};
-    }}};
-}};
+---
+
+#### `icrc1_transfer`
+
+**Call parameters:**
+
+```candid
+icrc1_transfer: record {
+  to: Account;
+  amount: Nat;
+  fee: opt Nat;
+  memo: opt Blob;
+  from_subaccount: opt blob;
+  created_at_time: opt Nat;
+}
 ```
 
-#### Mint Block Schema
+**Regular Transfer** — when neither the sender nor recipient is the minting account:
 
-1. the `btype` field MUST be `"1mint"` or the `tx.op` field MUST be `"mint"`
-2. it MUST contain a field `tx.to: Account`
+- `op = "xfer"`
+- `from = [caller]` if `from_subaccount` is not provided  
+- `from = [caller, from_subaccount]` if provided
+- `to = to`
+- `amt = amount`
+- `fee = fee` if provided
+- `memo = memo` if provided
+- `ts = created_at_time` if provided
 
-Example with `btype`:
-```
-variant { Map = vec {
-    record { "btype"; "variant" { Text = "1mint" }};
-    record { "ts"; variant { Nat = 1_675_241_149_669_614_928 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "amt"; variant { Nat = 100_000 : nat } };
-        record { "to"; variant { Array = vec {
-                variant { Blob = blob "Z\d0\ea\e8;\04*\c2CY\8b\delN\ea>]\ff\12^. WGj0\10\e4\02" };
-        }}};
-    }}};
-}};
-```
 
-Example without `btype`:
-```
-variant { Map = vec {
-    record { "ts"; variant { Nat = 1_675_241_149_669_614_928 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "op"; variant { Text = "mint" } };
-        record { "amt"; variant { Nat = 100_000 : nat } };
-        record { "to"; variant { Array = vec {
-                variant { Blob = blob "Z\d0\ea\e8;\04*\c2CY\8b\delN\ea>]\ff\12^. WGj0\10\e4\02" };
-        }}};
-    }}};
-}};
-```
 
-#### Transfer and Transfer From Block Schema
 
-1. the `btype` field MUST be
-    1. `"2xfer"` for `icrc2_transfer_from` blocks
-    2. `"1xfer"` for `icrc1_transfer` blocks
-1. if `btype` is not set then `tx.op` field MUST be `"xfer"`
-2. it MUST contain a field `tx.from: Account`
-3. it MUST contain a field `tx.to: Account`
-4. it CAN contain a field `tx.spender: Account`
+**Transfer from the Minting Account (→ Mint)** — when `[caller]` or `[caller, from_subaccount]` equals the minting account:
 
-Example with `btype`:
-```
-variant { Map = vec {
-    record { "btype"; "variant" { Text = "1xfer" }};
-    record { "fee"; variant { Nat = 10 : nat } };
-    record { "phash"; variant { Blob =
-        blob "h,,\97\82\ff.\9cx&l\a2e\e7KFVv\d1\89\beJ\c5\c5\ad,h\5c<\ca\ce\be"
-    }};
-    record { "ts"; variant { Nat = 1_701_109_006_692_276_133 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "amt"; variant { Nat = 609_618 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
-                variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
-        }}};
-        record { "to"; variant { Array = vec {
-            variant { Blob = blob " \ef\1f\83Zs\0a?\dc\d5y\e7\ccS\9f\0b\14a\ac\9f\fb\f0bf\f3\a9\c7D\02" };
-            variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
-        }}};
-    }}};
-}};
-```
+- `op = "mint"`
+- `to = to`
+- `amt = amount`
+- `memo = memo` if provided
+- `ts = created_at_time` if provided  
+> `from` and `fee` MUST NOT be present
 
-Example without `btype`:
+**Transfer to the Minting Account (→ Burn)** — when `to` equals the minting account:
+
+- `op = "burn"`
+- `from = [caller]` if `from_subaccount` is not provided  
+- `from = [caller, from_subaccount]` if provided
+- `amt = amount`
+- `memo = memo` if provided
+- `ts = created_at_time` if provided  
+> `to` and `fee` MUST NOT be present
+
+
+### Canonical Examples of `icrc1_transfer` Blocks
+
+Each of the following examples represents a canonical block resulting from an `icrc1_transfer` call. These examples illustrate different scenarios depending on which optional fields were included in the call. Only parameters explicitly provided by the caller appear in the resulting `tx`.
+
+---
+
+#### Example 1: Transfer with required parameters only
+This example shows an `icrc1_transfer` call where the caller only specifies the mandatory fields: `to` and `amount`. No `memo`, `created_at_time`, or explicit `fee` are provided. The block still contains a top-level `fee` field since the ledger applies the default transfer fee.
+
 ```
-variant { Map = vec {
-    record { "fee"; variant { Nat = 10 : nat } };
-    record { "phash"; variant { Blob =
-        blob "h,,\97\82\ff.\9cx&l\a2e\e7KFVv\d1\89\beJ\c5\c5\ad,h\5c<\ca\ce\be"
-    }};
-    record { "ts"; variant { Nat = 1_701_109_006_692_276_133 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "op"; variant { Text = "xfer" } };
-        record { "amt"; variant { Nat = 609_618 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
-                variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
-        }}};
-        record { "to"; variant { Array = vec {
-            variant { Blob = blob " \ef\1f\83Zs\0a?\dc\d5y\e7\ccS\9f\0b\14a\ac\9f\fb\f0bf\f3\a9\c7D\02" };
-            variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
-        }}};
-    }}};
-}};
+variant {
+  Map = vec {
+    record { "fee"; variant { Nat64 = 10_000 : nat64 } };
+    record {
+      "phash";
+      variant {
+        Blob = blob "\b8\0d\29\e5\91\60\4c\d4\60\3a\2a\7c\c5\33\14\21\27\b8\23\e9\a5\24\b7\14\43\24\4b\2d\d5\b0\86\13"
+      };
+    };
+    record { "ts"; variant { Nat64 = 1_753_344_727_778_561_060 : nat64 } };
+    record {
+      "tx";
+      variant {
+        Map = vec {
+          record { "amt"; variant { Nat64 = 85_224_322_205 : nat64 } };
+          record { "from"; variant { Array = vec { variant { Blob = blob "\00\00\00\00\02\30\02\17\01\01" } } } };
+          record { "op"; variant { Text = "xfer" } };
+          record {
+            "to";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\09\14\61\93\79\7a\6c\ab\86\17\ee\f9\5f\16\40\94\d3\f8\7c\e9\0d\9e\b2\7e\01\40\0c\79\02" };
+              }
+            };
+          };
+        }
+      };
+    };
+  }
+};
 ```
 
-#### Approve Block Schema
+---
 
-1. the `btype` field MUST be `"2approve"` or `tx.op` field MUST be `"approve"`
-2. it MUST contain a field `tx.from: Account`
-3. it MUST contain a field `tx.spender: Account`
-4. it CAN contain a field `tx.expected_allowance: Nat` if set by the user
-5. it CAN contain a field `tx.expires_at: Nat` if set by the user
+#### Example 2: Mint to user account
+This example represents an `icrc1_transfer` call where the `from` account is the minting account. This results in a mint block. The caller specifies `to` and `amount`. No `fee`, `memo`, or `created_at_time` are provided.
 
-Example with `btype`:
 ```
-variant { Map = vec {
-    record { "btype"; "variant" { Text = "2approve" }};
-    record { "fee"; variant { Nat = 10 : nat } };
-    record { "phash"; variant {
-        Blob = blob ";\f7\bet\b6\90\b7\ea2\f4\98\a5\b0\60\a5li3\dcXN\1f##2\b5\db\de\b1\b3\02\f5"
-    }};
-    record { "ts"; variant { Nat = 1_701_167_840_950_358_788 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "amt"; variant { Nat = 18_446_744_073_709_551_615 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\16c\e1\91v\eb\e5)\84:\b2\80\13\cc\09\02\01\a8\03[X\a5\a0\d3\1f\e4\c3{\02" };
-        }}};
-        record { "spender"; variant { Array = vec {
-            variant { Blob = blob "\00\00\00\00\00\e0\1dI\01\01" };
-        }}};
-    }}};
-}}};
+variant {
+  Map = vec {
+    record {
+      "phash";
+      variant {
+        Blob = blob "\c2\b1\32\6a\5e\09\0e\10\ad\be\f3\4c\ba\fd\bc\90\18\3f\38\a7\3e\73\61\cc\0a\fa\99\89\3d\6b\9e\47"
+      };
+    };
+    record { "ts"; variant { Nat64 = 1_753_344_737_123_456_789 : nat64 } };
+    record {
+      "tx";
+      variant {
+        Map = vec {
+          record { "amt"; variant { Nat64 = 500_000_000 : nat64 } };
+          record {
+            "to";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\15\28\84\12\af\11\b2\99\31\3a\5b\5a\7c\12\83\11\de\10\23\33\c4\ad\be\66\9f\2e\a1\a3\08" };
+              }
+            };
+          };
+          record { "op"; variant { Text = "mint" } };
+        }
+      };
+    };
+  }
+};
 ```
 
-Example without `btype`:
+---
+
+#### Example 3: Burn from user account
+This example represents an `icrc1_transfer` call where the destination `to` is the minting account. This results in a burn block. The caller specifies `from` and `amount`. No `fee`, `memo`, or `created_at_time` are provided.
+
 ```
-variant { Map = vec {
-    record { "fee"; variant { Nat = 10 : nat } };
-    record { "phash"; variant {
-        Blob = blob ";\f7\bet\b6\90\b7\ea2\f4\98\a5\b0\60\a5li3\dcXN\1f##2\b5\db\de\b1\b3\02\f5"
-    }};
-    record { "ts"; variant { Nat = 1_701_167_840_950_358_788 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "op"; variant { Text = "approve" } };
-        record { "amt"; variant { Nat = 18_446_744_073_709_551_615 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\16c\e1\91v\eb\e5)\84:\b2\80\13\cc\09\02\01\a8\03[X\a5\a0\d3\1f\e4\c3{\02" };
-        }}};
-        record { "spender"; variant { Array = vec {
-            variant { Blob = blob "\00\00\00\00\00\e0\1dI\01\01" };
-        }}};
-    }}};
-}}};
+variant {
+  Map = vec {
+    record {
+      "phash";
+      variant {
+        Blob = blob "\7f\89\42\a5\be\4d\af\50\3b\6e\2a\8e\9c\c7\dd\f1\c9\e8\24\f0\98\bb\d7\af\ae\d2\90\10\67\df\1e\c1\0a"
+      };
+    };
+    record { "ts"; variant { Nat64 = 1_753_344_740_000_000_000 : nat64 } };
+    record {
+      "tx";
+      variant {
+        Map = vec {
+          record { "amt"; variant { Nat64 = 42_000_000 : nat64 } };
+          record {
+            "from";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\00\00\00\00\02\30\02\17\01\01" };
+              }
+            };
+          };
+          record { "op"; variant { Text = "burn" } };
+        }
+      };
+    };
+  }
+};
 ```
+
+##### `icrc2_transfer_from`
+
+**Call parameters:**
+
+```
+ icrc2_transfer_from: record {
+  spender_subaccount: opt blob;
+  from: Account;
+  to: Account;
+  amount: Nat;
+  fee: opt Nat;
+  memo: opt Blob;
+  created_at_time: opt Nat;
+}
+```
+
+**Regular Transfer** — when the `to` account is not the minting account:
+
+- `op = "xfer"`
+- `from = from` (as passed in the call)
+- `spender = [caller]` if `spender_subaccount` is not provided
+- `spender = [caller, spender_subaccount]` if provided
+- `to = to`
+- `amt = amount`
+- `fee = fee` if provided
+- `memo = memo` if provided
+- `ts = created_at_time` if provided
+
+**Burn Transfer** — when the `to` account is the minting account:
+
+- `op = "burn"`
+- `from = from` (as passed in the call)
+- `spender = [caller]` if `spender_subaccount` is not provided
+- `spender = [caller, spender_subaccount]` if provided- `amt = amount`
+- `fee = fee` if provided
+- `memo = memo` if provided
+- `ts = created_at_time` if provided
+
+
+
+#### Example 4: Transfer from approval
+This example shows an `icrc2_transfer_from` call where the recipient is a regular user account. Only the required fields are provided: `from`, `to`, and `amount`, and the spender subaccount is omitted (defaults to `null`, i.e., the default subaccount).
+
+```
+variant {
+  Map = vec {
+    record { "fee"; variant { Nat64 = 10_000 : nat64 } };
+    record {
+      "phash";
+      variant {
+        Blob = blob "\a0\5f\d2\f3\4c\26\73\58\00\7f\ea\02\18\43\47\70\85\50\2e\d2\1f\23\e0\dc\e6\af\3c\cf\9e\6f\4a\d8"
+      };
+    };
+    record { "ts"; variant { Nat64 = 1_753_344_728_820_625_931 : nat64 } };
+    record {
+      "tx";
+      variant {
+        Map = vec {
+          record { "amt"; variant { Nat64 = 50_419_165_435 : nat64 } };
+          record {
+            "from";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc" }
+              }
+            };
+          };
+          record {
+            "spender";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\00\00\00\00\02\30\02\17\01\01" }
+              }
+            };
+          };
+          record { "op"; variant { Text = "xfer" } };
+          record {
+            "to";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\3a\b2\17\29\53\18\70\89\73\bf\db\61\ed\28\c7\22\dc\63\2e\60\3d\50\cd\6c\9e\36\b2\ef\02" }
+              }
+            };
+          };
+        }
+      };
+    };
+  }
+};
+```
+
+---
+
+#### Example 5: Burn from approval (to minting account with memo)
+This example shows an `icrc2_transfer_from` call where the destination `to` is the minting account, resulting in a burn block. The call includes a `memo`, and no `spender_subaccount` is provided. Therefore, the `spender` field consists only of the caller's principal (default subaccount). This example demonstrates a minimal burn operation initiated via approval, with memo included.
+
+```
+variant {
+  Map = vec {
+    record {
+      "phash";
+      variant {
+        Blob = blob "\9a\cd\20\3f\b0\11\fb\7f\e2\2a\1d\f2\c1\dd\22\6a\2f\1e\f6\88\d3\b0\9f\be\8d\2e\c5\70\f2\b4\a1\77"
+      };
+    };
+    record { "ts"; variant { Nat64 = 1_753_344_750_000_000_000 : nat64 } };
+    record {
+      "tx";
+      variant {
+        Map = vec {
+          record { "amt"; variant { Nat64 = 200_000 : nat64 } };
+          record {
+            "from";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\ab\cd\01\23\45\67\89\ab\cd\ef\01\23\45\67\89\ab\cd\ef\01\23\45\67\89\ab\cd\ef\01\23\45\67\89\ab" }
+              }
+            };
+          };
+          record {
+            "spender";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\00\00\00\00\02\30\02\17\01\01" }
+              }
+            };
+          };
+          record { "op"; variant { Text = "burn" } };
+          record { "memo"; variant { Blob = blob "burn by spender" } };
+        }
+      };
+    };
+  }
+};
+```
+
+
+
 
 ## Specification
 
