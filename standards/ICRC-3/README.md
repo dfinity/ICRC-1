@@ -342,6 +342,13 @@ Each of the following examples represents a canonical block resulting from an `i
 
 #### Example 1: Transfer with required parameters only
 This example shows an `icrc1_transfer` call where the caller only specifies the mandatory fields: `to` and `amount`. No `memo`, `created_at_time`, or explicit `fee` are provided. The block still contains a top-level `fee` field since the ledger applies the default transfer fee.
+### Burn Block Schema
+
+1. the `btype` MUST NOT be set and `tx.op` field MUST be `"burn"`
+2. it MUST contain a field `tx.from: Account`
+3. it MUST contain a field `tx.amt: Nat`
+4. it MUST contain a field `tx.memo` if the `icrc1_transfer` call that creates the block has a memo field, and its value is the value of that field. 
+
 
 ```
 variant {
