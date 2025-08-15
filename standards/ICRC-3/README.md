@@ -88,12 +88,93 @@ An ICRC-3 compliant Block
 2. MUST contain a field `phash: Blob` which is the hash of its parent if it has a parent block
 3. SHOULD contain a field `btype: String` which uniquely describes the type of the Block. If this field is not set then the block type falls back to ICRC-1 and ICRC-2 for backward compatibility purposes
 
-## Interaction with other standards
 
-Each standard that adheres to `ICRC-3` MUST define the list of block schemas that it introduces. Each block schema MUST:
+### Kinds of Blocks
 
-1. extend the [Generic Block Schema](#generic-block-schema)
-2. specify the expected value of `btype`. This MUST be unique accross all the standards. An ICRC-x standard MUST use namespacing for its op identifiers using the following scheme of using the ICRC standard's number as prefix to the name followed by an operation name that must begin with a letter:
+An ICRC-3 block can record different kinds of information. Some blocks record the result of a transaction submitted by a user. These typically contain a `tx` field describing the user’s intent and any parameters they provided.
+
+Other blocks may be created by the ledger itself, for example during an upgrade, migration, or system operation, to record changes in ledger state that did not come from a user call.
+
+The `tx` field, when present, encodes the **intent** or **state change payload** associated with the block:
+- In user-initiated blocks, `tx` reflects the call parameters, subject to the canonical mapping defined for that block type.
+- In system-generated blocks, `tx` may capture the minimal structure required to interpret the block’s meaning and effect, as defined in the specification for that block type.
+
+The exact meaning of a block and its `tx` structure is determined by its block type.  
+Block types and their schemas are defined either by legacy standards (e.g., ICRC-1, ICRC-2) or by newer standards introducing `btype`-tagged blocks.
+
+
+
+## Principles and Rules for ICRC-3 Blocks
+
+The following principles guide the evolution and interpretation of ICRC-3 and any standards that build on it.
+
+### 1. Separation of `btype` and `tx`
+- The `btype` field defines the **minimal semantic structure** of a block — the set of fields in `tx` required to fully determine its effect on ledger state.
+- Standards that introduce a new `btype` must:
+  - Assign a unique identifier for the `btype`.
+  - Specify the minimal `tx` structure required for interpreting that block type.
+  - Define how the block’s effect on ledger state is derived from this minimal structure.
+- Standards that define methods producing blocks must:
+  - Specify which `btype` the method produces.
+  - Define the **canonical mapping** from method call parameters to the `tx` field of the resulting block.
+  - Ensure that `tx` contains only parameters explicitly provided by the caller (except where the block type definition requires otherwise).
+
+### 2. Avoiding Collisions in `tx`
+- To avoid collisions between transactions originating from different standards, the canonical `tx` mapping must include:
+  - An operation field (`op`) whose value is namespaced using the standard’s number as a prefix, e.g., `122freeze_account`.
+- No two standardized methods may produce `tx` values that are indistinguishable when interpreted under ICRC-3 rules.
+
+### 3. Inclusion of the User Call in `tx`
+- The `tx` field must faithfully capture the structure of the user call that triggered the block.
+- All call parameters that are part of the method’s canonical mapping must be included exactly as provided by the caller.
+- Optional parameters that were not present in the call must be omitted from `tx`.
+
+### 4. Fee Calculation and Representation
+- The **effective fee** associated with a block is determined as follows:
+  1. If a top-level `fee` field is present in the block, it is the effective fee charged by the ledger.
+  2. Otherwise, if `tx.fee` is present, the effective fee is that value.
+  3. Otherwise, the effective fee is `0`.
+- `tx.fee` records the fee amount provided by the caller in the request.
+- The top-level `fee` records the actual fee charged by the ledger, allowing for ledger-specific fee policies (e.g., dynamic fees, discounts).
+- As an optimization, the top-level `fee` may be omitted if it is equal to `tx.fee`.
+- This design allows ledgers to implement flexible, policy-driven fee systems without breaking ICRC-3 compatibility.
+
+### 5. Fee Payer Inference
+- The fee payer must be **determinable from the block type alone**.
+- When defining a new `btype`, the standard must state explicitly which account pays the fee for blocks of that type.
+
+### 6. Future-Proofing and Extensibility
+- Additional non-semantic fields (e.g., metadata, hashes, references) may be added to `tx` without introducing a new `btype`, provided:
+  - They do not affect the block’s effect on ledger state.
+  - They are ignored by block verification and interpretation logic that only relies on the minimal `tx` structure defined by the `btype`.
+- Any change to the minimal semantic structure of a block requires introducing a new `btype`.
+
+
+
+## Interaction with Other Standards
+
+Each standard that adheres to `ICRC-3` MUST define the list of block schemas that it introduces.  
+Each block schema MUST:
+
+1. Extend the [Generic Block Schema](#generic-block-schema).
+2. Specify the expected value of `btype`. This MUST be unique across all standards.
+3. Describe the minimal `tx` structure required to interpret the block and determine its effect on ledger state.
+4. Define a canonical mapping from the method’s call parameters to the `tx` fields, including only parameters that are explicitly present in the user’s request.
+
+When defining how calls map to `tx`:
+- The `tx` must encode the user’s intent as passed in the method call.
+- Optional parameters not provided by the user MUST NOT appear in the `tx`.
+- If a top-level `fee` is present, it represents the effective fee charged by the ledger.  
+  If `tx.fee` is present, it represents the fee value specified by the user in the call.  
+  If both are absent, the fee is `0`.
+- The fee payer MUST be inferable from the block type alone.
+- Additional non-semantic fields may be added without requiring a new block type.  
+  Any new semantic fields that affect ledger state require a new block type definition.
+
+### Namespacing for Operations
+
+An ICRC-x standard MUST use namespacing for its operation identifiers using the following scheme, where the ICRC standard’s number acts as a prefix to the name, followed by an operation name that begins with a letter:
+
 
 ```
 op = icrc_number op_name
