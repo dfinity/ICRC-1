@@ -108,99 +108,122 @@ Block types and their schemas are defined either by legacy standards (e.g., ICRC
 
 The following principles guide the evolution and interpretation of ICRC-3 and any standards that build on it.
 
-### 1. Separation of `btype` and `tx`
-- The `btype` field defines the **minimal semantic structure** of a block — the set of fields in `tx` required to fully determine its effect on ledger state.
+### 1. Core State Transitions
+- Every block type must define the **core state transition** it represents: the deterministic change to ledger state implied by the block’s minimal `tx` structure, *ignoring fees or ledger-specific policies*.  
+- This transition is the canonical meaning of a block — what balances, allowances, or other state variables change as a direct consequence of the block.  
+- Fee handling, metadata, and ledger-specific policies are layered on top of this transition.
+
+### 2. Separation of `btype` and `tx`
+- The `btype` field defines the **minimal semantic structure** of a block — the set of fields in `tx` required to fully determine its core state transition.  
 - Standards that introduce a new `btype` must:
   - Assign a unique identifier for the `btype`.
   - Specify the minimal `tx` structure required for interpreting that block type.
-  - Define how the block’s effect on ledger state is derived from this minimal structure.
+  - Define the block’s **core state transition** in terms of this minimal structure.
 - Standards that define methods producing blocks must:
   - Specify which `btype` the method produces.
   - Define the **canonical mapping** from method call parameters to the `tx` field of the resulting block.
   - Ensure that `tx` contains only parameters explicitly provided by the caller (except where the block type definition requires otherwise).
 
-### 2. Avoiding Collisions in `tx`
+### 3. Avoiding Collisions in `tx`
 - To avoid collisions between transactions originating from different standards, the canonical `tx` mapping must include:
   - An operation field (`op`) whose value is namespaced using the standard’s number as a prefix, e.g., `122freeze_account`.
 - No two standardized methods may produce `tx` values that are indistinguishable when interpreted under ICRC-3 rules.
 
-### 3. Inclusion of the User Call in `tx`
+### 4. Inclusion of the User Call in `tx`
 - The `tx` field must faithfully capture the structure of the user call that triggered the block.
 - All call parameters that are part of the method’s canonical mapping must be included exactly as provided by the caller.
 - Optional parameters that were not present in the call must be omitted from `tx`.
 
-### 4. Fee Calculation and Representation
-- The **effective fee** associated with a block is determined as follows:
-  1. If a top-level `fee` field is present in the block, it is the effective fee charged by the ledger.
-  2. Otherwise, if `tx.fee` is present, the effective fee is that value.
-  3. Otherwise, the effective fee is `0`.
-- `tx.fee` records the fee amount provided by the caller in the request.
-- The top-level `fee` records the actual fee charged by the ledger, allowing for ledger-specific fee policies (e.g., dynamic fees, discounts).
-- As an optimization, the top-level `fee` may be omitted if it is equal to `tx.fee`.
-- This design allows ledgers to implement flexible, policy-driven fee systems without breaking ICRC-3 compatibility.
-
-### 5. Fee Payer Inference
-- The fee payer must be **determinable from the block type alone**.
-- When defining a new `btype`, the standard must state explicitly which account pays the fee for blocks of that type.
-
-### 6. Future-Proofing and Extensibility
+### 5. Future-Proofing and Extensibility
 - Additional non-semantic fields (e.g., metadata, hashes, references) may be added to `tx` without introducing a new `btype`, provided:
-  - They do not affect the block’s effect on ledger state.
+  - They do not affect the block’s **core state transition**.
   - They are ignored by block verification and interpretation logic that only relies on the minimal `tx` structure defined by the `btype`.
 - Any change to the minimal semantic structure of a block requires introducing a new `btype`.
 
+### Note on Ledger-Specific Fields
+- Blocks may include additional fields specific to a given standard or ledger (e.g., `fee`, metadata, references).  
+- ICRC-3 defines how such fields are recorded and verified, but **does not define their economic or behavioral semantics**. Those semantics must be specified by the standard that introduces the block type (e.g., fee rules in ICRC-107).
+
+## Semantics of Blocks: Evaluation Model
+
+To ensure consistency across standards and implementations, the semantics of any block must be interpretable through the following evaluation model. Each standard that defines a block type specifies how to “plug into” this model (by defining its minimal `tx` schema, pre-fee transition, fee payer, etc.).
+
+1. Identify block type  
+   • If `btype` is present, use it.  
+   • If no `btype`, fall back to legacy ICRC-1/2 inference from `tx.op`.
+
+2. Validate `tx` structure  
+   • Check that `tx` includes all required fields defined for the block type.  
+   • Ensure no extra *semantic* fields beyond those defined by the block type are present.  
+   • Optional caller-provided fields may appear if allowed by the canonical mapping.
+
+3. Derive pre-fee state transition  
+   • Apply the deterministic state change implied by `tx`, ignoring any fees.  
+   • Example: debit/credit balances, mint, burn, update allowance.
+
+4. Apply fee (if applicable)  
+   • If the block type involves fees, determine the **effective fee** following ICRC-107 rules.  
+   • Deduct the fee from the account designated as the **fee payer** for this block type.  
+   • Adjust balances accordingly (e.g., for mints: `to` receives `amt – fee`).
+
+5. Enforce validity conditions  
+   • Ensure balances remain non-negative.  
+   • Verify sufficient funds to cover `amt + fee` (where applicable).  
+   • Require `fee ≤ amt` for mint blocks.  
+   • Enforce any invariants specified by the block type’s standard.
 
 
 ## Interaction with Other Standards
 
-Any standard that builds on ICRC-3 and defines new block types MUST clearly and unambiguously describe how those block types are recorded and interpreted.
+ICRC-3 defines how blocks are structured and verified. Other standards extend this by either:  
+(1) introducing new block types (`btype`), or  
+(2) defining canonical mappings from standardized method calls to existing block types.
 
-### When Defining a New Block Type
-For each block type introduced by a standard, the specification MUST:
+### Standards That Introduce Block Types
+A standard that defines a new block type must:
+- Assign a unique `btype`.  
+- Specify the minimal `tx` structure required to interpret the block and determine its effect on ledger state.  
+- Define semantics using the **Semantics of Blocks: Evaluation Model** (pre-fee transition, fee hook, post-conditions).  
+- If the block type involves fees, reference the applicable fee standard (e.g., ICRC-107) and **define who pays**, via a fee payer expression resolvable from block fields.
 
-1. **Extend the [Generic Block Schema](#generic-block-schema)**.
-2. **Assign a unique `btype` value** that does not collide with any existing standard.
-3. **Describe the minimal `tx` structure** required to interpret the block and determine its effect on ledger state.
-4. **Specify the fee payer** for this block type.  
-   - The payer MUST be derivable from the block’s own fields (no external context or method-specific exceptions).
-   - This ensures the payer can be determined unambiguously by any ICRC-3-aware client.
-5. **Reference the [ICRC-3 effective fee rule](#principles-and-rules-for-icrc-3-blocks)** and state how it applies to this block type.  
-   - Clarify whether `tx.fee` is expected in user calls, when a top-level `fee` is present, and under what conditions either may be omitted.
-6. **Identify optional non-semantic fields** that may be added to `tx` without requiring a new block type.  
-   - Any change to the minimal semantic structure that affects ledger state requires defining a new `btype`.
+### Standards That Define Methods
+A standard that defines a method which produces blocks must:
+- Specify which `btype` (if any) the method produces.  
+- Define the canonical mapping from method inputs to the `tx` field of the resulting block.  
+- Ensure all required fields from the block type’s minimal schema are populated.  
+- Include only caller-provided optional fields; omit optionals that were not supplied.  
+- Include an `op` field in `tx` to identify the operation and avoid collisions.
 
-### When Defining a Canonical Mapping from Methods to Blocks
-For each method that produces a block:
-
-1. **Identify the `btype`** the method produces.
-2. **Define the canonical mapping** from the method’s call parameters to the `tx` fields of the resulting block:
-   - Include only parameters explicitly provided by the caller.
-   - Optional parameters not provided MUST NOT appear in `tx`.
-3. **Record fees according to the ICRC-3 fee rules**:
-   - `tx.fee` records the fee amount provided by the caller in the request.
-   - A top-level `fee` records the actual fee charged by the ledger.
-   - If both are absent, the fee is `0`.
-4. **Ensure operation names are namespaced** using the standard’s ICRC number as a prefix (see [Namespacing for Operations](#namespacing-for-operations)).
-
-This separation ensures that block semantics and method mappings are both specified with clarity and without cross-contamination.
-
-### Namespacing for Operations
-
-An ICRC-x standard MUST use namespacing for its operation identifiers using the following scheme, where the ICRC standard’s number acts as a prefix to the name, followed by an operation name that begins with a letter:
+This division of responsibility ensures that:
+- Block types define **what blocks mean** (semantics).
+- Methods define **how blocks are created** (intent capture).
+- Tooling and clients can rely on predictable, non-colliding `tx` values.
 
 
-```
-op = icrc_number op_name
-icrc_number = nonzero_digit *digit
-nonzero_digit = "1" / "2" / "3" / "4" / "5" / "6" / "7" / "8" / "9"
-digit = "0" / nonzero_digit
-op_name = a-z *(a-z / digit / "_" / "-")
-```
+#### Namespacing for Operations
+To avoid collisions across standards, `tx.op` MUST be namespaced:
+- `op = icrc_number op_name`  
+- `icrc_number`: a non-zero digit followed by zero or more digits  
+- `op_name`: starts with a lowercase letter, then lowercase letters, digits, `_` or `-`  
+**Examples:** `1transfer`, `2transfer_from`, `123freeze_account`.
+
+
+
+
+
+### Note on Fees
+ICRC-3 itself does not define fee semantics.  
+Standards that define block types which involve fees must follow the principles and rules specified in **ICRC-107 (Fee Handling in Blocks)**.  
+ICRC-3 only requires that the fee payer for a block type be clearly defined, so that fee responsibility is unambiguous.
 
 
 ## Supported Standards
 
-An ICRC-3 compatible Ledger MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`. The Ledger MUST return only blocks with `btype` set to one of the values returned by this endpoint.
+An ICRC-3 compatible Ledger MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`.
+
+- For **typed** blocks, the ledger MUST only produce blocks whose `"btype"` value is included in this list.
+- For **legacy** ICRC-1/2 blocks (no `"btype"`), the ledger MUST include the conventional identifiers (e.g., `"1xfer"`, `"2approve"`) in this list to advertise support, even though the blocks themselves do not carry a `"btype"` field.
+
 
 ## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
 
@@ -208,40 +231,115 @@ An ICRC-3 compatible Ledger MUST expose an endpoint listing all the supported bl
 This section describes how ICRC-1 and ICRC-2 operations are represented in ICRC-3-compliant blocks.  These blocks follow the **legacy format**, meaning they do not have a `btype` field.  
 Instead, their type is inferred directly from the content of the `tx` field, which records the canonical mapping of the original method call.
 
+### Legacy ICRC-1 and ICRC-2 Block Structure
 
+ICRC-1 and ICRC-2 blocks **MUST NOT** include a `btype` field. These standards use the legacy block format where the block type is determined exclusively from the content of the `tx` field.  
 
-### No `btype` Field
-ICRC-1 and ICRC-2 blocks MUST NOT include a `btype` field. These standards use the legacy block format where the type of block is determined exclusively by the content of the `tx` field. ICRC-1 and ICRC-2 blocks use the `tx` field to store input from the user and use the external block to store data set by the Ledger. For instance, the amount of a transaction is stored in the field `tx.amt` because it has been specified by the user, while the time when the block was added to the Ledger is stored in the field `ts` because it is set by the Ledger.
+Legacy blocks therefore follow a fixed generic structure, with semantics inferred from `tx.op`.
 
-#### Block Structure 
+---
 
-A generic ICRC-1 or ICRC-2 Block:
+#### Generic Legacy Block
 
-- **MUST** use the legacy format, i.e., it **MUST NOT** include a `"btype"` field.
-- **MUST** be a `Value::Map` containing at least the following fields:
-  - `"phash"`: `Blob` — the hash of the parent block.
-  - `"ts"`: `Nat` — the timestamp (set by the ledger at block creation).
+A legacy block:
+
+- **MUST** be a `Value::Map` containing at least:
+  - `"phash"`: `Blob` — the parent hash.
+  - `"ts"`: `Nat` — the timestamp set by the ledger when the block was created.
   - `"tx"`: `Value::Map` — representing the user’s transaction intent.
-- **CAN** include:
-  - `"fee"`: `Nat` — only if the ledger requires a fee and the user did not specify one in `tx.fee`.
+- **MAY** include:
+  - `"fee": Nat` — the fee actually charged by the ledger, if any.
+
+---
+
+#### Transfer Block (`op = "xfer"`)
+
+**Structure**
+- **MUST** contain `tx.op = "xfer"`.
+- **MUST** contain `tx.from : Account`.
+- **MUST** contain `tx.to : Account`.
+- **MUST** contain `tx.amt : Nat`.
+- **MAY** contain `tx.fee : Nat` if provided by the caller.
+- **MAY** contain `tx.memo : Blob` if provided by the caller.
+- **MAY** contain `tx.ts : Nat` if provided by the caller (`created_at_time`).
+- **MAY** contain `tx.spender : Account` if created via `icrc2_transfer_from`.
+
+**Semantics**  
+Transfers debit `amt` (and any fee) from `from` and credit `amt` to `to`.  
+If `tx.spender` is present, the operation is executed under an approval, which must cover at least `amt + fee`. The allowance is reduced accordingly.  
+
+**Fee payer:** `from`.
+
+---
+
+#### Mint Block (`op = "mint"`)
+
+**Structure**
+- **MUST** contain `tx.op = "mint"`.
+- **MUST** contain `tx.to : Account`.
+- **MUST** contain `tx.amt : Nat`.
+- **MUST NOT** contain `tx.from`.
+- **MAY** contain `tx.memo : Blob` if provided by the caller.
+- **MAY** contain `tx.ts : Nat` if provided by the caller.
+
+**Semantics**  
+Mints create `amt` new tokens. If a fee is charged, it is deducted from `to` immediately, so `to` receives `amt - fee` (require `fee ≤ amt`).  
+
+**Fee payer:** `to`.
+
+---
+
+#### Burn Block (`op = "burn"`)
+
+**Structure**
+- **MUST** contain `tx.op = "burn"`.
+- **MUST** contain `tx.from : Account`.
+- **MUST** contain `tx.amt : Nat`.
+- **MUST NOT** contain `tx.to`.
+- **MAY** contain `tx.fee : Nat` if provided by the caller.
+- **MAY** contain `tx.memo : Blob` if provided by the caller.
+- **MAY** contain `tx.ts : Nat` if provided by the caller.
+
+**Semantics**  
+Burns remove `amt` tokens from `from`. Any fee is also debited from `from`.  
+
+**Fee payer:** `from`.
+
+---
+
+#### Approve Block (`op = "approve"`)
+
+**Structure**
+- **MUST** contain `tx.op = "approve"`.
+- **MUST** contain `tx.from : Account`.
+- **MUST** contain `tx.spender : Account`.
+- **MUST** contain the allowance field as defined by ICRC-2 (e.g., `tx.amt : Nat`).
+- **MAY** contain `tx.fee : Nat` if provided by the caller.
+- **MAY** contain `tx.memo : Blob` if provided by the caller.
+- **MAY** contain `tx.ts : Nat` if provided by the caller.
+
+**Semantics**  
+Approvals set or update the allowance of `spender` on `from`.  
+Any subsequent `xfer` block with `tx.spender` consumes the allowance.  
+Fees (if any) are debited from `from`.  
+
+**Fee payer:** `from`.
+
+---
+
+#### Notes on Fee Representation (Legacy Blocks)
+
+- The **effective fee** for a block is computed as:
+  1. If a top-level `"fee"` is present, that is the fee charged by the ledger.
+  2. Otherwise, if `tx.fee` is present, the effective fee equals `tx.fee`.
+  3. Otherwise, the fee is `0`.
+
+- `tx.fee` records what the caller supplied; when the top-level `"fee"` is absent, it also implies the ledger charged that same amount.
+- If both top-level `"fee"` and `tx.fee` are present and differ, the top-level `"fee"` is authoritative.
+- Ledgers **may** omit the top-level `"fee"` when it equals `tx.fee` to save space.
+- The **destination/handling** of the fee (e.g., sink account, burn) is specified by the fee standard (see **ICRC-107, Fee Handling in Blocks**); ICRC-3 only standardizes how fees are recorded in blocks, not where they go.
 
 
-#### `tx` Field Semantics
-
-The `tx` field:
-
-- **MUST** represent the user intent derived from the method call.
-- **MUST** be encoded using the ICRC-3 `Value` type.
-- **MUST NOT** contain any fields that were not explicitly present in the original user call.
-- **MUST** follow the canonical mapping rules described in the next section.
-- **MUST** contain a field `op: String` with value one of "mint", "burn", "xfer", "approve"
-- **MUST** contain a field `amt: Nat` that represents the amount
-- **MUST**  contain the `fee: Nat` field for operations that require a fee if the user specifies the fee in the request. If the user does not specify the fee in the request, then this field is not set and the top-level `fee` is set.
- - **CAN**  contain the `memo: Blob` field if specified by the user
- - **CAN** contain the `ts: Nat` field if the user sets the `created_at_time` field in the request.
-
-
-Operations that require paying a fee: Transfer, and Approve.
 
 ### Compliance Reporting
 
@@ -321,7 +419,7 @@ icrc1_transfer: record {
 - `amt = amount`
 - `memo = memo` if provided
 - `ts = created_at_time` if provided  
-> `from` and `fee` MUST NOT be present
+- `from` and `fee` MUST NOT be present
 
 **Transfer to the Minting Account (→ Burn)** — when `to` equals the minting account:
 
@@ -331,24 +429,51 @@ icrc1_transfer: record {
 - `amt = amount`
 - `memo = memo` if provided
 - `ts = created_at_time` if provided  
-> `to` and `fee` MUST NOT be present
+- `to` and `fee` MUST NOT be present
+
+
+### Fee Payer and Balance Effects (Legacy ICRC-1/2)
+
+The rules below define **who pays** and how the **effective fee** (if any) affects balances for legacy blocks (no `btype`; kind inferred from `tx`). The authoritative charged amount is the top-level `fee : Nat` when present; `tx.fee` (if present) reflects the caller input only.
+
+#### `icrc1_transfer`
+- `op = "xfer"` → **Payer:** `from`  
+  • Debited from `from`: `amt + fee` (if a fee is charged)  
+  • Credited to `to`: `amt`
+- `op = "burn"` → **Payer:** `from`  
+  • Debited from `from`: `amt + fee` (if a fee is charged)  
+  • Burned: `amt`
+- `op = "mint"` → **Payer:** `to`  
+  • Credited to `to`: `amt - fee` (if a fee is charged; require `fee ≤ amt`)  
+  • Minted gross amount: `amt` (with `fee` immediately taken from `to`)
+
+#### `icrc2_transfer_from`
+- `op = "xfer"` → **Payer:** `from` (authorized by `spender`)  
+  • Debited from `from`: `amt + fee` (if a fee is charged)  
+  • Credited to `to`: `amt`
+- `op = "burn"` → **Payer:** `from` (authorized by `spender`)  
+  • Debited from `from`: `amt + fee` (if a fee is charged)  
+  • Burned: `amt`
+
+#### `icrc2_approve`
+- **Payer:** `from` (the account whose allowance is modified)  
+  • Debited from `from`: `fee` (if a fee is charged)
+
+**Notes**  
+- A fee may be charged even if `tx.fee` is absent; the charged fee is indicated by a top-level `fee`.  
+- If no top-level `fee` is present, the effective fee is `0`.  
+- Implementations must reject calls that cannot satisfy the fee rule (e.g., `fee > amt` for mint; or insufficient balance for `amt + fee` debits).
+
 
 
 ### Canonical Examples of `icrc1_transfer` Blocks
 
 Each of the following examples represents a canonical block resulting from an `icrc1_transfer` call. These examples illustrate different scenarios depending on which optional fields were included in the call. Only parameters explicitly provided by the caller appear in the resulting `tx`.
 
----
+
 
 #### Example 1: Transfer with required parameters only
 This example shows an `icrc1_transfer` call where the caller only specifies the mandatory fields: `to` and `amount`. No `memo`, `created_at_time`, or explicit `fee` are provided. The block still contains a top-level `fee` field since the ledger applies the default transfer fee.
-### Burn Block Schema
-
-1. the `btype` MUST NOT be set and `tx.op` field MUST be `"burn"`
-2. it MUST contain a field `tx.from: Account`
-3. it MUST contain a field `tx.amt: Nat`
-4. it MUST contain a field `tx.memo` if the `icrc1_transfer` call that creates the block has a memo field, and its value is the value of that field. 
-
 
 ```
 variant {
@@ -483,15 +608,18 @@ variant {
 - `memo = memo` if provided
 - `ts = created_at_time` if provided
 
+
 **Burn Transfer** — when the `to` account is the minting account:
 
 - `op = "burn"`
 - `from = from` (as passed in the call)
 - `spender = [caller]` if `spender_subaccount` is not provided
-- `spender = [caller, spender_subaccount]` if provided- `amt = amount`
+- `spender = [caller, spender_subaccount]` if provided
+- `amt = amount`
 - `fee = fee` if provided
 - `memo = memo` if provided
 - `ts = created_at_time` if provided
+
 
 
 
