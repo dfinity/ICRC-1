@@ -50,13 +50,13 @@ type Value = variant {
 };
 ```
 
-Servers must serve the block log as a list of `Value` where each `Value` represents a single block in the block log.
+Servers MUST serve the block log as a list of `Value` where each `Value` represents a single block in the block log.
 
 ## Value Hash
 
 `ICRC-3` specifies a standard hash function over `Value`.
 
-This hash function should be used by Ledgers to calculate the hash of the parent of a block and by clients to verify the downloaded block log.
+This hash function SHOULD be used by Ledgers to calculate the hash of the parent of a block and by clients to verify the downloaded block log.
 
 The hash function is the [representation-independent hashing of structured data](https://internetcomputer.org/docs/current/references/ic-interface-spec#hash-of-map) used by the IC:
 - the hash of a `Blob` is the hash of the bytes themselves
@@ -109,36 +109,36 @@ Block types and their schemas are defined either by legacy standards (e.g., ICRC
 The following principles guide the evolution and interpretation of ICRC-3 and any standards that build on it.
 
 ### 1. Core State Transitions
-- Every block type must define the **core state transition** it represents: the deterministic change to ledger state implied by the block’s minimal `tx` structure, *ignoring fees or ledger-specific policies*.  
+- Every block type MUST define the **core state transition** it represents: the deterministic change to ledger state implied by the block’s minimal `tx` structure, *ignoring fees or ledger-specific policies*.  
 - This transition is the canonical meaning of a block — what balances, allowances, or other state variables change as a direct consequence of the block.  
 - Fee handling, metadata, and ledger-specific policies are layered on top of this transition.
 
 ### 2. Separation of `btype` and `tx`
 - The `btype` field defines the **minimal semantic structure** of a block — the set of fields in `tx` required to fully determine its core state transition.  
-- Standards that introduce a new `btype` must:
+- Standards that introduce a new `btype` MUST:
   - Assign a unique identifier for the `btype`.
   - Specify the minimal `tx` structure required for interpreting that block type.
   - Define the block’s **core state transition** in terms of this minimal structure.
-- Standards that define methods producing blocks must:
+- Standards that define methods producing blocks MUST:
   - Specify which `btype` the method produces.
   - Define the **canonical mapping** from method call parameters to the `tx` field of the resulting block.
   - Ensure that `tx` contains only parameters explicitly provided by the caller (except where the block type definition requires otherwise).
 
 ### 3. Avoiding Collisions in `tx`
-- To avoid collisions between transactions originating from different standards, the canonical `tx` mapping must include:
+- To avoid collisions between transactions originating from different standards, the canonical `tx` mapping MUST include:
   - An operation field (`op`) whose value is namespaced using the standard’s number as a prefix, e.g., `122freeze_account`.
 - No two standardized methods may produce `tx` values that are indistinguishable when interpreted under ICRC-3 rules.
 
 ### 4. Inclusion of the User Call in `tx`
 - The `tx` field must faithfully capture the structure of the user call that triggered the block.
-- All call parameters that are part of the method’s canonical mapping must be included exactly as provided by the caller.
-- Optional parameters that were not present in the call must be omitted from `tx`.
+- All call parameters that are part of the method’s canonical mapping MUST be included exactly as provided by the caller.
+- Optional parameters that were not present in the call MUST be omitted from `tx`.
 
 ### 5. Future-Proofing and Extensibility
-- Additional non-semantic fields (e.g., metadata, hashes, references) may be added to `tx` without introducing a new `btype`, provided:
+- Additional non-semantic fields (e.g., metadata, hashes, references) MAY be added to `tx` without introducing a new `btype`, provided:
   - They do not affect the block’s **core state transition**.
   - They are ignored by block verification and interpretation logic that only relies on the minimal `tx` structure defined by the `btype`.
-- Any change to the minimal semantic structure of a block requires introducing a new `btype`.
+- Any change to the minimal semantic structure of a block REQUIRES introducing a new `btype`.
 
 ### Note on Ledger-Specific Fields
 - Blocks may include additional fields specific to a given standard or ledger (e.g., `fee`, metadata, references).  
@@ -162,7 +162,7 @@ To ensure consistency across standards and implementations, the semantics of any
    • Example: debit/credit balances, mint, burn, update allowance.
 
 4. Apply fee (if applicable)  
-   • If the block type involves fees, determine the **effective fee** following ICRC-107 rules.  
+   • If the block type involves fees, determine the **effective fee** following ICRC-107.  
    • Deduct the fee from the account designated as the **fee payer** for this block type.  
    • Adjust balances accordingly (e.g., for mints: `to` receives `amt – fee`).
 
@@ -180,14 +180,14 @@ ICRC-3 defines how blocks are structured and verified. Other standards extend th
 (2) defining canonical mappings from standardized method calls to existing block types.
 
 ### Standards That Introduce Block Types
-A standard that defines a new block type must:
+A standard that defines a new block type MUST:
 - Assign a unique `btype`.  
 - Specify the minimal `tx` structure required to interpret the block and determine its effect on ledger state.  
 - Define semantics using the **Semantics of Blocks: Evaluation Model** (pre-fee transition, fee hook, post-conditions).  
 - If the block type involves fees, reference the applicable fee standard (e.g., ICRC-107) and **define who pays**, via a fee payer expression resolvable from block fields.
 
 ### Standards That Define Methods
-A standard that defines a method which produces blocks must:
+A standard that defines a method which produces blocks MUST:
 - Specify which `btype` (if any) the method produces.  
 - Define the canonical mapping from method inputs to the `tx` field of the resulting block.  
 - Ensure all required fields from the block type’s minimal schema are populated.  
@@ -213,7 +213,7 @@ To avoid collisions across standards, `tx.op` MUST be namespaced:
 
 ### Note on Fees
 ICRC-3 itself does not define fee semantics.  
-Standards that define block types which involve fees must follow the principles and rules specified in **ICRC-107 (Fee Handling in Blocks)**.  
+Standards that define block types which involve fees MUST follow **ICRC-107 (Fee Handling in Blocks)**.
 ICRC-3 only requires that the fee payer for a block type be clearly defined, so that fee responsibility is unambiguous.
 
 
@@ -336,8 +336,8 @@ Fees (if any) are debited from `from`.
 
 - `tx.fee` records what the caller supplied; when the top-level `"fee"` is absent, it also implies the ledger charged that same amount.
 - If both top-level `"fee"` and `tx.fee` are present and differ, the top-level `"fee"` is authoritative.
-- Ledgers **may** omit the top-level `"fee"` when it equals `tx.fee` to save space.
-- The **destination/handling** of the fee (e.g., sink account, burn) is specified by the fee standard (see **ICRC-107, Fee Handling in Blocks**); ICRC-3 only standardizes how fees are recorded in blocks, not where they go.
+- Ledgers **MAY** omit the top-level `"fee"` when it equals `tx.fee` to save space.
+- The **destination/handling** of the fee (e.g., collecting account, burn) is specified by the fee standard (see **ICRC-107, Fee Handling in Blocks**); ICRC-3 only standardizes how fees are recorded in blocks, not where they go.
 
 
 
