@@ -50,7 +50,7 @@ type Value = variant {
 };
 ```
 
-Servers must serve the block log as a list of `Value` where each `Value` represent a single block in the block log.
+Servers must serve the block log as a list of `Value` where each `Value` represents a single block in the block log.
 
 ## Value Hash
 
@@ -66,15 +66,15 @@ The hash function is the [representation-independent hashing of structured data]
 - the hash of an `Array` is the hash of the concatenation of the hashes of all the elements of the array
 - the hash of a `Map` is the hash of the concatenation of all the hashed items of the map sorted lexicographically. A hashed item is the tuple composed by the hash of the key and the hash of the value.
 
-Pseudocode for representation independent hashing of Value, together with test vectors to check compliance with the specification can be found [`here`](HASHINGVALUES.md). 
+Pseudocode for representation-independent hashing of `Value`, together with test vectors to check compliance with the specification can be found [`here`](HASHINGVALUES.md). 
 
 ## Blocks Verification
 
-The Ledger MUST certify the last block (tip) recorded. The Ledger MUST allow to download the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate is comprised of a tree containing the certified data and the signature. The tree MUST contain two labelled values (leafs):
-1. `last_block_index`: the index of the last block in the chain. The values must be expressed as [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128)
+The Ledger MUST certify the last block (tip) recorded. The Ledger MUST allow to download the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate is comprised of a tree containing the certified data and the signature. The tree MUST contain two labeled values (leaves):
+1. `last_block_index`: the index of the last block in the chain. The values MUST be expressed as [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128)
 2. `last_block_hash`: the hash of the last block in the chain
 
-Clients SHOULD download the tip certificate first and then download the block backward starting from `last_block_index` and validate the blocks in the process.
+Clients SHOULD download the tip certificate first and then download the blocks backward starting from `last_block_index` and validate the blocks in the process.
 
 Validation of block `i` is done by checking the block hash against
 1. if `i + 1 < len(chain)` then the parent hash `phash` of the block `i+1`
@@ -86,7 +86,7 @@ An ICRC-3 compliant Block
 
 1. MUST be a `Value` of variant `Map`
 2. MUST contain a field `phash: Blob` which is the hash of its parent if it has a parent block
-3. SHOULD contain a field `btype: String` which uniquely describes the type of the Block. If this field is not set then the block type falls back to ICRC-1 and ICRC-2 for backward compatibility purposes
+3. SHOULD contain a field `btype: Text` which uniquely describes the type of the Block. If this field is not set then the block type falls back to ICRC-1 and ICRC-2 for backward compatibility purposes
 
 
 ### Kinds of Blocks
