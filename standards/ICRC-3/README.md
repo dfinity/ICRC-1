@@ -279,11 +279,15 @@ If `tx.spender` is present, the operation is executed under an approval, which m
 - **MUST** contain `tx.to : Account`.
 - **MUST** contain `tx.amt : Nat`.
 - **MUST NOT** contain `tx.from`.
+- **MAY** contain `tx.spender : Account`.
 - **MAY** contain `tx.memo : Blob` if provided by the caller.
 - **MAY** contain `tx.ts : Nat` if provided by the caller.
 
 **Semantics**  
 Mints create `amt` new tokens. If a fee is charged, it is deducted from `to` immediately, so `to` receives `amt - fee` (require `fee ≤ amt`).  
+If `tx.spender` is present, the mint is executed under an approval on the minting account; that approval **MUST** be at least `amt + fee` and **MUST** be reduced by `amt + fee`.
+
+
 
 **Fee payer:** `to`.
 
@@ -322,6 +326,8 @@ Burns remove `amt` tokens from `from`. Any fee is also debited from `from`.
 Approvals set or update the allowance of `spender` on `from`.  
 Any subsequent `xfer` block with `tx.spender` consumes the allowance.  
 Fees (if any) are debited from `from`.  
+If the approval is set on the minting account, it can be consumed by `icrc2_transfer_from` mints; such mints reduce the allowance by `amt + fee`.
+
 
 **Fee payer:** `from`.
 
@@ -454,6 +460,9 @@ The rules below define **who pays** and how the **effective fee** (if any) affec
 - `op = "burn"` → **Payer:** `from` (authorized by `spender`)  
   • Debited from `from`: `amt + fee` (if a fee is charged)  
   • Burned: `amt`
+- `op = "mint"` → Payer: to (authorized by spender under an approval on the minting account)
+• Credited to `to: amt - fee` (if a fee is charged; require `fee ≤ amt`)
+• Allowance on the minting account (for spender) is reduced by `amt + fee`
 
 #### `icrc2_approve`
 - **Payer:** `from` (the account whose allowance is modified)  
@@ -621,6 +630,16 @@ variant {
 - `ts = created_at_time` if provided
 
 
+**Mint Transfer** — when the `from` account is the minting account:
+
+- `op = "mint"`
+- `spender = [caller]` if `spender_subaccount` is not provided
+- `spender = [caller, spender_subaccount]` if provided
+- `to = to`
+- `amt = amount`
+- `memo = memo` if provided
+- `ts = created_at_time` if provided
+- `from` and `fee` **MUST NOT** be present
 
 
 #### Example 4: Transfer from approval
