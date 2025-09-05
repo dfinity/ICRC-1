@@ -335,10 +335,10 @@ If the approval is set on the minting account, it can be consumed by `icrc2_tran
 
 #### Notes on Fee Representation (Legacy Blocks)
 
-- The **effective fee** for a block is computed as:
-  1. If a top-level `"fee"` is present, that is the fee charged by the ledger.
+- The **effective fee**  is the fee charged by the ledger. For a block this is computed as:
+  1. If a top-level `"fee"` is present, that is the effective fee.
   2. Otherwise, if `tx.fee` is present, the effective fee equals `tx.fee`.
-  3. Otherwise, the fee is `0`.
+  3. Otherwise, the effective fee is `0`.
 
 - `tx.fee` records what the caller supplied; when the top-level `"fee"` is absent, it also implies the ledger charged that same amount.
 - If both top-level `"fee"` and `tx.fee` are present and differ, the top-level `"fee"` is authoritative.
