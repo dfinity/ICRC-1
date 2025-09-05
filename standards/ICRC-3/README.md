@@ -438,41 +438,6 @@ icrc1_transfer: record {
 - `to` and `fee` MUST NOT be present
 
 
-### Fee Payer and Balance Effects (Legacy ICRC-1/2)
-
-The rules below define **who pays** and how the **effective fee** (if any) affects balances for legacy blocks (no `btype`; kind inferred from `tx`). The authoritative charged amount is the top-level `fee : Nat` when present; `tx.fee` (if present) reflects the caller input only.
-
-#### `icrc1_transfer`
-- `op = "xfer"` → **Payer:** `from`  
-  • Debited from `from`: `amt + fee` (if a fee is charged)  
-  • Credited to `to`: `amt`
-- `op = "burn"` → **Payer:** `from`  
-  • Debited from `from`: `amt + fee` (if a fee is charged)  
-  • Burned: `amt`
-- `op = "mint"` → **Payer:** `to`  
-  • Credited to `to`: `amt - fee` (if a fee is charged; require `fee ≤ amt`)  
-  • Minted gross amount: `amt` (with `fee` immediately taken from `to`)
-
-#### `icrc2_transfer_from`
-- `op = "xfer"` → **Payer:** `from` (authorized by `spender`)  
-  • Debited from `from`: `amt + fee` (if a fee is charged)  
-  • Credited to `to`: `amt`
-- `op = "burn"` → **Payer:** `from` (authorized by `spender`)  
-  • Debited from `from`: `amt + fee` (if a fee is charged)  
-  • Burned: `amt`
-- `op = "mint"` → Payer: to (authorized by spender under an approval on the minting account)
-• Credited to `to: amt - fee` (if a fee is charged; require `fee ≤ amt`)
-• Allowance on the minting account (for spender) is reduced by `amt + fee`
-
-#### `icrc2_approve`
-- **Payer:** `from` (the account whose allowance is modified)  
-  • Debited from `from`: `fee` (if a fee is charged)
-
-**Notes**  
-- A fee may be charged even if `tx.fee` is absent; the charged fee is indicated by a top-level `fee`.  
-- If no top-level `fee` is present, the effective fee is `0`.  
-- Implementations must reject calls that cannot satisfy the fee rule (e.g., `fee > amt` for mint; or insufficient balance for `amt + fee` debits).
-
 
 
 ### Canonical Examples of `icrc1_transfer` Blocks
