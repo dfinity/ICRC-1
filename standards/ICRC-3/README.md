@@ -245,7 +245,7 @@ A legacy block:
 
 - **MUST** be a `Value::Map` containing at least:
   - `"phash"`: `Blob` — the parent hash.
-  - `"ts"`: `Nat` — the timestamp set by the ledger when the block was created.
+  - `"ts"`: `Nat` — the timestamp (in nanoseconds since Unix epoch) set by the ledger when the block was created.
   - `"tx"`: `Value::Map` — representing the user’s transaction intent.
 - **MAY** include:
   - `"fee": Nat` — the fee actually charged by the ledger, if any.
