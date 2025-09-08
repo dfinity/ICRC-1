@@ -1,5 +1,5 @@
 {
-  "checksum": "cc8ebd94d80cc098a21f08dbd3985420b629be50ef78177389bb86f35c0e84ae",
+  "checksum": "f6ff6bcf5edf70849b03ea8aa41e56b31985defcf341b0badc9a81a3252abb1c",
   "crates": {
     "addr2line 0.24.2": {
       "name": "addr2line",
@@ -5993,9 +5993,9 @@
       ],
       "license_file": "LICENSE"
     },
-    "icrc1-test-env 0.1.2": {
+    "icrc1-test-env 0.1.12": {
       "name": "icrc1-test-env",
-      "version": "0.1.2",
+      "version": "0.1.12",
       "package_url": "https://github.com/dfinity/ICRC-1",
       "repository": null,
       "targets": [
@@ -6048,7 +6048,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.2"
+        "version": "0.1.12"
       },
       "license": "Apache-2.0",
       "license_ids": [
@@ -6056,9 +6056,9 @@
       ],
       "license_file": null
     },
-    "icrc1-test-env-replica 0.1.2": {
+    "icrc1-test-env-replica 0.1.12": {
       "name": "icrc1-test-env-replica",
-      "version": "0.1.2",
+      "version": "0.1.12",
       "package_url": "https://github.com/dfinity/ICRC-1",
       "repository": null,
       "targets": [
@@ -6119,7 +6119,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.2"
+        "version": "0.1.12"
       },
       "license": "Apache-2.0",
       "license_ids": [
@@ -6127,9 +6127,9 @@
       ],
       "license_file": null
     },
-    "icrc1-test-env-state-machine 0.1.2": {
+    "icrc1-test-env-state-machine 0.1.12": {
       "name": "icrc1-test-env-state-machine",
-      "version": "0.1.2",
+      "version": "0.1.12",
       "package_url": "https://github.com/dfinity/ICRC-1",
       "repository": null,
       "targets": [
@@ -6182,7 +6182,7 @@
           ],
           "selects": {}
         },
-        "version": "0.1.2"
+        "version": "0.1.12"
       },
       "license": "Apache-2.0",
       "license_ids": [
@@ -6190,9 +6190,9 @@
       ],
       "license_file": null
     },
-    "icrc1-test-replica 0.1.2": {
+    "icrc1-test-replica 0.1.12": {
       "name": "icrc1-test-replica",
-      "version": "0.1.2",
+      "version": "0.1.12",
       "package_url": "https://github.com/dfinity/ICRC-1",
       "repository": null,
       "targets": [
@@ -6236,7 +6236,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.1.2"
+        "version": "0.1.12"
       },
       "license": "Apache-2.0",
       "license_ids": [
@@ -6244,9 +6244,9 @@
       ],
       "license_file": null
     },
-    "icrc1-test-runner 0.1.2": {
+    "icrc1-test-runner 0.1.12": {
       "name": "icrc1-test-runner",
-      "version": "0.1.2",
+      "version": "0.1.12",
       "package_url": "https://github.com/dfinity/ICRC-1",
       "repository": null,
       "targets": [],
@@ -6285,7 +6285,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.1.2"
+        "version": "0.1.12"
       },
       "license": "Apache-2.0",
       "license_ids": [
@@ -6293,9 +6293,9 @@
       ],
       "license_file": null
     },
-    "icrc1-test-suite 0.1.2": {
+    "icrc1-test-suite 0.1.12": {
       "name": "icrc1-test-suite",
-      "version": "0.1.2",
+      "version": "0.1.12",
       "package_url": "https://github.com/dfinity/ICRC-1",
       "repository": null,
       "targets": [
@@ -6335,7 +6335,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.1.2"
+        "version": "0.1.12"
       },
       "license": "Apache-2.0",
       "license_ids": [
@@ -18968,12 +18968,12 @@
   },
   "binary_crates": [],
   "workspace_members": {
-    "icrc1-test-env 0.1.2": "test/env",
-    "icrc1-test-env-replica 0.1.2": "test/env/replica",
-    "icrc1-test-env-state-machine 0.1.2": "test/env/state-machine",
-    "icrc1-test-replica 0.1.2": "test/replica",
-    "icrc1-test-runner 0.1.2": "test/runner",
-    "icrc1-test-suite 0.1.2": "test/suite"
+    "icrc1-test-env 0.1.12": "test/env",
+    "icrc1-test-env-replica 0.1.12": "test/env/replica",
+    "icrc1-test-env-state-machine 0.1.12": "test/env/state-machine",
+    "icrc1-test-replica 0.1.12": "test/replica",
+    "icrc1-test-runner 0.1.12": "test/runner",
+    "icrc1-test-suite 0.1.12": "test/suite"
   },
   "conditions": {
     "aarch64-apple-darwin": [
