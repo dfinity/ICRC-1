@@ -16,5 +16,5 @@ anyhow = { workspace = true }
 candid = { workspace = true }
 async-trait = { workspace = true }
 hex = { workspace = true }
-ic-test-state-machine-client = { workspace = true }
-icrc1-test-env = { version = "0.1.12", path = ".." }
+pocket-ic = { workspace = true }
+icrc1-test-env = { version = "0.2.0", path = ".." }

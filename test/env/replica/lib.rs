@@ -47,7 +47,7 @@ impl LedgerEnv for ReplicaLedger {
             .expect("failed to get agent principal")
     }
 
-    fn time(&self) -> SystemTime {
+    async fn time(&self) -> SystemTime {
         // The replica relies on the system time by default.
         // Unfortunately, this assumption might break during the time
         // shifts, but it's probably good enough for tests.

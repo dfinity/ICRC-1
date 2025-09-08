@@ -2,8 +2,9 @@ use anyhow::Context;
 use async_trait::async_trait;
 use candid::utils::{decode_args, encode_args, ArgumentDecoder, ArgumentEncoder};
 use candid::Principal;
-use ic_test_state_machine_client::StateMachine;
 use icrc1_test_env::LedgerEnv;
+use pocket_ic::nonblocking::PocketIc;
+use std::convert::TryInto;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -17,7 +18,7 @@ fn new_principal(n: u64) -> Principal {
 #[derive(Clone)]
 pub struct SMLedger {
     counter: Arc<AtomicU64>,
-    sm: Arc<StateMachine>,
+    pic: Arc<PocketIc>,
     sender: Principal,
     canister_id: Principal,
 }
@@ -27,7 +28,7 @@ impl LedgerEnv for SMLedger {
     fn fork(&self) -> Self {
         Self {
             counter: self.counter.clone(),
-            sm: self.sm.clone(),
+            pic: self.pic.clone(),
             sender: new_principal(self.counter.fetch_add(1, Ordering::Relaxed)),
             canister_id: self.canister_id,
         }
@@ -37,8 +38,12 @@ impl LedgerEnv for SMLedger {
         self.sender
     }
 
-    fn time(&self) -> std::time::SystemTime {
-        self.sm.time()
+    async fn time(&self) -> std::time::SystemTime {
+        self.pic
+            .get_time()
+            .await
+            .try_into()
+            .expect("Failed to convert PocketIC time to SystemTime")
     }
 
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>
@@ -50,30 +55,22 @@ impl LedgerEnv for SMLedger {
         let in_bytes = encode_args(input)
             .with_context(|| format!("Failed to encode arguments {}", debug_inputs))?;
         match self
-            .sm
-            .query_call(
-                Principal::from_slice(self.canister_id.as_slice()),
-                Principal::from_slice(self.sender.as_slice()),
-                method,
-                in_bytes,
-            )
-            .map_err(|err| anyhow::Error::msg(err.to_string()))?
+            .pic
+            .query_call(self.canister_id, self.sender, method, in_bytes)
+            .await
         {
-            ic_test_state_machine_client::WasmResult::Reply(bytes) => decode_args(&bytes)
-                .with_context(|| {
-                    format!(
-                        "Failed to decode method {} response into type {}, bytes: {}",
-                        method,
-                        std::any::type_name::<Output>(),
-                        hex::encode(bytes)
-                    )
-                }),
-            ic_test_state_machine_client::WasmResult::Reject(msg) => {
-                return Err(anyhow::Error::msg(format!(
-                    "Query call to ledger {:?} was rejected: {}",
-                    self.canister_id, msg
-                )))
-            }
+            Ok(bytes) => decode_args(&bytes).with_context(|| {
+                format!(
+                    "Failed to decode method {} response into type {}, bytes: {}",
+                    method,
+                    std::any::type_name::<Output>(),
+                    hex::encode(bytes)
+                )
+            }),
+            Err(reject_response) => Err(anyhow::Error::msg(format!(
+                "Query call to ledger {:?} was rejected: {}",
+                self.canister_id, reject_response.reject_message
+            ))),
         }
     }
 
@@ -86,39 +83,31 @@ impl LedgerEnv for SMLedger {
         let in_bytes = encode_args(input)
             .with_context(|| format!("Failed to encode arguments {}", debug_inputs))?;
         match self
-            .sm
+            .pic
             .update_call(self.canister_id, self.sender, method, in_bytes)
-            .map_err(|err| anyhow::Error::msg(err.to_string()))
-            .with_context(|| {
+            .await
+        {
+            Ok(bytes) => decode_args(&bytes).with_context(|| {
                 format!(
-                    "failed to execute update call {} on canister {}",
-                    method, self.canister_id
+                    "Failed to decode method {} response into type {}, bytes: {}",
+                    method,
+                    std::any::type_name::<Output>(),
+                    hex::encode(&bytes)
                 )
-            })? {
-            ic_test_state_machine_client::WasmResult::Reply(bytes) => decode_args(&bytes)
-                .with_context(|| {
-                    format!(
-                        "Failed to decode method {} response into type {}, bytes: {}",
-                        method,
-                        std::any::type_name::<Output>(),
-                        hex::encode(bytes)
-                    )
-                }),
-            ic_test_state_machine_client::WasmResult::Reject(msg) => {
-                return Err(anyhow::Error::msg(format!(
-                    "Query call to ledger {:?} was rejected: {}",
-                    self.canister_id, msg
-                )))
-            }
+            }),
+            Err(reject_response) => Err(anyhow::Error::msg(format!(
+                "Update call to ledger {:?} was rejected: {}",
+                self.canister_id, reject_response.reject_message
+            ))),
         }
     }
 }
 
 impl SMLedger {
-    pub fn new(sm: Arc<StateMachine>, canister_id: Principal, sender: Principal) -> Self {
+    pub fn new(pic: Arc<PocketIc>, canister_id: Principal, sender: Principal) -> Self {
         Self {
             counter: Arc::new(AtomicU64::new(0)),
-            sm,
+            pic,
             canister_id,
             sender,
         }
