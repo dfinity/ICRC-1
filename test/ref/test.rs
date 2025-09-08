@@ -183,6 +183,7 @@ async fn test_replica() {
     }
 }
 
+#[allow(clippy::arc_with_non_send_sync)]
 async fn test_state_machine() {
     let sm_env = sm_env();
     // We need a fresh identity to be used for the tests

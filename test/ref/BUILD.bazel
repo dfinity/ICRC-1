@@ -18,6 +18,7 @@ rust_test(
     ],
     crate_name = "icrc1_test_ref",
     data = [
+        ":ref_wasm",
         "@replica_tools//:canister_sandbox",
         "@replica_tools//:ic-starter",
         "@replica_tools//:ic-test-state-machine",
