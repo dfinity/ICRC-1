@@ -1,6 +1,6 @@
 [package]
 name = "icrc1-test-runner"
-version = "0.1.2"
+version = "0.1.12"
 authors = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
@@ -13,9 +13,9 @@ name = "runner"
 path = "main.rs"
 
 [dependencies]
-icrc1-test-env = { version ="0.1.2", path = "../env" }
-icrc1-test-env-replica = { version ="0.1.2", path = "../env/replica" }
-icrc1-test-suite = { version ="0.1.2", path = "../suite" }
+icrc1-test-env = { version ="0.1.12", path = "../env" }
+icrc1-test-env-replica = { version ="0.1.12", path = "../env/replica" }
+icrc1-test-suite = { version ="0.1.12", path = "../suite" }
 ic-agent = { workspace = true }
 pico-args = "0.5"
 reqwest = { workspace = true }
