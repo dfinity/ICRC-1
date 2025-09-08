@@ -1,7 +1,7 @@
 REPLICA_BUILD = """
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["replica", "ic-starter", "canister_sandbox", "sandbox_launcher","ic-test-state-machine"])
+exports_files(["replica", "ic-starter", "canister_sandbox", "sandbox_launcher"])
 """
 
 IC_COMMIT_HASH = "09c3000df0a54c470994ceb5bc33bd8457b02fe7"
@@ -22,10 +22,6 @@ BINARY_HASHES = {
     "sandbox_launcher.gz": {
         "linux": "96c416bf98724aa3bf72053d06d559f007f8655261b48f435f9104b605c8f77f",
         "mac os x": "ed0bc2eeaf282012c8475ddf1ca3369488dc80d385e5b194d2823ae84514ff8a",
-    },
-    "ic-test-state-machine.gz": {
-        "linux": "2fb622770cfdf815f74f0e2fbaa51795c74ecba334883a4762507aef90352c15",
-        "mac os x": "c8c7a6daa921b243cb6f1825dd7f80a7a7543234476d50f7becda072b1725c5c",
     },
 }
 
