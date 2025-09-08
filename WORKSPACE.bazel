@@ -86,7 +86,7 @@ crates_repository(
         "//:Cargo.toml",
         "//test/env:Cargo.toml",
         "//test/env/replica:Cargo.toml",
-        "//test/env/state-machine:Cargo.toml",
+        "//test/env/pocket-ic:Cargo.toml",
         "//test/suite:Cargo.toml",
         "//test/runner:Cargo.toml",
         "//test/replica:Cargo.toml",

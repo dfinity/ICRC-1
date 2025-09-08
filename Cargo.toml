@@ -2,7 +2,7 @@
 
 members = [
     "test/env",
-    "test/env/state-machine",
+    "test/env/pocket-ic",
     "test/env/replica",
     "test/suite",
     "test/runner",

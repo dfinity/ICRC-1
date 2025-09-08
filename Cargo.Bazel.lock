@@ -1,5 +1,5 @@
 {
-  "checksum": "b6542e1065d4ff09139c78bd0ea7ae0a9115b486d24c7de526b8f9adbdd6faff",
+  "checksum": "1df1f7781304322dd8eeaaba40677b36e9d29ea4bcee2d19855d116fdca5b41e",
   "crates": {
     "addr2line 0.24.2": {
       "name": "addr2line",
@@ -7134,6 +7134,69 @@
       ],
       "license_file": null
     },
+    "icrc1-test-env-pocket-ic 0.2.0": {
+      "name": "icrc1-test-env-pocket-ic",
+      "version": "0.2.0",
+      "package_url": "https://github.com/dfinity/ICRC-1",
+      "repository": null,
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "icrc1_test_env_pocket_ic",
+            "crate_root": "lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "icrc1_test_env_pocket_ic",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "anyhow 1.0.99",
+              "target": "anyhow"
+            },
+            {
+              "id": "candid 0.10.18",
+              "target": "candid"
+            },
+            {
+              "id": "hex 0.4.3",
+              "target": "hex"
+            },
+            {
+              "id": "pocket-ic 9.0.2",
+              "target": "pocket_ic"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "async-trait 0.1.89",
+              "target": "async_trait"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.2.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": null
+    },
     "icrc1-test-env-replica 0.2.0": {
       "name": "icrc1-test-env-replica",
       "version": "0.2.0",
@@ -7198,69 +7261,6 @@
           "selects": {}
         },
         "version": "0.2.0"
-      },
-      "license": "Apache-2.0",
-      "license_ids": [
-        "Apache-2.0"
-      ],
-      "license_file": null
-    },
-    "icrc1-test-env-state-machine 0.1.12": {
-      "name": "icrc1-test-env-state-machine",
-      "version": "0.1.12",
-      "package_url": "https://github.com/dfinity/ICRC-1",
-      "repository": null,
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "icrc1_test_env_state_machine",
-            "crate_root": "lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "icrc1_test_env_state_machine",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "anyhow 1.0.99",
-              "target": "anyhow"
-            },
-            {
-              "id": "candid 0.10.18",
-              "target": "candid"
-            },
-            {
-              "id": "hex 0.4.3",
-              "target": "hex"
-            },
-            {
-              "id": "pocket-ic 9.0.2",
-              "target": "pocket_ic"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "proc_macro_deps": {
-          "common": [
-            {
-              "id": "async-trait 0.1.89",
-              "target": "async_trait"
-            }
-          ],
-          "selects": {}
-        },
-        "version": "0.1.12"
       },
       "license": "Apache-2.0",
       "license_ids": [
@@ -23741,8 +23741,8 @@
   "binary_crates": [],
   "workspace_members": {
     "icrc1-test-env 0.2.0": "test/env",
+    "icrc1-test-env-pocket-ic 0.2.0": "test/env/pocket-ic",
     "icrc1-test-env-replica 0.2.0": "test/env/replica",
-    "icrc1-test-env-state-machine 0.1.12": "test/env/state-machine",
     "icrc1-test-replica 0.2.0": "test/replica",
     "icrc1-test-runner 0.2.0": "test/runner",
     "icrc1-test-suite 0.2.0": "test/suite"

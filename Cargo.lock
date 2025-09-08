@@ -1183,6 +1183,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "icrc1-test-env-pocket-ic"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "candid",
+ "hex",
+ "icrc1-test-env",
+ "pocket-ic",
+]
+
+[[package]]
 name = "icrc1-test-env-replica"
 version = "0.2.0"
 dependencies = [
@@ -1194,18 +1206,6 @@ dependencies = [
  "icrc1-test-env",
  "rand 0.8.5",
  "ring 0.16.20",
-]
-
-[[package]]
-name = "icrc1-test-env-state-machine"
-version = "0.1.12"
-dependencies = [
- "anyhow",
- "async-trait",
- "candid",
- "hex",
- "icrc1-test-env",
- "pocket-ic",
 ]
 
 [[package]]

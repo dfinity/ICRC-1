@@ -37,7 +37,7 @@ rust_test(
     deps = [
         "//test/env",
         "//test/env/replica",
-        "//test/env/state-machine",
+        "//test/env/pocket-ic",
         "//test/replica",
         "//test/suite",
         "@crate_index//:candid",
