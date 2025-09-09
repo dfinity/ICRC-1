@@ -2,7 +2,7 @@ use candid::Principal;
 use candid::{CandidType, Decode, Encode, Nat};
 use ic_agent::Agent;
 use ic_agent::Identity;
-use icrc1_test_env_pocket_ic::SMLedger;
+use icrc1_test_env_pocket_ic::PICLedger;
 use icrc1_test_env_replica::fresh_identity;
 use icrc1_test_env_replica::ReplicaLedger;
 use icrc1_test_replica::start_replica;
@@ -205,7 +205,7 @@ async fn test_pocket_ic() {
     pic.install_canister(canister_id, REF_WASM.to_vec(), init_arg, None)
         .await;
 
-    let env = SMLedger::new(Arc::new(pic), canister_id, p1.sender().unwrap());
+    let env = PICLedger::new(Arc::new(pic), canister_id, p1.sender().unwrap());
 
     let tests = icrc1_test_suite::test_suite(env).await;
 

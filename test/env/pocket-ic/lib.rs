@@ -16,7 +16,7 @@ fn new_principal(n: u64) -> Principal {
 }
 
 #[derive(Clone)]
-pub struct SMLedger {
+pub struct PICLedger {
     counter: Arc<AtomicU64>,
     pic: Arc<PocketIc>,
     sender: Principal,
@@ -24,7 +24,7 @@ pub struct SMLedger {
 }
 
 #[async_trait(?Send)]
-impl LedgerEnv for SMLedger {
+impl LedgerEnv for PICLedger {
     fn fork(&self) -> Self {
         Self {
             counter: self.counter.clone(),
@@ -103,7 +103,7 @@ impl LedgerEnv for SMLedger {
     }
 }
 
-impl SMLedger {
+impl PICLedger {
     pub fn new(pic: Arc<PocketIc>, canister_id: Principal, sender: Principal) -> Self {
         Self {
             counter: Arc::new(AtomicU64::new(0)),
