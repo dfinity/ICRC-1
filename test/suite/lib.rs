@@ -55,9 +55,10 @@ fn assert_not_equal<T: PartialEq + std::fmt::Debug>(lhs: T, rhs: T) -> anyhow::R
     Ok(())
 }
 
-fn time_nanos(ledger_env: &impl LedgerEnv) -> u64 {
+async fn time_nanos(ledger_env: &impl LedgerEnv) -> u64 {
     ledger_env
         .time()
+        .await
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
         .as_nanos() as u64
@@ -378,7 +379,7 @@ pub async fn icrc2_test_approve_expiration(ledger_env: impl LedgerEnv) -> anyhow
     let p1_env = setup_test_account(&ledger_env, initial_balance.clone()).await?;
     let p2_env = ledger_env.fork();
     let approve_amount = fee.clone();
-    let now = time_nanos(&ledger_env);
+    let now = time_nanos(&ledger_env).await;
 
     // Expiration in the past
     match approve(
@@ -716,7 +717,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
 
     // Setting the created_at_time field changes the transaction
     // identity, so the transfer should succeed.
-    let transfer_args = transfer_args.created_at_time(time_nanos(&ledger_env));
+    let transfer_args = transfer_args.created_at_time(time_nanos(&ledger_env).await);
 
     let txid = match transfer(&p1_env, transfer_args.clone()).await? {
         Ok(txid) => txid,
@@ -785,7 +786,7 @@ pub async fn icrc1_test_tx_deduplication(ledger_env: impl LedgerEnv) -> anyhow::
 
     assert_balance(&p1_env, p2_env.principal(), transfer_amount.clone() * 5u8).await?;
 
-    let now = time_nanos(&ledger_env);
+    let now = time_nanos(&ledger_env).await;
 
     // Transactions with different subaccounts (even if it's None and
     // Some([0; 32])) should not be considered duplicates.

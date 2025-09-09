@@ -1,6 +1,6 @@
 [package]
 name = "icrc1-test-suite"
-version = "0.1.12"
+version = "0.2.0"
 authors = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
@@ -15,4 +15,4 @@ path = "lib.rs"
 anyhow = "1.0"
 candid = { workspace = true }
 futures = "0.3.24"
-icrc1-test-env = { version ="0.1.12", path = "../env" }
+icrc1-test-env = { version = "0.2.0", path = "../env" }

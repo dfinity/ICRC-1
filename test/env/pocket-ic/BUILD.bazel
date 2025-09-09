@@ -10,9 +10,9 @@ MACRO_DEPENDENCIES = [
 ]
 
 rust_library(
-    name = "state-machine",
+    name = "pocket-ic",
     srcs = ["lib.rs"],
-    crate_name = "icrc1_test_env_state_machine",
+    crate_name = "icrc1_test_env_pocket_ic",
     deps = all_crate_deps(
         normal = True,
     ) + [        "//test/env",

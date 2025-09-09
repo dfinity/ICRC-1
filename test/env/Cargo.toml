@@ -1,6 +1,6 @@
 [package]
 name = "icrc1-test-env"
-version = "0.1.12"
+version = "0.2.0"
 authors = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
@@ -13,7 +13,7 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = { workspace = true }
-async-trait = { workspace = true } 
+async-trait = { workspace = true }
 candid = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

@@ -2,11 +2,11 @@ use candid::Principal;
 use candid::{CandidType, Decode, Encode, Nat};
 use ic_agent::Agent;
 use ic_agent::Identity;
-use ic_test_state_machine_client::StateMachine;
+use icrc1_test_env_pocket_ic::PICLedger;
 use icrc1_test_env_replica::fresh_identity;
 use icrc1_test_env_replica::ReplicaLedger;
-use icrc1_test_env_state_machine::SMLedger;
 use icrc1_test_replica::start_replica;
+use pocket_ic::nonblocking::PocketIc;
 use ring::rand::SystemRandom;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -105,19 +105,8 @@ async fn install_canister(agent: &Agent, wasm: &[u8], init_arg: &[u8]) -> Princi
     canister_id
 }
 
-fn sm_env() -> StateMachine {
-    let ic_test_state_machine_path = std::fs::canonicalize(
-        std::env::var_os("STATE_MACHINE_BINARY").expect("missing ic-starter binary"),
-    )
-    .unwrap();
-
-    StateMachine::new(
-        &ic_test_state_machine_path
-            .into_os_string()
-            .into_string()
-            .unwrap(),
-        false,
-    )
+async fn pic_env() -> PocketIc {
+    PocketIc::new().await
 }
 
 async fn test_replica() {
@@ -183,9 +172,8 @@ async fn test_replica() {
     }
 }
 
-#[allow(clippy::arc_with_non_send_sync)]
-async fn test_state_machine() {
-    let sm_env = sm_env();
+async fn test_pocket_ic() {
+    let pic = pic_env().await;
     // We need a fresh identity to be used for the tests
     // This identity simulates the identity a user would parse to the binary
     let minter = fresh_identity(&SystemRandom::new());
@@ -211,16 +199,13 @@ async fn test_state_machine() {
     })
     .unwrap();
 
-    let canister_id = sm_env.create_canister(Some(minter.sender().unwrap()));
+    let canister_id = pic.create_canister().await;
+    pic.add_cycles(canister_id, 1_000_000_000_000u128).await;
 
-    sm_env.install_canister(
-        canister_id,
-        (*REF_WASM).to_vec(),
-        init_arg,
-        Some(minter.sender().unwrap()),
-    );
+    pic.install_canister(canister_id, REF_WASM.to_vec(), init_arg, None)
+        .await;
 
-    let env = SMLedger::new(Arc::new(sm_env), canister_id, p1.sender().unwrap());
+    let env = PICLedger::new(Arc::new(pic), canister_id, p1.sender().unwrap());
 
     let tests = icrc1_test_suite::test_suite(env).await;
 
@@ -231,7 +216,7 @@ async fn test_state_machine() {
 
 #[tokio::main]
 async fn main() {
-    test_state_machine().await;
+    test_pocket_ic().await;
 
     test_replica().await;
 }

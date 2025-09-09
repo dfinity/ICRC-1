@@ -266,7 +266,7 @@ pub trait LedgerEnv {
     fn principal(&self) -> Principal;
 
     /// Returns the approximation of the current ledger time.
-    fn time(&self) -> std::time::SystemTime;
+    async fn time(&self) -> std::time::SystemTime;
 
     /// Executes a query call with the specified arguments on the ledger.
     async fn query<Input, Output>(&self, method: &str, input: Input) -> anyhow::Result<Output>

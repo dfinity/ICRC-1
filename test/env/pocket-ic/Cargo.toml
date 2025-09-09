@@ -1,12 +1,12 @@
 [package]
-name = "icrc1-test-env-state-machine"
-version = "0.1.12"
+name = "icrc1-test-env-pocket-ic"
+version = "0.2.0"
 authors = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
 rust-version = { workspace = true }
 repository = { workspace = true }
-description = "DEPRECATED: Use icrc1-test-env-pocket-ic"
+description = { workspace = true }
 
 [lib]
 path = "lib.rs"
@@ -16,5 +16,5 @@ anyhow = { workspace = true }
 candid = { workspace = true }
 async-trait = { workspace = true }
 hex = { workspace = true }
-ic-test-state-machine-client = { workspace = true }
-icrc1-test-env = { version = "0.1.12", path = ".." }
+pocket-ic = { workspace = true }
+icrc1-test-env = { version = "0.2.0", path = ".." }
