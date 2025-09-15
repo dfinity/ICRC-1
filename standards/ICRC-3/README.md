@@ -125,9 +125,9 @@ The following principles guide the evolution and interpretation of ICRC-3 and an
   - Ensure that `tx` contains only parameters explicitly provided by the caller (except where the block type definition requires otherwise).
 
 ### 3. Avoiding Collisions in `tx`
-- To avoid collisions between transactions originating from different standards, the canonical `tx` mapping MUST include:
-  - An operation field (`op`) whose value is namespaced using the standard’s number as a prefix, e.g., `122freeze_account`.
 - No two standardized methods may produce `tx` values that are indistinguishable when interpreted under ICRC-3 rules.
+- To avoid collisions between transactions originating from different standards, the canonical `tx` mapping MUST include:
+- An operation field (`op`) whose value is namespaced using as prefix the number of the standard that introduces the method, e.g., `122freeze_account`.
 
 ### 4. Inclusion of the User Call in `tx`
 - The `tx` field must faithfully capture the structure of the user call that triggered the block.
