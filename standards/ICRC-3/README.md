@@ -126,9 +126,6 @@ The following principles guide the evolution and interpretation of ICRC-3 and an
 
 ### 3. Avoiding Collisions in `tx`
 - No two standardized methods may produce `tx` values that are indistinguishable when interpreted under ICRC-3 rules.
-- To avoid collisions across standards, the canonical `tx` mapping MUST include an operation field (`op`) whose value is namespaced with the introducing standard’s number as a prefix, e.g., `122freeze_account`.
-
-- No two standardized methods may produce `tx` values that are indistinguishable when interpreted under ICRC-3 rules.
 - To avoid collisions across standards, `tx` MUST include an operation field (`op`) whose value is namespaced with the introducing standard’s number as a prefix (e.g., `122freeze_account`). This namespacing requirement applies to typed blocks; legacy ICRC-1/2 blocks keep their historical `op` values (e.g., `"xfer"`, `"mint"`, `"burn"`).
 
 
@@ -167,7 +164,7 @@ To ensure consistency across standards and implementations, the semantics of any
 4. Apply fee (if applicable)  
    • If the block type involves fees, determine the **effective fee** according to the rules defined for that block type.  
    • Deduct the fee from the account designated as the **fee payer** for this block type.  
-   • Adjust balances accordingly (e.g., for mints: `to` receives `amt – fee`).  
+   • Adjust balances accordingly (e.g., for mints: `to` receives `amt - fee`).
    • The destination or handling of the fee (burn, treasury, etc.) may be specified by the block type or by a separate fee standard (e.g., ICRC-107). When unspecified, the destination/handling of the fee is ledger-defined; ledgers may burn fees or route them to a treasury. See ICRC-107 for a standardized way to expose fee handling.  
 
 
@@ -288,8 +285,11 @@ The **effective fee** is the fee charged by the ledger. For a block, this is com
 - **MAY** contain `tx.spender : Account` if created via `icrc2_transfer_from`.
 
 **Semantics**  
-Transfers debit `amt` (and any fee) from `from` and credit `amt` to `to`.  
+Transfers debit `tx.amt` (and any fee) from `tx.from` and credit `tx.amt` to `tx.to`.  
 If `tx.spender` is present, the operation is executed under an approval, which must cover at least `tx.amt + effective_fee`. The allowance is reduced accordingly.  
+
+**Minting-account prohibition.** A block with `tx.op = "xfer"` MUST NOT have either endpoint equal to the minting account. If `tx.from` equals the minting account, the operation MUST be represented as `op = "mint"`. If `tx.to` equals the minting account, the operation MUST be represented as `op = "burn"`. It is strictly prohibited for both `tx.from` and `tx.to` to be the minting account simultaneously.
+
 
 **Fee payer:** `tx.from`.
 
@@ -311,7 +311,6 @@ Mints create `tx.amt` new tokens. If an effective fee is charged, it is deducted
 If `tx.spender` is present, the mint is executed under an approval on the minting account; that approval **MUST** be at least `tx.amt + effective_fee` and **MUST** be reduced by `tx.amt + effective_fee`.
 
 
-
 **Fee payer:** `tx.to`.
 
 ---
@@ -323,7 +322,7 @@ If `tx.spender` is present, the mint is executed under an approval on the mintin
 - **MUST** contain `tx.from : Account`.
 - **MUST** contain `tx.amt : Nat`.
 - **MUST NOT** contain `tx.to`.
-- **MAY** contain `tx.fee : Nat` if provided by the caller.
+- **MUST NOT** contain `tx.fee`. 
 - **MAY** contain `tx.memo : Blob` if provided by the caller.
 - **MAY** contain `tx.ts : Nat` if provided by the caller.
 
@@ -363,12 +362,13 @@ If the approval is set on the minting account, it can be consumed by `icrc2_tran
 
 Although legacy ICRC-1 and ICRC-2 blocks do not include the `btype` field, ledgers **MUST** still report their supported block types via the `icrc3_supported_block_types` endpoint. By convention, the following identifiers are used to describe the types of these legacy blocks:
 
-- `"1burn"` for burn blocks
-- `"1mint"` for mint blocks
-- `"1xfer"` for `icrc1_transfer` blocks
-- `"2xfer"` for `icrc2_transfer_from` transfer blocks
-- `"2mint"` for `icrc2_transfer_from` delegated mint blocks
-- `"2approve"` for `icrc2_approve` blocks
+- "1burn" for burn blocks
+- "1mint" for mint blocks
+- "1xfer" for `icrc1_transfer` blocks
+- "2xfer" for `icrc2_transfer_from` transfer blocks
+- "2burn" for `icrc2_transfer_from` burn blocks
+- "2mint" for `icrc2_transfer_from` delegated mint blocks
+- "2approve" for `icrc2_approve` blocks
 
 
 ### Account Type
@@ -451,6 +451,7 @@ icrc1_transfer: record {
 - `to` and `fee` MUST NOT be present
 
 
+**Invalid combination (rejected).** If both the sender and the recipient resolve to the minting account in the same call, the ledger MUST reject the call; no legacy `xfer` block is produced for this case.
 
 
 
@@ -604,7 +605,6 @@ variant {
 - `spender = [caller]` if `spender_subaccount` is not provided
 - `spender = [caller, spender_subaccount]` if provided
 - `amt = amount`
-- `fee = fee` if provided
 - `memo = memo` if provided
 - `ts = created_at_time` if provided
 
@@ -619,6 +619,14 @@ variant {
 - `memo = memo` if provided
 - `ts = created_at_time` if provided
 - `from` and `fee` **MUST NOT** be present
+
+**Invalid combination (rejected).** If both `from` and `to` are the minting account in the same `icrc2_transfer_from` call, the ledger MUST reject the call; no `xfer`/`burn`/`mint` block is produced for this case.
+
+
+
+### Canonical Examples of `icrc2_transfer_from` Blocks
+
+Each of the following examples represents a canonical block resulting from an `icrc2_transfer_from` call. These examples illustrate different scenarios depending on which optional fields were included in the call. Only parameters explicitly provided by the caller appear in the resulting `tx`.
 
 
 #### Example 4: Transfer from approval
