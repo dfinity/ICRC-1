@@ -308,7 +308,7 @@ If `tx.spender` is present, the operation is executed under an approval, which m
 - **MAY** contain `tx.ts : Nat` if provided by the caller.
 
 Mints create `tx.amt` new tokens. If an effective fee is charged, it is deducted from `tx.to` immediately, so `tx.to` receives `tx.amt - effective_fee` (require `effective_fee ≤ tx.amt`).  
-If `tx.spender` is present, the mint is executed under an approval on the minting account; that approval **MUST** be at least `tx.amt + effective_fee` and **MUST** be reduced by `tx.amt + effective_fee`.
+If `tx.spender` is present, the mint is executed under an approval on the minting account; that approval **MUST** be at least `tx.amt` and **MUST** be reduced by `tx.amt`.
 
 
 **Fee payer:** `tx.to`.
@@ -348,7 +348,7 @@ Burns remove `tx.amt` tokens from `tx.from`. Any fee is also debited from `tx.fr
 Approvals set or update the allowance of `tx.spender` on `tx.from`.  
 Any subsequent `xfer` block with `tx.spender` consumes the allowance.  
 Fees (if any) are debited from `tx.from`.  
-If the approval is set on the minting account, it can be consumed by `icrc2_transfer_from` mints; such mints reduce the allowance by `tx.amt + effective_fee`.
+If the approval is set on the minting account, it can be consumed by `icrc2_transfer_from` mints; such mints reduce the allowance by `tx.amt`.
 
 
 **Fee payer:** `tx.from`.
@@ -376,21 +376,24 @@ Although legacy ICRC-1 and ICRC-2 blocks do not include the `btype` field, ledge
 ICRC-1 Account is represented as an `Array` containing the `owner` bytes and optionally the subaccount bytes.  Two examples of accounts, one with subaccount and the second without are below. 
 
 Example of account representation as an array with two blobs, one for the owner principal and the second for the subaccount:
-
 ```
-variant { Array = vec {
-                variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
-                variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
-        }};
+variant {
+  Array = vec {
+    variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
+    variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
+  };
+};
 ```
 
 
 Example of account representation as an array with one blob encoding the owner principal.
 ```
-variant { Array = vec {
-                variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
-            
-        }};
+variant {
+  Array = vec {
+    variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
+  };
+};
+
 ```
 
 
