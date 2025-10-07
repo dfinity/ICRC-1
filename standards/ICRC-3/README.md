@@ -4,7 +4,12 @@
 |:------:|
 | [Accepted](https://dashboard.internetcomputer.org/proposal/128824)  |
 
-`ICRC-3` is a standard for accessing the block log of a Ledger on the [Internet Computer](https://internetcomputer.org).
+
+`ICRC-3` is a standard for exposing a **verifiable, append-only block log** on the Internet Computer [Internet Computer](https://internetcomputer.org).
+While widely used by token ledgers, ICRC-3 is **domain-agnostic**: any canister that emits a
+sequence of verifiable events (e.g., governance actions, system upgrades, oracle attestations)
+can use ICRC-3 to publish, verify, and archive those events.
+
 
 `ICRC-3` specifies:
 1. A way to fetch the archive nodes of a Ledger
