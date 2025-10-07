@@ -5,17 +5,41 @@
 | [Accepted](https://dashboard.internetcomputer.org/proposal/128824)  |
 
 
-`ICRC-3` is a standard for exposing a **verifiable, append-only block log** on the Internet Computer [Internet Computer](https://internetcomputer.org).
+`ICRC-3` is a standard for exposing a **verifiable, append-only block log** on the [Internet Computer](https://internetcomputer.org).
 While widely used by token ledgers, ICRC-3 is **domain-agnostic**: any canister that emits a
 sequence of verifiable events (e.g., governance actions, system upgrades, oracle attestations)
 can use ICRC-3 to publish, verify, and archive those events.
 
 
-`ICRC-3` specifies:
-1. A way to fetch the archive nodes of a Ledger
-2. A generic format for sharing the block log without information loss. This includes the fields that a block must have
-3. A mechanism to verify the block log on the client side to allow downloading the block log via query calls
-4. A way for new standards to define new transaction types compatible with ICRC-3
+## Scope & Non-Goals
+
+**Scope.** ICRC-3 standardizes:
+- A canonical, representation-independent `Value` type to encode blocks losslessly.
+- A linked block structure (`phash` → parent hash) enabling client-side verification.
+- Endpoints for retrieving recent and archived blocks, and for verifying the tip.
+- A mechanism (`btype`) for higher-level standards to define event semantics.
+
+**Non-Goals.**
+- ICRC-3 does **not** prescribe economic semantics (fees, rewards, slashing, etc.).
+- ICRC-3 does **not** define what an event “means.” Semantics are defined by the block’s `btype`
+  and the standard or application that introduces it.
+
+
+## What ICRC-3 Specifies
+
+ICRC-3 defines the **structure, linkage, and access model** for verifiable event logs on the
+Internet Computer. It standardizes:
+
+1. A way for clients to fetch information about archive canisters associated with the log.  
+2. A generic, lossless format for representing blocks and their contents using the canonical `Value` type.  
+3. A mechanism for verifying block log integrity on the client side, enabling query-based block retrieval.  
+4. A way for new standards and applications to define **domain-specific block types** (`btype`) that remain interoperable under the same verifiable log framework.
+
+ICRC-3 does **not** prescribe the semantics of these blocks—it only defines how they are encoded,
+linked, and verified. Higher-level standards such as ICRC-1, ICRC-2, or ICRC-107 use ICRC-3
+to record domain-specific state transitions (e.g., transfers, approvals, or fees), while
+other systems may use it to log governance actions, oracle attestations, or protocol events.
+
 
 ## Archive Nodes
 
