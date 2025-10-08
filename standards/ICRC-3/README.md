@@ -16,8 +16,8 @@ can use ICRC-3 to publish, verify, and archive those events.
 **Scope.** ICRC-3 standardizes:
 - A canonical, representation-independent `Value` type to encode blocks losslessly.
 - A linked block structure (`phash` → parent hash) enabling client-side verification.
-- Endpoints for retrieving recent and archived blocks, and for verifying the tip.
-- A mechanism (`btype`) for higher-level standards to define event semantics.
+- Endpoints for retrieving recent and archived blocks, and for verifying the tip of the chain.
+- A mechanism (`btype`) that allows higher-level standards to define event semantics.
 
 **Non-Goals.**
 - ICRC-3 does **not** prescribe economic semantics (fees, rewards, slashing, etc.).
@@ -30,10 +30,12 @@ can use ICRC-3 to publish, verify, and archive those events.
 ICRC-3 defines the **structure, linkage, and access model** for verifiable event logs on the
 Internet Computer. It standardizes:
 
-1. A way for clients to fetch information about archive canisters associated with the log.  
-2. A generic, lossless format for representing blocks and their contents using the canonical `Value` type.  
+1. A generic, lossless format for representing blocks and their contents using the canonical `Value` type.  
+2. A linked block structure (`phash` → parent hash) enabling client-side verification.  
 3. A mechanism for verifying block log integrity on the client side, enabling query-based block retrieval.  
-4. A way for new standards and applications to define **domain-specific block types** (`btype`) that remain interoperable under the same verifiable log framework.
+4. A way for clients to fetch information about archive canisters associated with the log.  
+5. A way for new standards and applications to define **domain-specific block types** (`btype`) that remain interoperable under the same verifiable log framework.
+
 
 ICRC-3 does **not** prescribe the semantics of these blocks—it only defines how they are encoded,
 linked, and verified. Higher-level standards such as ICRC-1, ICRC-2, or ICRC-107 use ICRC-3
@@ -41,13 +43,38 @@ to record domain-specific state transitions (e.g., transfers, approvals, or fees
 other systems may use it to log governance actions, oracle attestations, or protocol events.
 
 
-## Archive Nodes
 
-The Ledger must expose an endpoint `icrc3_get_archives` listing all the canisters containing its blocks.
+## Terminology and Block Structure
+
+ICRC-3 defines blocks as **verifiable records** that together form an append-only chain.
+Each block encapsulates a transaction or event in a canonical `Value` representation and
+links to its predecessor through the `phash` (parent hash).  
+
+Blocks are **domain-neutral**: the `btype` field identifies which higher-level standard or
+application defines the semantics of the `tx` content.  This enables interoperable verification across domains—ledgers, governance systems, or any canister that emits a sequence of verifiable actions.
+
+Although many deployments are token ledgers, the same verifiable log applies to governance decisions, protocol upgrades, oracle attestations, or any application that benefits from an auditable sequence of certified events.
+
+## Block Retrieval and Archival
+
+Large canisters may offload older blocks to archive canisters.  
+ICRC-3 defines standard endpoints for:
+
+- Querying the list of archive canisters (`icrc3_get_archives`),
+- Retrieving blocks from both the primary and archive canisters (`icrc3_get_blocks`),
+- Verifying continuity between archived and unarchived segments.
+
+This enables clients to reconstruct the entire verified log even when its storage
+is distributed across multiple archive canisters.
+
+The following sections specify the generic block format, the meaning of its top-level fields,
+and the rules for defining new block types under ICRC-3.
+
 
 ## Block Log
 
-The block log is a list of blocks where each block contains the hash of its parent (`phash`). The parent of a block `i` is block `i-1` for `i>0` and `null` for `i=0`.
+- The parent of block `i` is block `i-1` for `i > 0`, and `null` for the genesis block (`i = 0`).
+
 
 ```
    ┌─────────────────────────┐          ┌─────────────────────────┐
@@ -85,7 +112,7 @@ Servers MUST serve the block log as a list of `Value` where each `Value` represe
 
 `ICRC-3` specifies a standard hash function over `Value`.
 
-This hash function SHOULD be used by Ledgers to calculate the hash of the parent of a block and by clients to verify the downloaded block log.
+This hash function MUST be used by log producer canister to calculate the hash of the parent of a block and by clients to verify the downloaded block log.
 
 The hash function is the [representation-independent hashing of structured data](https://internetcomputer.org/docs/current/references/ic-interface-spec#hash-of-map) used by the IC:
 - the hash of a `Blob` is the hash of the bytes themselves
@@ -99,7 +126,7 @@ Pseudocode for representation-independent hashing of `Value`, together with test
 
 ## Blocks Verification
 
-The Ledger MUST certify the last block (tip) recorded. The Ledger MUST allow to download the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate is comprised of a tree containing the certified data and the signature. The tree MUST contain two labeled values (leaves):
+The log producer canister MUST certify the last block (tip) recorded. The log producer canister MUST allow to download the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate is comprised of a tree containing the certified data and the signature. The tree MUST contain two labeled values (leaves):
 1. `last_block_index`: the index of the last block in the chain. The value MUST be expressed as [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128)
 2. `last_block_hash`: the hash of the last block in the chain
 
@@ -122,7 +149,7 @@ An ICRC-3 compliant Block
 
 An ICRC-3 block can record different kinds of information. Some blocks record the result of a transaction submitted by a user. These typically contain a `tx` field describing the user’s intent and any parameters they provided.
 
-Other blocks may be created by the ledger itself, for example during an upgrade, migration, or system operation, to record changes in ledger state that did not come from a user call.
+Other blocks may be created by the log producer canister itself, for example during an upgrade, migration, or system operation, to record changes in the canistesr state that did not come from a user call.
 
 The `tx` field, when present, encodes the **intent** or **state change payload** associated with the block:
 - In user-initiated blocks, `tx` reflects the call parameters, subject to the canonical mapping defined for that block type.
@@ -250,10 +277,10 @@ The rules for interpreting the amount and destination of fees are defined in ICR
 
 ## Supported Standards
 
-An ICRC-3 compatible Ledger MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`.
+An ICRC-3 compatible log producer canister MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`.
 
-- For **typed** blocks, the ledger MUST only produce blocks whose `"btype"` value is included in this list.
-- For **legacy** ICRC-1/2 blocks (no `"btype"`), the ledger MUST include the conventional identifiers (e.g., `"1xfer"`, `"2approve"`) in this list to advertise support, even though the blocks themselves do not carry a `"btype"` field.
+- For **typed** blocks, the log producer canister MUST only produce blocks whose `"btype"` value is included in this list.
+- For **legacy** ICRC-1/2 blocks (no `"btype"`), the log producer canister MUST include the conventional identifiers (e.g., `"1xfer"`, `"2approve"`) in this list to advertise support, even though the blocks themselves do not carry a `"btype"` field.
 
 
 ## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
@@ -276,10 +303,10 @@ A legacy block:
 
 - **MUST** be a `Value::Map` containing at least:
   - `"phash"`: `Blob` — the parent hash.
-  - `"ts"`: `Nat` — the timestamp (in nanoseconds since Unix epoch) set by the ledger when the block was created.
+  - `"ts"`: `Nat` — the timestamp (in nanoseconds since Unix epoch) set by the log producer canister when the block was created.
   - `"tx"`: `Value::Map` — representing the user’s transaction intent.
 - **MAY** include:
-  - `"fee": Nat` — the fee actually charged by the ledger, if any.
+  - `"fee": Nat` — the fee actually charged by the log producer canister, if any.
 
 
 
@@ -776,7 +803,7 @@ type Value = variant {
 
 type GetArchivesArgs = record {
     // The last archive seen by the client.
-    // The Ledger will return archives coming
+    // The log producer will return archives coming
     // after this one if set, otherwise it
     // will return the first archives.
     from : opt principal;
@@ -799,11 +826,11 @@ type GetBlocksResult = record {
     // Total number of blocks in the block log
     log_length : nat;
 
-    // Blocks found locally to the Ledger
+    // Blocks found locally to the producing canister
     blocks : vec record { id : nat; block: Value };
 
     // List of callbacks to fetch the blocks that are not local
-    // to the Ledger, i.e. archived blocks
+    // to the producing canister, i.e. archived blocks
     archived_blocks : vec record {
         args : GetBlocksArgs;
         callback : func (GetBlocksArgs) -> (GetBlocksResult) query;
