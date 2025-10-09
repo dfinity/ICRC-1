@@ -55,6 +55,25 @@ application defines the semantics of the `tx` content.  This enables interoperab
 
 Although many deployments are token ledgers, the same verifiable log applies to governance decisions, protocol upgrades, oracle attestations, or any application that benefits from an auditable sequence of certified events.
 
+
+## Block Log
+
+- The parent of block `i` is block `i-1` for `i > 0`, and `null` for the genesis block (`i = 0`).
++ The parent of block `i` is block `i-1` for `i > 0`.
++ The genesis block (`i = 0`) has no parent and therefore MUST NOT include a `"phash"` field.
+
+
+
+```
+   ┌─────────────────────────┐          ┌─────────────────────────┐
+   |         Block i         |          |         Block i+1       |
+   ├─────────────────────────┤          ├─────────────────────────┤
+◄──| phash = hash(Block i-1) |◄─────────| phash = hash(Block i)   |
+   | ...                     |          | ...                     |
+   └─────────────────────────┘          └─────────────────────────┘
+
+```
+
 ## Block Retrieval and Archival
 
 Large canisters may offload older blocks to archive canisters.  
@@ -70,21 +89,6 @@ is distributed across multiple archive canisters.
 The following sections specify the generic block format, the meaning of its top-level fields,
 and the rules for defining new block types under ICRC-3.
 
-
-## Block Log
-
-- The parent of block `i` is block `i-1` for `i > 0`, and `null` for the genesis block (`i = 0`).
-
-
-```
-   ┌─────────────────────────┐          ┌─────────────────────────┐
-   |         Block i         |          |         Block i+1       |
-   ├─────────────────────────┤          ├─────────────────────────┤
-◄──| phash = hash(Block i-1) |◄─────────| phash = hash(Block i)   |
-   | ...                     |          | ...                     |
-   └─────────────────────────┘          └─────────────────────────┘
-
-```
 
 ## Value
 
@@ -160,14 +164,19 @@ Block types and their schemas are defined either by legacy standards (e.g., ICRC
 
 
 
-## Principles and Rules for ICRC-3 Blocks
+## Principles for ICRC-3 Blocks
 
 The following principles guide the evolution and interpretation of ICRC-3 and any standards that build on it.
 
-### 1. Core State Transitions
-- Every block type MUST define the **core state transition** it represents: the deterministic change to ledger state implied by the block’s minimal `tx` structure, *ignoring fees or ledger-specific policies*.  
-- This transition is the canonical meaning of a block — what balances, allowances, or other state variables change as a direct consequence of the block.  
-- Fee handling, metadata, and ledger-specific policies are layered on top of this transition.
+### 1. Deterministic Meaning
+
+- Every block type SHOULD define the deterministic change or effect it represents in the system’s state.
+
+- This description captures the intended meaning of a block — what observable change or event it records — without prescribing how that change is implemented.
+
+- For example, in ledgers this may refer to a balance update; in other domains, it could mean a configuration change, governance vote, or emitted signal.
+
+- Fee handling or application-specific policies are layered on top of this meaning and may be standardized separately.
 
 ### 2. Separation of `btype` and `tx`
 - The `btype` field defines the **minimal semantic structure** of a block — the set of fields in `tx` required to fully determine its core state transition.  
