@@ -197,10 +197,12 @@ The following principles guide the evolution and interpretation of ICRC-3 and an
 - To avoid collisions across standards, `tx` MUST include an operation field (`op`) whose value is namespaced with the introducing standard’s number as a prefix (e.g., `122freeze_account`). This namespacing requirement applies to typed blocks; legacy ICRC-1/2 blocks keep their historical `op` values (e.g., `"xfer"`, `"mint"`, `"burn"`).
 
 
-### 4. Inclusion of the User Call in `tx`
-- The `tx` field must faithfully capture the structure of the user call that triggered the block.
-- All call parameters that are part of the method’s canonical mapping MUST be included exactly as provided by the caller.
-- Optional parameters that were not present in the call MUST be omitted from `tx`.
+### 4. Capturing the User Call
+
+- The `tx` field **SHOULD** capture the structure of the user call or event that triggered the block.  
+- All call parameters that are part of the canonical mapping **MUST** be included exactly as provided.  
+- Optional parameters that were not present in the call **MUST NOT** appear in `tx`.
+
 
 ### 5. Future-Proofing and Extensibility
 - Additional non-semantic fields (e.g., metadata, hashes, references) MAY be added to `tx` without introducing a new `btype`, provided:
