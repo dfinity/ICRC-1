@@ -8,7 +8,10 @@
 `ICRC-3` is a standard for exposing a **verifiable, append-only block log** on the [Internet Computer](https://internetcomputer.org).
 While widely used by token ledgers, ICRC-3 is **domain-agnostic**: any canister that emits a
 sequence of verifiable events (e.g., governance actions, system upgrades, oracle attestations)
-can use ICRC-3 to publish, verify, and archive those events.
+can use ICRC-3 to publish, verify, and archive those events.  
+
+**Producer canister.** The canister that exposes an ICRC-3 log.  It may be a token ledger or any other application (e.g., governance, oracle, system services). Throughout this document, “producer canister” replaces terms like “ledger” or "producer” to emphasize that ICRC-3 is domain-agnostic.
+
 
 
 ## Scope & Non-Goals
@@ -116,7 +119,7 @@ Servers MUST serve the block log as a list of `Value` where each `Value` represe
 
 `ICRC-3` specifies a standard hash function over `Value`.
 
-This hash function MUST be used by log producer canister to calculate the hash of the parent of a block and by clients to verify the downloaded block log.
+This hash function MUST be used by producer canister to calculate the hash of the parent of a block and by clients to verify the downloaded block log.
 
 The hash function is the [representation-independent hashing of structured data](https://internetcomputer.org/docs/current/references/ic-interface-spec#hash-of-map) used by the IC:
 - the hash of a `Blob` is the hash of the bytes themselves
@@ -130,7 +133,7 @@ Pseudocode for representation-independent hashing of `Value`, together with test
 
 ## Blocks Verification
 
-The log producer canister MUST certify the last block (tip) recorded. The log producer canister MUST allow to download the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate is comprised of a tree containing the certified data and the signature. The tree MUST contain two labeled values (leaves):
+The producer canister MUST certify the last block (tip) recorded. The producer canister MUST allow to download the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate is comprised of a tree containing the certified data and the signature. The tree MUST contain two labeled values (leaves):
 1. `last_block_index`: the index of the last block in the chain. The value MUST be expressed as [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128)
 2. `last_block_hash`: the hash of the last block in the chain
 
@@ -153,7 +156,7 @@ An ICRC-3 compliant Block
 
 An ICRC-3 block can record different kinds of information. Some blocks record the result of a transaction submitted by a user. These typically contain a `tx` field describing the user’s intent and any parameters they provided.
 
-Other blocks may be created by the log producer canister itself, for example during an upgrade, migration, or system operation, to record changes in the canistesr state that did not come from a user call.
+Other blocks may be created by the producer canister itself, for example during an upgrade, migration, or system operation, to record changes in the canistesr state that did not come from a user call.
 
 The `tx` field, when present, encodes the **intent** or **state change payload** associated with the block:
 - In user-initiated blocks, `tx` reflects the call parameters, subject to the canonical mapping defined for that block type.
@@ -291,10 +294,10 @@ The rules for interpreting the amount and destination of fees are defined in ICR
 
 ## Supported Standards
 
-An ICRC-3 compatible log producer canister MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`.
+An ICRC-3 compatible producer canister MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`.
 
-- For **typed** blocks, the log producer canister MUST only produce blocks whose `"btype"` value is included in this list.
-- For **legacy** ICRC-1/2 blocks (no `"btype"`), the log producer canister MUST include the conventional identifiers (e.g., `"1xfer"`, `"2approve"`) in this list to advertise support, even though the blocks themselves do not carry a `"btype"` field.
+- For **typed** blocks, the producer canister MUST only produce blocks whose `"btype"` value is included in this list.
+- For **legacy** ICRC-1/2 blocks (no `"btype"`), the producer canister MUST include the conventional identifiers (e.g., `"1xfer"`, `"2approve"`) in this list to advertise support, even though the blocks themselves do not carry a `"btype"` field.
 
 
 ## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
@@ -317,10 +320,10 @@ A legacy block:
 
 - **MUST** be a `Value::Map` containing at least:
   - `"phash"`: `Blob` — the parent hash.
-  - `"ts"`: `Nat` — the timestamp (in nanoseconds since Unix epoch) set by the log producer canister when the block was created.
+  - `"ts"`: `Nat` — the timestamp (in nanoseconds since Unix epoch) set by the producer canister when the block was created.
   - `"tx"`: `Value::Map` — representing the user’s transaction intent.
 - **MAY** include:
-  - `"fee": Nat` — the fee actually charged by the log producer canister, if any.
+  - `"fee": Nat` — the fee actually charged by the producer canister, if any.
 
 
 
@@ -817,7 +820,7 @@ type Value = variant {
 
 type GetArchivesArgs = record {
     // The last archive seen by the client.
-    // The log producer will return archives coming
+    // The producer will return archives coming
     // after this one if set, otherwise it
     // will return the first archives.
     from : opt principal;
