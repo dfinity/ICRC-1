@@ -178,12 +178,15 @@ The following principles guide the evolution and interpretation of ICRC-3 and an
 
 - Fee handling or application-specific policies are layered on top of this meaning and may be standardized separately.
 
+
 ### 2. Separation of `btype` and `tx`
-- The `btype` field defines the **minimal semantic structure** of a block — the set of fields in `tx` required to fully determine its core state transition.  
+- The btype field identifies the semantic family of a block — which higher-level standard or application defines its interpretation.
+
 - Standards that introduce a new `btype` MUST:
   - Assign a unique identifier for the `btype`.
-  - Specify the minimal `tx` structure required for interpreting that block type.
-  - Define the block’s **core state transition** in terms of this minimal structure.
+  - Specify the minimal structure required for interpreting that block type (including any specific fields required in `tx`).
+  - Define the intended meaning or effect in terms of this minimal structure.
+
 - Standards that define methods producing blocks MUST:
   - Specify which `btype` the method produces.
   - Define the **canonical mapping** from method call parameters to the `tx` field of the resulting block.
