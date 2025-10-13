@@ -119,7 +119,8 @@ Servers MUST serve the block log as a list of `Value` where each `Value` represe
 
 `ICRC-3` specifies a standard hash function over `Value`.
 
-This hash function MUST be used by producer canister to calculate the hash of the parent of a block and by clients to verify the downloaded block log.
+This hash function MUST be used by the producer canister to compute parent hashes and by clients to verify downloaded blocks.
+
 
 The hash function is the [representation-independent hashing of structured data](https://internetcomputer.org/docs/current/references/ic-interface-spec#hash-of-map) used by the IC:
 - the hash of a `Blob` is the hash of the bytes themselves
@@ -137,6 +138,9 @@ The producer canister MUST certify the last block (tip) recorded. The producer c
 1. `last_block_index`: the index of the last block in the chain. The value MUST be expressed as [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128)
 2. `last_block_hash`: the hash of the last block in the chain
 
+The certified data root MUST commit exactly to `{ last_block_index, last_block_hash }` under those root labels; no additional certified keys are required by ICRC-3.
+
+
 These labels are direct children at the tree root (no extra path segments).
 
 Clients SHOULD download the tip certificate first and then download the blocks backward starting from `last_block_index` and validate the blocks in the process.
@@ -144,6 +148,8 @@ Clients SHOULD download the tip certificate first and then download the blocks b
 Validation of block `i` is done by checking the block hash against
 1. if `i + 1 < len(chain)` then the parent hash `phash` of the block `i+1`
 2. otherwise the `last_block_hash` in the tip certificate.
+
+
 
 ## Generic Block Schema
 
@@ -153,6 +159,12 @@ An ICRC-3 compliant block:
 2. MUST contain `"phash" : Blob` — the hash of its parent block (absent only for the genesis block).
 3. MUST contain `"ts" : Nat` — the producer-assigned timestamp in nanoseconds since Unix epoch.
 4. SHOULD contain `"btype" : Text` — a unique identifier for the block type. If absent, the block is interpreted using the legacy ICRC-1/2 rules (see below).
+
+### Timestamp (`ts`) Semantics
+
+- `ts` is in nanoseconds since Unix epoch and set by the producer canister at block creation.
+- `ts` MUST be non-decreasing across blocks (`ts[i] >= ts[i-1]`). If the system clock moves backward, clamp: `ts[i] = max(ts[i-1], now)`.
+- When `ts[i] == ts[i-1]`, the block index is the tie-breaker for ordering.
 
 
 ### Kinds of Blocks
