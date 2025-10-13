@@ -62,8 +62,8 @@ Although many deployments are token ledgers, the same verifiable log applies to 
 ## Block Log
 
 - The parent of block `i` is block `i-1` for `i > 0`, and `null` for the genesis block (`i = 0`).
-+ The parent of block `i` is block `i-1` for `i > 0`.
-+ The genesis block (`i = 0`) has no parent and therefore MUST NOT include a `"phash"` field.
+- The parent of block `i` is block `i-1` for `i > 0`.
+- The genesis block (`i = 0`) has no parent and therefore MUST NOT include a `"phash"` field.
 
 
 
@@ -98,7 +98,7 @@ and the rules for defining new block types under ICRC-3.
 The [candid](https://github.com/dfinity/candid) format supports sharing information even when the client and the server involved do not have the same schema (see the [Upgrading and subtyping](https://github.com/dfinity/candid/blob/master/spec/Candid.md#upgrading-and-subtyping) section of the candid spec). While this mechanism allows to evolve services and clients
 independently without breaking them, it also means that a client may not receive all the information that the server is sending, e.g. in case the client schema lacks some fields that the server schema has.
 
-This loss of information is not an option for `ICRC-3`. The client must receive the same exact data the server sent in order to verify it. Verification is done by hashing the data and checking that the result is consistent with what has been certified by the server.
+Lossy decoding is unacceptable for verification. The client must receive the same exact data the server sent in order to verify it. Verification is done by hashing the data and checking that the result is consistent with what has been certified by the server.
 
 For this reason, `ICRC-3` introduces the `Value` type which never changes:
 
@@ -133,9 +133,11 @@ Pseudocode for representation-independent hashing of `Value`, together with test
 
 ## Blocks Verification
 
-The producer canister MUST certify the last block (tip) recorded. The producer canister MUST allow to download the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate is comprised of a tree containing the certified data and the signature. The tree MUST contain two labeled values (leaves):
+The producer canister MUST certify the last block (tip) recorded. The producer canister MUST expose the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate is comprised of a tree containing the certified data and the signature. The tree MUST contain two labeled values (leaves):
 1. `last_block_index`: the index of the last block in the chain. The value MUST be expressed as [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128)
 2. `last_block_hash`: the hash of the last block in the chain
+
+These labels are direct children at the tree root (no extra path segments).
 
 Clients SHOULD download the tip certificate first and then download the blocks backward starting from `last_block_index` and validate the blocks in the process.
 
@@ -145,18 +147,19 @@ Validation of block `i` is done by checking the block hash against
 
 ## Generic Block Schema
 
-An ICRC-3 compliant Block
+An ICRC-3 compliant block:
 
-1. MUST be a `Value` of variant `Map`
-2. MUST contain a field `phash: Blob` which is the hash of its parent if it has a parent block
-3. SHOULD contain a field `btype: Text` which uniquely describes the type of the Block. If this field is not set then the block type falls back to ICRC-1 and ICRC-2 for backward compatibility purposes
+1. MUST be a `Value` of variant `Map`.
+2. MUST contain `"phash" : Blob` — the hash of its parent block (absent only for the genesis block).
+3. MUST contain `"ts" : Nat` — the producer-assigned timestamp in nanoseconds since Unix epoch.
+4. SHOULD contain `"btype" : Text` — a unique identifier for the block type. If absent, the block is interpreted using the legacy ICRC-1/2 rules (see below).
 
 
 ### Kinds of Blocks
 
 An ICRC-3 block can record different kinds of information. Some blocks record the result of a transaction submitted by a user. These typically contain a `tx` field describing the user’s intent and any parameters they provided.
 
-Other blocks may be created by the producer canister itself, for example during an upgrade, migration, or system operation, to record changes in the canistesr state that did not come from a user call.
+Other blocks may be created by the producer canister itself, for example during an upgrade, migration, or system operation, to record changes in the canister's state that did not come from a user call.
 
 The `tx` field, when present, encodes the **intent** or **state change payload** associated with the block:
 - In user-initiated blocks, `tx` reflects the call parameters, subject to the canonical mapping defined for that block type.
@@ -209,9 +212,10 @@ The following principles guide the evolution and interpretation of ICRC-3 and an
 
 ### 5. Future-Proofing and Extensibility
 - Additional non-semantic fields (e.g., metadata, hashes, references) MAY be added to `tx` without introducing a new `btype`, provided:
-  - They do not affect the block’s **core state transition**.
+  - They do not affect the block’s interpreted effects.
   - They are ignored by block verification and interpretation logic that only relies on the minimal `tx` structure defined by the `btype`.
-- Any change to the minimal semantic structure of a block REQUIRES introducing a new `btype`.
+  - Any change to the minimal semantic structure of a block REQUIRES introducing a new `btype`. If additions change how a block’s effect is determined from `tx`, a new btype SHOULD be introduced.
+
 
 ### Note on Ledger-Specific Fields
 - Blocks may include additional fields specific to a given standard or ledger (e.g., `fee`, metadata, references).  
@@ -446,7 +450,11 @@ Although legacy ICRC-1 and ICRC-2 blocks do not include the `btype` field, ledge
 
 ### Account Type
 
-ICRC-1 Account is represented as an `Array` containing the `owner` bytes and optionally the subaccount bytes.  Two examples of accounts, one with subaccount and the second without are below. 
+ICRC-1 Account is represented as an `Array` containing the `owner` bytes and optionally the subaccount bytes.  
+
+* `owner` is the raw principal bytes.
+* `subaccount` is a 32-byte blob when present.
+* The account value is Array of 1 or 2 Blob items in order: `[owner, subaccount?]`.
 
 Example of account representation as an array with two blobs, one for the owner principal and the second for the subaccount:
 ```
