@@ -61,7 +61,6 @@ Although many deployments are token ledgers, the same verifiable log applies to 
 
 ## Block Log
 
-- The parent of block `i` is block `i-1` for `i > 0`, and `null` for the genesis block (`i = 0`).
 - The parent of block `i` is block `i-1` for `i > 0`.
 - The genesis block (`i = 0`) has no parent and therefore MUST NOT include a `"phash"` field.
 
@@ -128,7 +127,7 @@ The hash function is the [representation-independent hashing of structured data]
 - the hash of a `Nat` is the hash of the [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128) encoding of the number
 - the hash of an `Int` is the hash of the [`sleb128`](https://en.wikipedia.org/wiki/LEB128#Signed_LEB128) encoding of the number
 - the hash of an `Array` is the hash of the concatenation of the hashes of all the elements of the array
-- the hash of a `Map` is the hash of the concatenation of all the hashed items of the map sorted lexicographically. A hashed item is the tuple composed by the hash of the key and the hash of the value.
+- the hash of a `Map` is the hash of the concatenation of all the hashed items of the map sorted lexicographically by the keys.  Map keys are compared by the lexicographic order of their UTF-8 bytes. A hashed item is the tuple composed by the hash of the key and the hash of the value.
 
 Pseudocode for representation-independent hashing of `Value`, together with test vectors to check compliance with the specification can be found [`here`](HASHINGVALUES.md). 
 
@@ -294,7 +293,7 @@ This division of responsibility ensures that:
 
 #### Namespacing for Operations
 To avoid collisions across standards, `tx.op` MUST be namespaced:
-- `op = icrc_number op_name`  
+- `op = icrc_number op_name`    
 - `icrc_number`: a non-zero digit followed by zero or more digits  
 - `op_name`: starts with a lowercase letter, then lowercase letters, digits, `_` or `-`  
 
@@ -354,8 +353,8 @@ The **effective fee** is the fee charged by the ledger. For a block, this is com
 
 - `tx.fee` records what the caller supplied; when the top-level `"fee"` is absent, it also implies the ledger charged that same amount.  
 - If both top-level `"fee"` and `tx.fee` are present and differ, the top-level `"fee"` is authoritative.  
-- Ledgers **MAY** omit the top-level `"fee"` when it equals `tx.fee` to save space.  
-- What happens with the effective fee (e.g., burning it, sending it to a collector account, redistributing) is up to the ledger implementation. A common policy is to burn fees.  
+- Implementations **MAY** omit the top-level `"fee"` when it equals `tx.fee` to save space.  
+- What happens with the effective fee (e.g., burning it, sending it to a collector account, redistributing) is up to the implementation. A common policy is to burn fees.  
 - **ICRC-107** specifies how fee collection and handling are formalized. Ledgers that wish to expose their fee policy in a standardized way should follow that specification.
 
 
@@ -821,8 +820,27 @@ variant {
 };
 ```
 
+#### Example 6: Typed block (`btype = "107fee"`)
 
 
+```
+variant { Map = vec {
+  // Block type
+  record { "btype"; variant { Text = "107feecol" }};
+
+  // Top-level tx (constructed per Canonical `tx` Mapping)
+  record { "tx"; variant { Map = vec {
+    record { "op"; variant { Text = "107set_fee_collector" }};
+    record { "fee_collector"; variant { Array = vec { }}}; // [] means "burn from now on"
+    record { "created_at_time"; variant { Nat = 1_750_951_728_000_000_000 : nat }};
+    record { "caller"; variant { Blob = blob "\00\00\00\00\00\00\00\00\01\01" }};
+  }}};
+
+  // Standard block metadata
+  record { "ts";    variant { Nat = 1_741_312_737_184_874_392 : nat }};
+  record { "phash"; variant { Blob = blob "\2d\86\7f\34\c7\2d\1e\2d\00\84\10\a4\00\b0\b6\4c\3e\02\96\c9\e8\55\6f\dd\72\68\e8\df\8d\8e\8a\ee" }};
+}}
+```
 
 ## Specification
 
