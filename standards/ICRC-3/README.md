@@ -114,6 +114,45 @@ type Value = variant {
 
 Servers MUST serve the block log as a list of `Value` where each `Value` represents a single block in the block log.
 
+## Common Encodings (Non-Normative)
+
+The `Value` type is intentionally minimal and does not include specialized variants for principals, booleans, or optional values.  
+This section provides **non-normative guidance** for representing such values in a consistent and interoperable way.
+
+### Principals
+Encode principals as raw bytes using `Blob`:
+
+```
+variant { Blob = blob "<principal-bytes>" }
+```
+
+### Booleans
+Encode booleans as natural numbers:  
+- `false` → `variant { Nat = 0 : nat }`  
+- `true`  → `variant { Nat = 1 : nat }`
+
+### Optionals
+Two recommended patterns:
+
+1. **Preferred (map-style)** — when fields can be optional, use maps and omit absent fields:
+
+```
+variant { Map = vec {
+  record { "field_a"; <Value> };
+  // "field_b" omitted if absent
+} }
+```
+
+2. **Tuple/array form** — if array/tuple positional semantics must be preserved, use a **tagged option per slot**:  
+   - `None` → `Array [ Nat 0 ]`  
+   - `Some(x)` → `Array [ Nat 1, x ]`
+
+### Rationale
+These conventions avoid expanding the `Value` type while enabling consistent encoding of common structures across domains.  
+They are **non-binding** but strongly recommended for interoperability.
+
+
+
 ## Value Hash
 
 `ICRC-3` specifies a standard hash function over `Value`.
