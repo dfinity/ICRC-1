@@ -562,19 +562,19 @@ This example shows an `icrc1_transfer` call where the caller only specifies the 
 ```
 variant {
   Map = vec {
-    record { "fee"; variant { Nat64 = 10_000 : nat64 } };
+    record { "fee"; variant { nat = 10_000 : nat } };
     record {
       "phash";
       variant {
         Blob = blob "\b8\0d\29\e5\91\60\4c\d4\60\3a\2a\7c\c5\33\14\21\27\b8\23\e9\a5\24\b7\14\43\24\4b\2d\d5\b0\86\13"
       };
     };
-    record { "ts"; variant { Nat64 = 1_753_344_727_778_561_060 : nat64 } };
+    record { "ts"; variant { nat = 1_753_344_727_778_561_060 : nat } };
     record {
       "tx";
       variant {
         Map = vec {
-          record { "amt"; variant { Nat64 = 85_224_322_205 : nat64 } };
+          record { "amt"; variant { nat = 85_224_322_205 : nat } };
           record { "from"; variant { Array = vec { variant { Blob = blob "\00\00\00\00\02\30\02\17\01\01" } } } };
           record { "op"; variant { Text = "xfer" } };
           record {
@@ -606,12 +606,12 @@ variant {
         Blob = blob "\c2\b1\32\6a\5e\09\0e\10\ad\be\f3\4c\ba\fd\bc\90\18\3f\38\a7\3e\73\61\cc\0a\fa\99\89\3d\6b\9e\47"
       };
     };
-    record { "ts"; variant { Nat64 = 1_753_344_737_123_456_789 : nat64 } };
+    record { "ts"; variant { nat = 1_753_344_737_123_456_789 : nat } };
     record {
       "tx";
       variant {
         Map = vec {
-          record { "amt"; variant { Nat64 = 500_000_000 : nat64 } };
+          record { "amt"; variant { nat = 500_000_000 : nat } };
           record {
             "to";
             variant {
@@ -642,12 +642,12 @@ variant {
         Blob = blob "\7f\89\42\a5\be\4d\af\50\3b\6e\2a\8e\9c\c7\dd\f1\c9\e8\24\f0\98\bb\d7\af\ae\d2\90\10\67\df\1e\c1\0a"
       };
     };
-    record { "ts"; variant { Nat64 = 1_753_344_740_000_000_000 : nat64 } };
+    record { "ts"; variant { nat = 1_753_344_740_000_000_000 : nat } };
     record {
       "tx";
       variant {
         Map = vec {
-          record { "amt"; variant { Nat64 = 42_000_000 : nat64 } };
+          record { "amt"; variant { nat = 42_000_000 : nat } };
           record {
             "from";
             variant {
@@ -730,19 +730,19 @@ This example shows an `icrc2_transfer_from` call where the recipient is a regula
 ```
 variant {
   Map = vec {
-    record { "fee"; variant { Nat64 = 10_000 : nat64 } };
+    record { "fee"; variant { nat = 10_000 : nat } };
     record {
       "phash";
       variant {
         Blob = blob "\a0\5f\d2\f3\4c\26\73\58\00\7f\ea\02\18\43\47\70\85\50\2e\d2\1f\23\e0\dc\e6\af\3c\cf\9e\6f\4a\d8"
       };
     };
-    record { "ts"; variant { Nat64 = 1_753_344_728_820_625_931 : nat64 } };
+    record { "ts"; variant { nat = 1_753_344_728_820_625_931 : nat } };
     record {
       "tx";
       variant {
         Map = vec {
-          record { "amt"; variant { Nat64 = 50_419_165_435 : nat64 } };
+          record { "amt"; variant { nat = 50_419_165_435 : nat } };
           record {
             "from";
             variant {
@@ -789,12 +789,12 @@ variant {
         Blob = blob "\9a\cd\20\3f\b0\11\fb\7f\e2\2a\1d\f2\c1\dd\22\6a\2f\1e\f6\88\d3\b0\9f\be\8d\2e\c5\70\f2\b4\a1\77"
       };
     };
-    record { "ts"; variant { Nat64 = 1_753_344_750_000_000_000 : nat64 } };
+    record { "ts"; variant { nat = 1_753_344_750_000_000_000 : nat } };
     record {
       "tx";
       variant {
         Map = vec {
-          record { "amt"; variant { Nat64 = 200_000 : nat64 } };
+          record { "amt"; variant { nat = 200_000 : nat } };
           record {
             "from";
             variant {
