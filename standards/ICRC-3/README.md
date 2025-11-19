@@ -300,6 +300,143 @@ To ensure consistency across standards and implementations, the semantics of any
    • This includes checks such as sufficient balances, allowance coverage, or limits on fees, as applicable.  
 
 
+## Methods
+
+This section defines the methods that an ICRC-3 compliant producer canister MUST expose.
+These methods provide read-only access to the certified, append-only block log described above.
+
+All methods in this section MUST be implemented as query methods.
+
+
+### `icrc3_get_archives`
+Returns metadata about the archive canisters that store older portions of the block log.
+Clients use `from` to request only archives that appear after a previously seen archive.
+
+```
+type GetArchivesArgs = record {
+    // The last archive seen by the client.
+    // The producer will return archives coming
+    // after this one if set, otherwise it
+    // will return the first archives.
+    from : opt principal;
+};
+
+type GetArchivesResult = vec record {
+    // The id of the archive
+    canister_id : principal;
+
+    // The first block in the archive
+    start : nat;
+
+    // The last block in the archive
+    end : nat;
+};
+
+service : {
+    icrc3_get_archives : (GetArchivesArgs) -> (GetArchivesResult) query;
+};
+
+```
+#### Rules
+
+- Archives MUST be returned in strictly increasing order of their start index.
+- If `from` is `null`, the producer MUST return the first archive(s).
+- If from is set, the producer MUST return archives whose IDs appear after the principal `from` with that principal in the producer’s archive ordering.
+- For every archive returned:
+  - `start` and `end` MUST describe a contiguous, inclusive block range;
+  - that archive MUST be able to serve exactly that range via its callbacks (as returned indirectly in `icrc3_get_blocks`).
+- The producer MAY change its archival layout over time (e.g., due to upgrades, reallocation, compaction, or   reinstallation). The values of `canister_id`, `start`, and `end` MUST correctly reflect the archival layout at the time of the call.
+- A producer MUST NOT return overlapping or out-of-order ranges across the union of all archives.
+
+### `icrc3_get_blocks`
+Returns a contiguous range of blocks starting at index start and spanning up to length blocks from the canonical block log. Blocks that are no longer stored locally by the producer are returned indirectly via archive callbacks.
+
+```
+type Value = variant {
+    Blob : blob;
+    Text : text;
+    Nat : nat; 
+    Int : int;
+    Array : vec Value;
+    Map : vec record { text; Value };
+};
+
+
+type GetBlocksArgs = vec record { start : nat; length : nat };
+
+type GetBlocksResult = record {
+    // Total number of blocks in the block log
+    log_length : nat;
+
+    // Blocks found locally to the producing canister
+    blocks : vec record { id : nat; block: Value };
+
+    // List of callbacks to fetch the blocks that are not local
+    // to the producing canister, i.e. archived blocks
+    archived_blocks : vec record {
+        args : GetBlocksArgs;
+        callback : func (GetBlocksArgs) -> (GetBlocksResult) query;
+    };
+};
+
+service : {
+    icrc3_get_blocks : (GetBlocksArgs) -> (GetBlocksResult) query;
+};
+```
+
+
+Rules
+
+- Block indices are zero-based. The genesis block, if present, has index 0.
+- If start is greater than the last block index at the time of the call, the producer MUST return:
+    - blocks = [], and
+    - archived_blocks = [].
+- The blocks vector MUST contain blocks for indices `[start, start + k)` for some `k ≤ length`, in strictly increasing index order, without gaps.
+- The producer MAY return fewer than `length` blocks in blocks:
+    - due to security concerns,
+    - due to platform restrictions (i.e. bounds on message sizes),
+    - if it reaches the current tip of the log, or
+    - if some of the requested indices are archived.
+- For every range of archived blocks in the requested interval, the producer MUST include an entry in `archived_blocks` with:
+    - `start` and `length` describing a contiguous index range, and
+    - callback pointing to a function that, when called with matching start and length, returns exactly the corresponding blocks in a blocks : vec block field.
+
+The union of:
+- blocks returned directly in blocks, and
+- blocks returned via all callback functions in `archived_blocks` MUST form a contiguous range of blocks covering all available indices in `[start, start + length)` that exist in the log at the time of the call.
+
+Implementations MUST NOT reorder, duplicate, or skip any existing block indices within the requested range.
+
+
+### `icrc3_get_tip_certificate`
+Returns the certified tip of the block log. The certificate authenticates a labeled subtree of the canister’s certified data that includes the last block index and the hash of the last block.
+
+```
+// See https://internetcomputer.org/docs/current/references/ic-interface-spec#certification
+type DataCertificate = record {
+
+  // Signature of the root of the hash_tree
+  certificate : blob;
+
+  // CBOR encoded hash_tree
+  hash_tree : blob;
+};
+
+service : {
+  icrc3_get_tip_certificate : () -> (opt DataCertificate) query;
+};
+```
+
+### `icrc3_supported_block_types`
+Returns the set of block types (identified by their btype strings) that the producer canister may emit in its block log.
+
+```
+service : {
+    icrc3_supported_block_types : () -> (vec record { block_type : text; url : text }) query;
+};
+```
+
+
 
 ## Interaction with Other Standards
 
@@ -346,6 +483,8 @@ Every standard that introduces a block type involving fees MUST specify who the 
 The rules for interpreting the amount and destination of fees are defined in ICRC-107 (Fee Handling in Blocks). Ledgers that do not yet implement ICRC-107 MAY still produce valid ICRC-3 blocks, but their fee behavior will be ledger-specific until aligned with ICRC-107.
 
 
+
+
 ## Supported Standards
 
 An ICRC-3 compatible producer canister MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`.
@@ -354,11 +493,19 @@ An ICRC-3 compatible producer canister MUST expose an endpoint listing all the s
 - For **legacy** ICRC-1/2 blocks (no `"btype"`), the producer canister MUST include the conventional identifiers (e.g., `"1xfer"`, `"2approve"`) in this list to advertise support, even though the blocks themselves do not carry a `"btype"` field.
 
 
+
+
+
+
+
+
+
 ## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
 
 
 This section describes how ICRC-1 and ICRC-2 operations are represented in ICRC-3-compliant blocks.  These blocks follow the **legacy format**, meaning they do not have a `btype` field.  
 Instead, their type is inferred directly from the content of the `tx` field, which records the canonical mapping of the original method call.
+
 
 ### Legacy ICRC-1 and ICRC-2 Block Structure
 
@@ -881,84 +1028,3 @@ variant { Map = vec {
 }}
 ```
 
-## Specification
-
-### `icrc3_get_blocks`
-
-```
-type Value = variant {
-    Blob : blob;
-    Text : text;
-    Nat : nat; 
-    Int : int;
-    Array : vec Value;
-    Map : vec record { text; Value };
-};
-
-type GetArchivesArgs = record {
-    // The last archive seen by the client.
-    // The producer will return archives coming
-    // after this one if set, otherwise it
-    // will return the first archives.
-    from : opt principal;
-};
-
-type GetArchivesResult = vec record {
-    // The id of the archive
-    canister_id : principal;
-
-    // The first block in the archive
-    start : nat;
-
-    // The last block in the archive
-    end : nat;
-};
-
-type GetBlocksArgs = vec record { start : nat; length : nat };
-
-type GetBlocksResult = record {
-    // Total number of blocks in the block log
-    log_length : nat;
-
-    // Blocks found locally to the producing canister
-    blocks : vec record { id : nat; block: Value };
-
-    // List of callbacks to fetch the blocks that are not local
-    // to the producing canister, i.e. archived blocks
-    archived_blocks : vec record {
-        args : GetBlocksArgs;
-        callback : func (GetBlocksArgs) -> (GetBlocksResult) query;
-    };
-};
-
-service : {
-    icrc3_get_archives : (GetArchivesArgs) -> (GetArchivesResult) query;
-    icrc3_get_blocks : (GetBlocksArgs) -> (GetBlocksResult) query;
-};
-```
-
-### `icrc3_get_tip_certificate`
-
-```
-// See https://internetcomputer.org/docs/current/references/ic-interface-spec#certification
-type DataCertificate = record {
-
-  // Signature of the root of the hash_tree
-  certificate : blob;
-
-  // CBOR encoded hash_tree
-  hash_tree : blob;
-};
-
-service : {
-  icrc3_get_tip_certificate : () -> (opt DataCertificate) query;
-};
-```
-
-### `icrc3_supported_block_types`
-
-```
-service : {
-    icrc3_supported_block_types : () -> (vec record { block_type : text; url : text }) query;
-};
-```
