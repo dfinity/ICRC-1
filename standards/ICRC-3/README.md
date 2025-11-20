@@ -166,7 +166,7 @@ The hash function is the [representation-independent hashing of structured data]
 - the hash of a `Nat` is the hash of the [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128) encoding of the number
 - the hash of an `Int` is the hash of the [`sleb128`](https://en.wikipedia.org/wiki/LEB128#Signed_LEB128) encoding of the number
 - the hash of an `Array` is the hash of the concatenation of the hashes of all the elements of the array
-- the hash of a `Map` is the hash of the concatenation of all the hashed items of the map sorted lexicographically by the keys.  Map keys are compared by the lexicographic order of their UTF-8 bytes. A hashed item is the tuple composed by the hash of the key and the hash of the value.
+- the hash of a `Map` is the hash of the concatenation of all the hashed items of the map sorted lexicographically by the keys.  Map keys are compared by the lexicographic order of their UTF-8 bytes. A hashed item is the tuple composed of the hash of the key and the hash of the value.
 
 Pseudocode for representation-independent hashing of `Value`, together with test vectors to check compliance with the specification can be found [`here`](HASHINGVALUES.md). 
 
@@ -176,7 +176,10 @@ The producer canister MUST certify the last block (tip) recorded. The producer c
 1. `last_block_index`: the index of the last block in the chain. The value MUST be expressed as [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128)
 2. `last_block_hash`: the hash of the last block in the chain
 
-The certified data root MUST commit exactly to `{ last_block_index, last_block_hash }` under those root labels; no additional certified keys are required by ICRC-3.
+The certified data root MUST commit to at least the labeled values
+`last_block_index` and `last_block_hash` under those root labels. ICRC-3 does
+not require any additional certified keys, but implementations MAY include
+other labeled values in the certified data tree.
 
 
 These labels are direct children at the tree root (no extra path segments).
@@ -341,7 +344,7 @@ service : {
 
 - Archives MUST be returned in strictly increasing order of their start index.
 - If `from` is `null`, the producer MUST return the first archive(s).
-- If from is set, the producer MUST return archives whose IDs appear after the principal `from` with that principal in the producer’s archive ordering.
+- If `from` is set, the producer MUST return archives whose IDs appear after the principal `from` with that principal in the producer’s archive ordering.
 - For every archive returned:
   - `start` and `end` MUST describe a contiguous, inclusive block range;
   - that archive MUST be able to serve exactly that range via its callbacks (as returned indirectly in `icrc3_get_blocks`).
@@ -349,7 +352,8 @@ service : {
 - A producer MUST NOT return overlapping or out-of-order ranges across the union of all archives.
 
 ### `icrc3_get_blocks`
-Returns a contiguous range of blocks starting at index start and spanning up to length blocks from the canonical block log. Blocks that are no longer stored locally by the producer are returned indirectly via archive callbacks.
+Returns blocks for one or more requested ranges from the canonical block log.
+Blocks that are no longer stored locally by the producer are returned indirectly via archive callbacks.
 
 ```
 type Value = variant {
@@ -385,27 +389,45 @@ service : {
 ```
 
 
-Rules
+#### Rules
 
-- Block indices are zero-based. The genesis block, if present, has index 0.
-- If start is greater than the last block index at the time of the call, the producer MUST return:
-    - blocks = [], and
-    - archived_blocks = [].
-- The blocks vector MUST contain blocks for indices `[start, start + k)` for some `k ≤ length`, in strictly increasing index order, without gaps.
-- The producer MAY return fewer than `length` blocks in blocks:
-    - due to security concerns,
-    - due to platform restrictions (i.e. bounds on message sizes),
-    - if it reaches the current tip of the log, or
-    - if some of the requested indices are archived.
-- For every range of archived blocks in the requested interval, the producer MUST include an entry in `archived_blocks` with:
-    - `start` and `length` describing a contiguous index range, and
-    - callback pointing to a function that, when called with matching start and length, returns exactly the corresponding blocks in a blocks : vec block field.
+- Block indices are zero-based. The genesis block, if present, has index `0`.
 
-The union of:
-- blocks returned directly in blocks, and
-- blocks returned via all callback functions in `archived_blocks` MUST form a contiguous range of blocks covering all available indices in `[start, start + length)` that exist in the log at the time of the call.
+- The `id` field of each returned local block MUST equal its block height  
+  (i.e., its index in the canonical block log).
 
-Implementations MUST NOT reorder, duplicate, or skip any existing block indices within the requested range.
+- Each element `r` in `GetBlocksArgs` describes a **half-open** range  
+  `[r.start, r.start + r.length)` of requested indices.
+
+- If **all** requested indices across all ranges are greater than the last block index at the time of the call, the producer MUST return:
+  - `blocks = []`, and  
+  - `archived_blocks = []`.
+
+- The `blocks` vector:
+  - MUST contain locally stored blocks whose indices lie in at least a subset of the requested ranges,
+  - MUST be sorted by `id` in strictly increasing order,
+  - MUST NOT contain duplicates.
+
+- The producer MAY return fewer local blocks than requested:
+  - due to security concerns,
+  - due to platform restrictions (e.g., message size limits),
+  - because it has reached the current tip of the log,
+  - because some of the requested indices are archived.
+
+
+- Each entry in `archived_blocks`:
+  - MUST have `args` describing one or more contiguous ranges of archived indices,
+  - MUST provide a `callback` which, when called with a subset of those ranges, returns exactly the corresponding blocks (via its own `blocks` and/or `archived_blocks`).
+
+- For any requested index that is not returned in `blocks` but is available in the log, the producer MUST either:
+  - include that index in some `archived_blocks[i].args` range, or
+  - intentionally omit it due to resource or security constraints (e.g., message-size limits), or
+  - omit it because it lies beyond the current tip.
+
+- Implementations MUST NOT misrepresent the structure of the log:
+  - no returned block may have an incorrect `id`,
+  - blocks MUST appear in strictly increasing `id` order,
+  - and blocks MUST NOT be reordered or duplicated.
 
 
 ### `icrc3_get_tip_certificate`
@@ -427,14 +449,42 @@ service : {
 };
 ```
 
+#### Rules
+
+- If the producer canister has not yet emitted any blocks, it MAY return `null`.
+
+- Otherwise, the method MUST return an IC data certificate whose `hash_tree` authenticates a labeled subtree containing at least:
+  - `last_block_index` — the leb128-encoded index of the last block, and
+  - `last_block_hash` — the hash of that block.
+
+- Additional labeled values MAY be present in the certified data tree.
+
+- The certificate MUST be a valid IC data certificate as defined in the IC interface specification. In particular, its signature and delegation MUST verify against the IC root key, and the `hash_tree` MUST be consistent with the certified data used to derive `last_block_index` and `last_block_hash` at the time the certificate was created.
+
+
 ### `icrc3_supported_block_types`
-Returns the set of block types (identified by their btype strings) that the producer canister may emit in its block log.
+Returns the set of block types (`btype` identifiers) that the producer canister may emit in its block log.
+
+Producers that emit **legacy ICRC-1/ICRC-2 semantics** using the legacy untyped format MUST still include the corresponding legacy `btype` strings (e.g., `"1mint"`, `"1xfer"`, `"1burn"`, `"2approve"`, …).
+
 
 ```
 service : {
     icrc3_supported_block_types : () -> (vec record { block_type : text; url : text }) query;
 };
 ```
+
+#### Rules
+
+- The returned vector MUST contain exactly one entry for each `btype` the producer canister is capable of emitting over its lifetime.
+
+- The vector MUST be sorted lexicographically by the UTF-8 bytes of `block_type`.
+
+- Producers that only emit legacy ICRC-1/ICRC-2 blocks MUST still return the legacy block types they support.
+
+- Producers that support new, typed block kinds defined by other ICRC standards (e.g., ICRC-107, ICRC-122/123/124) MUST include those `btype` identifiers as well.
+
+- The `url` field MUST point to a stable, canonical description of the standard defining that block type (e.g., the ICRC repository URL).
 
 
 
@@ -504,7 +554,7 @@ An ICRC-3 compatible producer canister MUST expose an endpoint listing all the s
 
 
 This section describes how ICRC-1 and ICRC-2 operations are represented in ICRC-3-compliant blocks.  These blocks follow the **legacy format**, meaning they do not have a `btype` field.  
-Instead, their type is inferred directly from the content of the `tx` field, which records the canonical mapping of the original method call.
+Instead, their type is inferred directly from the content of the `tx` field, specifically from the value of `tx.op`, which records the canonical mapping of the original method call.
 
 
 ### Legacy ICRC-1 and ICRC-2 Block Structure
