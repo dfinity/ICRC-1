@@ -368,10 +368,10 @@ Clients use `from` to request only archives that appear after a previously seen 
 
 ```
 type GetArchivesArgs = record {
-    // The last archive seen by the client.
-    // The producer will return archives coming
-    // after this one if set, otherwise it
-    // will return the first archives.
+// The producer will return archives that appear after
+// this one in its internal archive ordering if set,
+// otherwise it will return the first archives.
+
     from : opt principal;
 };
 
@@ -395,7 +395,7 @@ service : {
 
 - Archives MUST be returned in strictly increasing order of their start index.
 - If `from` is `null`, the producer MUST return the first archive(s).
-If `from` is set, the producer MUST return only the archives whose
+- If `from` is set, the producer MUST return only the archives whose
 `canister_id` appears *after* the specified principal in the producer’s
 internal archive ordering.
 
@@ -473,11 +473,11 @@ service : {
 - Each entry in `archived_blocks`:
   - MUST have `args` describing one or more contiguous ranges of archived
     indices, and
-- MUST provide a `callback` which, when called with any subset of the
-  ranges listed in `args`, returns the blocks whose `id` values lie within
-  the requested ranges, except where constraints such as message size,
-  security limits, or the archive’s own tip boundaries prevent returning
-  the full set.
+  - MUST provide a `callback` which, when called with any subset of the
+    ranges listed in `args`, returns the blocks whose `id` values lie within
+    the requested ranges, except where constraints such as message size,
+    security limits, or the archive’s own tip boundaries prevent returning
+    the full set.
 
 
 - Implementations MAY therefore return only a **partial view** of the blocks in
@@ -697,7 +697,104 @@ An ICRC-3 compatible producer canister MUST expose an endpoint listing all the s
 
 
 
+## Candid Specification
 
+```
+// ICRC-3: Block Log Candid Interface
+
+// Generic representation-independent value type used for blocks.
+type Value = variant {
+  Blob : blob;
+  Text : text;
+  Nat  : nat;
+  Int  : int;
+  Array : vec Value;
+  Map   : vec record { text; Value };
+};
+
+// Archives
+
+type GetArchivesArgs = record {
+  // The last archive seen by the client.
+  // The producer will return archives that appear after
+  // this one in its internal archive ordering if set,
+  // otherwise it will return the first archives.
+  from : opt principal;
+};
+
+type GetArchivesResult = vec record {
+  // The id of the archive canister
+  canister_id : principal;
+
+  // The first block in the archive (inclusive)
+  start : nat;
+
+  // The last block in the archive (inclusive)
+  end : nat;
+};
+
+// Blocks
+
+// Each element describes a half-open range [start, start + length)
+type GetBlocksArgs = vec record {
+  start  : nat;
+  length : nat;
+};
+
+type GetBlocksResult = record {
+  // Total number of blocks in the block log
+  log_length : nat;
+
+  // Blocks found locally on the producer canister
+  blocks : vec record {
+    id    : nat;   // block index
+    block : Value; // encoded block
+  };
+
+  // Callbacks to fetch archived blocks
+  archived_blocks : vec record {
+    // Archived ranges available via this callback
+    args : GetBlocksArgs;
+
+    // Callback to fetch a subset of the above ranges
+    callback : func (GetBlocksArgs) -> (GetBlocksResult) query;
+  };
+};
+
+// Tip certificate
+
+// See https://internetcomputer.org/docs/current/references/ic-interface-spec#certification
+type DataCertificate = record {
+  // Signature of the root of the hash_tree
+  certificate : blob;
+
+  // CBOR-encoded hash_tree
+  hash_tree : blob;
+};
+
+// Supported block types
+
+type SupportedBlockType = record {
+  block_type : text; // e.g. "1xfer", "107feecol"
+  url        : text; // canonical URL of the defining spec
+};
+
+// ICRC-3 service
+
+service : {
+  // Returns archive metadata
+  icrc3_get_archives : (GetArchivesArgs) -> (GetArchivesResult) query;
+
+  // Returns blocks and archive callbacks for one or more ranges
+  icrc3_get_blocks : (GetBlocksArgs) -> (GetBlocksResult) query;
+
+  // Returns a certificate for the tip of the block log
+  icrc3_get_tip_certificate : () -> (opt DataCertificate) query;
+
+  // Returns the set of block types this producer may emit
+  icrc3_supported_block_types : () -> (vec SupportedBlockType) query;
+}
+```
 
 
 
@@ -951,19 +1048,19 @@ This example shows an `icrc1_transfer` call where the caller only specifies the 
 ```
 variant {
   Map = vec {
-    record { "fee"; variant { nat = 10_000 : nat } };
+    record { "fee"; variant { Nat = 10_000 : nat } };
     record {
       "phash";
       variant {
         Blob = blob "\b8\0d\29\e5\91\60\4c\d4\60\3a\2a\7c\c5\33\14\21\27\b8\23\e9\a5\24\b7\14\43\24\4b\2d\d5\b0\86\13"
       };
     };
-    record { "ts"; variant { nat = 1_753_344_727_778_561_060 : nat } };
+    record { "ts"; variant { Nat = 1_753_344_727_778_561_060 : nat } };
     record {
       "tx";
       variant {
         Map = vec {
-          record { "amt"; variant { nat = 85_224_322_205 : nat } };
+          record { "amt"; variant { Nat = 85_224_322_205 : nat } };
           record { "from"; variant { Array = vec { variant { Blob = blob "\00\00\00\00\02\30\02\17\01\01" } } } };
           record { "op"; variant { Text = "xfer" } };
           record {
@@ -995,12 +1092,12 @@ variant {
         Blob = blob "\c2\b1\32\6a\5e\09\0e\10\ad\be\f3\4c\ba\fd\bc\90\18\3f\38\a7\3e\73\61\cc\0a\fa\99\89\3d\6b\9e\47"
       };
     };
-    record { "ts"; variant { nat = 1_753_344_737_123_456_789 : nat } };
+    record { "ts"; variant { Nat = 1_753_344_737_123_456_789 : nat } };
     record {
       "tx";
       variant {
         Map = vec {
-          record { "amt"; variant { nat = 500_000_000 : nat } };
+          record { "amt"; variant { Nat = 500_000_000 : nat } };
           record {
             "to";
             variant {
@@ -1031,12 +1128,12 @@ variant {
         Blob = blob "\7f\89\42\a5\be\4d\af\50\3b\6e\2a\8e\9c\c7\dd\f1\c9\e8\24\f0\98\bb\d7\af\ae\d2\90\10\67\df\1e\c1\0a"
       };
     };
-    record { "ts"; variant { nat = 1_753_344_740_000_000_000 : nat } };
+    record { "ts"; variant { Nat = 1_753_344_740_000_000_000 : nat } };
     record {
       "tx";
       variant {
         Map = vec {
-          record { "amt"; variant { nat = 42_000_000 : nat } };
+          record { "amt"; variant { Nat = 42_000_000 : nat } };
           record {
             "from";
             variant {
@@ -1119,19 +1216,19 @@ This example shows an `icrc2_transfer_from` call where the recipient is a regula
 ```
 variant {
   Map = vec {
-    record { "fee"; variant { nat = 10_000 : nat } };
+    record { "fee"; variant { Nat = 10_000 : nat } };
     record {
       "phash";
       variant {
         Blob = blob "\a0\5f\d2\f3\4c\26\73\58\00\7f\ea\02\18\43\47\70\85\50\2e\d2\1f\23\e0\dc\e6\af\3c\cf\9e\6f\4a\d8"
       };
     };
-    record { "ts"; variant { nat = 1_753_344_728_820_625_931 : nat } };
+    record { "ts"; variant { Nat = 1_753_344_728_820_625_931 : nat } };
     record {
       "tx";
       variant {
         Map = vec {
-          record { "amt"; variant { nat = 50_419_165_435 : nat } };
+          record { "amt"; variant { Nat = 50_419_165_435 : nat } };
           record {
             "from";
             variant {
@@ -1178,12 +1275,12 @@ variant {
         Blob = blob "\9a\cd\20\3f\b0\11\fb\7f\e2\2a\1d\f2\c1\dd\22\6a\2f\1e\f6\88\d3\b0\9f\be\8d\2e\c5\70\f2\b4\a1\77"
       };
     };
-    record { "ts"; variant { nat = 1_753_344_750_000_000_000 : nat } };
+    record { "ts"; variant { Nat = 1_753_344_750_000_000_000 : nat } };
     record {
       "tx";
       variant {
         Map = vec {
-          record { "amt"; variant { nat = 200_000 : nat } };
+          record { "amt"; variant { Nat = 200_000 : nat } };
           record {
             "from";
             variant {
@@ -1221,13 +1318,15 @@ variant { Map = vec {
   record { "tx"; variant { Map = vec {
     record { "op"; variant { Text = "107set_fee_collector" }};
     record { "fee_collector"; variant { Array = vec { }}}; // [] means "burn from now on"
-    record { "created_at_time"; variant { nat = 1_750_951_728_000_000_000 : nat }};
+    record { "created_at_time"; variant { Nat = 1_750_951_728_000_000_000 : nat }};
     record { "caller"; variant { Blob = blob "\00\00\00\00\00\00\00\00\01\01" }};
   }}};
 
   // Standard block metadata
-  record { "ts";    variant { nat = 1_741_312_737_184_874_392 : nat }};
+  record { "ts";    variant { Nat = 1_741_312_737_184_874_392 : nat }};
   record { "phash"; variant { Blob = blob "\2d\86\7f\34\c7\2d\1e\2d\00\84\10\a4\00\b0\b6\4c\3e\02\96\c9\e8\55\6f\dd\72\68\e8\df\8d\8e\8a\ee" }};
 }}
 ```
+
+
 
