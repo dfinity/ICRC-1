@@ -262,7 +262,6 @@ For any ICRC standard that defines a **user-callable method which produces block
 - The `tx` field for such blocks SHOULD include an operation discriminator `op`.
 - The `op` value SHOULD be namespaced with the standard’s ICRC number  
   (e.g., `122freeze_account`, `107set_fee_collector`) to avoid collisions with operations defined by other standards.
-- The pair `(btype,tx.op)`  MUST uniquely identify the method that produced the block.
 
 Typed blocks that **do not** represent method calls (e.g., upgrade markers, maintenance events, migration records, or system actions) MAY omit the `tx` field entirely and therefore MAY omit `tx.op`.
 
@@ -303,16 +302,28 @@ without over-constraining block structure or requiring the presence of `tx` or `
 
 ## Semantics of Blocks: Evaluation Model
 
-To ensure consistency across standards and implementations, the semantics of any block must be interpretable through the following evaluation model. Each standard that defines a block type specifies how to “plug into” this model (by defining its minimal `tx` schema, pre-fee transition, fee payer, etc.).
+To ensure consistency across standards and implementations, the semantics of any
+block must be interpretable through the following evaluation model. Each standard
+that defines a block type specifies how to “plug into” this model (by defining
+its minimal `tx` schema, pre-fee transition, fee payer, etc.). For block types
+that do not use a `tx` field, the standard MUST specify how to interpret the
+block directly from its top-level fields.
+
 
 1. Identify block type  
    • If `btype` is present, use it.  
    • If no `btype`, fall back to legacy ICRC-1/2 inference from `tx.op`.
 
 2. Validate `tx` structure  
-   • Check that `tx` includes all required fields defined for the block type.  
-   • Ensure no extra *semantic* fields beyond those defined by the block type are present.  
-   • Optional caller-provided fields may appear if allowed by the canonical mapping.
+   • Check that all semantic fields that the block type specification
+     marks as required, and that they have the expected shape.  
+   • If the block type specification allows additional optional or
+     extension fields, they MAY be present.  
+   • ICRC-3 itself does not distinguish between “semantic” and
+     “non-semantic” fields; it is the responsibility of the block type
+     specification to state which fields affect the meaning of the block
+     and how extra fields are to be treated (e.g., ignored by generic
+     interpreters).
 
 3. Derive pre-fee state transition  
    • Apply the deterministic state change implied by `tx`, ignoring any fees.  
@@ -528,13 +539,60 @@ ICRC-3 defines how blocks are structured and verified. Other standards extend th
 (2) defining canonical mappings from standardized method calls to existing block types.
 
 ### Standards That Introduce Block Types
-A standard that defines a new block type MUST:
-- Assign a unique `btype`.  
-- Specify the minimal `tx` structure required to interpret the block and determine its effect on ledger state.  
-- Define semantics using the **Semantics of Blocks: Evaluation Model** (pre-fee transition, fee hook, post-conditions).  
-- If the block type involves fees, clarify what the **effective fee** is (i.e., the fee that is actually charged) and **define who pays**, via a fee payer expression resolvable from block fields.  
-- Optionally reference the applicable fee standard (e.g., ICRC-107) to specify **where the fee goes** (burn, treasury, etc.).  
 
+A standard may define one or more **block types** (`btype`) that represent
+domain-specific events. Block-type standards define **what a block means**, not how
+blocks are created. The creation of blocks (i.e., the mapping from method calls to `tx`
+fields) is handled separately by the standard that defines the method.
+
+A standard that defines a new block type MUST:
+
+- **Assign a unique `btype` string** for that block type.  
+  This identifier determines how the block is interpreted.
+
+- **Do not define or constrain `tx.op`**, because:
+  - `tx.op` belongs to the standard that defines the *method* which creates the block,
+    not to the block-type standard.
+  - A single block type may be produced by multiple methods, potentially from different
+    standards.
+  - Some blocks (e.g., system-generated events or migration markers) do not include
+    `tx.op` at all.
+
+
+- **Specify the minimal structure** required to interpret the block and recover its
+  semantic meaning.  
+   This structure MUST contain all fields needed to reconstruct the event’s effect.
+
+- **Define precise semantics** for the block using the  
+  *Semantics of Blocks: Evaluation Model*:  
+  - pre-fee state transition,  
+  - fee payer (if applicable),  
+  - validity conditions,  
+  - any invariants or constraints.
+
+
+- **Describe how fees are handled**, if the block type involves fees:  
+  - The standard **SHOULD** specify the **effective fee** (the fee that is actually charged), where this is well-defined.  
+  - The standard **SHOULD** specify the **fee payer**, as an expression resolvable from fields in the block, where this is possible.  
+  - If applicable, the standard **MAY** reference ICRC-107 to specify **where the fee goes** (e.g., burned, sent to a collector, etc.).
+
+
+
+- **Allow additional non-semantic fields** in blocks of this type (e.g., metadata,
+  hashes, memo fields), provided they do not change the semantic interpretation.  
+  The block-type specification MUST clearly identify which fields—whether in tx or at
+the top level—are semantic (i.e., affect the block’s meaning). Generic interpreters
+MAY ignore any other fields.
+
+- **Not define or constrain `tx.op`**, because:  
+  - `tx.op` is owned by the standard **defining the method**, not the block type.  
+  - A given block type may be produced by methods from different standards.  
+  - Some blocks (e.g., system-generated blocks) may not include `tx.op` at all.
+
+This separation ensures:
+- Block types define *what* a block means.  
+- Methods define *how* blocks are formed.  
+- The same block type can be produced by multiple standards without semantic ambiguity.  
 
 ### Standards That Define Methods
 A standard that defines a method which produces blocks MUST:
@@ -545,6 +603,10 @@ A standard that defines a method which produces blocks MUST:
 - For methods that represent user-initiated calls, include an `op` field in
   `tx` (namespaced as described above) to identify the operation and avoid
   collisions.
+- A namespaced `tx.op` MUST uniquely identify the standardized method that created the block.
+  The `btype` identifies the semantic family of the block; `tx.op` identifies the specific
+  method invocation.
+
 
 This division of responsibility ensures that:
 - Block types define **what blocks mean** (semantics).
@@ -553,13 +615,38 @@ This division of responsibility ensures that:
 
 
 #### Namespacing for Operations
-To avoid collisions across standards, `tx.op` MUST be namespaced:
-- `op = icrc_number op_name`    
-- `icrc_number`: a non-zero digit followed by zero or more digits  
-- `op_name`: starts with a lowercase letter, then lowercase letters, digits, `_` or `-`  
 
-**Examples:** `1transfer`, `2transfer_from`, `123freeze_account`.
-Legacy ICRC-1/2 blocks are not retrofitted with namespaced `op` values; they retain their historical operation names (e.g., `"xfer"`, `"mint"`, `"burn"`).
+The namespacing rules apply to **standards that define user-callable methods**, not to the
+standards that define block types.
+
+If a standard defines a method that produces blocks, and those blocks include a `tx.op`,
+then:
+
+- `tx.op` MUST be namespaced using the ICRC number of the **method’s standard**, not the
+  block-type standard.
+- The value of `op` MUST uniquely identify the method that created the block.
+- The pair `(btype, tx.op)` MUST uniquely determine the method invocation that produced the block.
+
+Formally:
+
+- `op = <method_standard_number><operation_name>`
+- `method_standard_number`: a non-zero digit followed by zero or more digits  
+- `operation_name`: starts with a lowercase letter, then lowercase letters, digits, `_`, or `-`
+
+**Examples**  
+If ICRC-107 defines a user-callable method `set_fee_collector`, and that method produces
+blocks of type `107feecol`, then:
+
+- `btype = "107feecol"` is defined by the **block-type standard** (ICRC-107)
+- `tx.op = "107set_fee_collector"` is defined by the **method standard** (also ICRC-107)
+
+If a method in ICRC-122 produces blocks of type `122freeze`, then:
+
+- `btype = "122freeze"`  
+- `tx.op = "122freeze_account"`
+
+Legacy ICRC-1 and ICRC-2 blocks continue to use their historical operation names
+(`"xfer"`, `"mint"`, `"burn"`, `"approve"`) and are exempt from namespacing.
 
 
 ### Note on Fees
