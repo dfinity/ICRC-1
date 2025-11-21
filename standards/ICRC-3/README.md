@@ -522,7 +522,7 @@ service : {
 ### `icrc3_supported_block_types`
 Returns the set of block types (`btype` identifiers) that the producer canister may emit in its block log.
 
-Producers that emit **legacy ICRC-1/ICRC-2 semantics** using the legacy untyped format MUST still include the corresponding legacy `btype` strings (e.g., `"1mint"`, `"1xfer"`, `"1burn"`, `"2approve"`, …).
+Producers that emit legacy ICRC-1/ICRC-2 semantics using the legacy untyped format MUST still include the corresponding legacy btype strings in the return value of `icrc3_supported_block_types`, even though the blocks themselves do not carry a `btype` field.
 
 
 ```
@@ -680,46 +680,6 @@ calculated or collected.
   ICRC-107 (Fee Handling in Blocks). Ledgers that do not yet implement ICRC-107 MAY
   still produce valid ICRC-3 blocks, but their fee behavior will remain
   implementation-specific until aligned with ICRC-107.
-
-
-#### Namespacing for Operations
-
-The namespacing rules apply to **standards that define user-callable methods**, not to the
-standards that define block types.
-
-If a standard defines a method that produces blocks, and those blocks include a `tx.op`,
-then:
-
-- `tx.op` MUST be namespaced using the ICRC number of the **method’s standard**, not the
-  block-type standard.
-- The value of `op` MUST uniquely identify the method that created the block.
-
-Formally:
-
-- `op = <method_standard_number><operation_name>`
-- `method_standard_number`: a non-zero digit followed by zero or more digits  
-- `operation_name`: starts with a lowercase letter, then lowercase letters, digits, `_`, or `-`
-
-**Examples**  
-If ICRC-107 defines a user-callable method `set_fee_collector`, and that method produces
-blocks of type `107feecol`, then:
-
-- `btype = "107feecol"` is defined by the **block-type standard** (ICRC-107)
-- `tx.op = "107set_fee_collector"` is defined by the **method standard** (also ICRC-107)
-
-If a method in ICRC-122 produces blocks of type `122freeze`, then:
-
-- `btype = "122freeze"`  
-- `tx.op = "122freeze_account"`
-
-Legacy ICRC-1 and ICRC-2 blocks continue to use their historical operation names
-(`"xfer"`, `"mint"`, `"burn"`, `"approve"`) and are exempt from namespacing.
-
-
-### Note on Fees
-ICRC-3 standardizes how fees are recorded in blocks, but it does not prescribe how fees are calculated or collected.
-Every standard that introduces a block type involving fees MUST specify who the fee payer is so that responsibility is unambiguous.
-The rules for interpreting the amount and destination of fees are defined in ICRC-107 (Fee Handling in Blocks). Ledgers that do not yet implement ICRC-107 MAY still produce valid ICRC-3 blocks, but their fee behavior will be ledger-specific until aligned with ICRC-107.
 
 
 
