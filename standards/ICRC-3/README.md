@@ -274,7 +274,9 @@ If a block represents the result of a **standardized user-initiated method call*
 
 - The block **SHOULD** include a `tx` field.
 - For user-initiated blocks, a namespaced `tx.op` **SHOULD** be included (see above).
-- The structure of `tx` **MUST** follow the canonical mapping defined by the relevant standard.
+- The `tx` field MUST follow the canonical mapping defined by the method standard.
+  Semantic fields required by the block type may appear **outside** `tx` when defined
+  as top-level fields by the block-type specification (e.g., `fee`, `caller`).
 - All parameters explicitly provided by the caller **MUST** appear in `tx` exactly as provided.
 - Optional parameters that were not passed in the call **MUST NOT** appear in `tx`.
 
@@ -305,40 +307,53 @@ without over-constraining block structure or requiring the presence of `tx` or `
 To ensure consistency across standards and implementations, the semantics of any
 block must be interpretable through the following evaluation model. Each standard
 that defines a block type specifies how to “plug into” this model (by defining
-its minimal `tx` schema, pre-fee transition, fee payer, etc.). For block types
+its minimal schema, pre-fee transition, fee payer, etc.). For block types
 that do not use a `tx` field, the standard MUST specify how to interpret the
 block directly from its top-level fields.
-
 
 1. Identify block type  
    • If `btype` is present, use it.  
    • If no `btype`, fall back to legacy ICRC-1/2 inference from `tx.op`.
 
-2. Validate `tx` structure  
-   • Check that all semantic fields that the block type specification
-     marks as required, and that they have the expected shape.  
-   • If the block type specification allows additional optional or
-     extension fields, they MAY be present.  
-   • ICRC-3 itself does not distinguish between “semantic” and
-     “non-semantic” fields; it is the responsibility of the block type
-     specification to state which fields affect the meaning of the block
-     and how extra fields are to be treated (e.g., ignored by generic
-     interpreters).
+2. Validate block fields  
+   • Check that all semantic fields required by the block-type specification are
+     present.  
+   • Semantic fields may appear **inside `tx`** or **at the top level**, depending on the
+     block-type specification.  
+   • Additional non-semantic fields MAY appear anywhere in the block and MUST be
+     ignored by generic interpreters.  
+   • ICRC-3 itself does not distinguish between “semantic” and “non-semantic”
+     fields; it is the responsibility of the block type specification to state
+     which fields affect the meaning of the block and how extra fields are to be
+     treated (e.g., ignored by generic interpreters).
 
 3. Derive pre-fee state transition  
-   • Apply the deterministic state change implied by `tx`, ignoring any fees.  
-   • Example: debit/credit balances, mint, burn, update allowance.
+   • Using the semantic fields identified by the block-type specification
+     (typically the contents of `tx`, plus any semantic top-level fields such as
+     `caller`, `fee`, etc.), apply the deterministic state change implied by the
+     block, **ignoring any fees**.  
+   • For block types that do not use `tx`, the standard MUST describe how to
+     derive this transition directly from the top-level fields.  
+   • Examples: debit/credit balances, mint, burn, update allowance, configuration
+     change, etc.
 
 4. Apply fee (if applicable)  
-   • If the block type involves fees, determine the **effective fee** according to the rules defined for that block type.  
-   • Deduct the fee from the account designated as the **fee payer** for this block type.  
-   • Adjust balances accordingly (e.g., for mints: `to` receives `amt - fee`).
-   • The destination or handling of the fee (burn, treasury, etc.) may be specified by the block type or by a separate fee standard (e.g., ICRC-107). When unspecified, the destination/handling of the fee is ledger-defined; ledgers may burn fees or route them to a treasury. See ICRC-107 for a standardized way to expose fee handling.  
-
+   • If the block type involves fees, determine the **effective fee** according
+     to the rules defined for that block type (or a referenced fee standard).  
+   • Deduct the fee from the account designated as the **fee payer** for this
+     block type.  
+   • Adjust balances accordingly (e.g., for mints: `to` receives `amt - fee`).  
+   • The destination or handling of the fee (burn, treasury, etc.) may be
+     specified by the block type or by a separate fee standard (e.g., ICRC-107).
+     When unspecified, the destination/handling of the fee is
+     implementation- or ledger-defined; ledgers may, for example, burn fees or
+     route them to a treasury.
 
 5. Enforce validity conditions  
-   • Validate that all preconditions and invariants defined by the block type’s standard are satisfied.  
-   • This includes checks such as sufficient balances, allowance coverage, or limits on fees, as applicable.  
+   • Validate that all preconditions and invariants defined by the block type’s
+     standard are satisfied.  
+   • This includes checks such as sufficient balances, allowance coverage, or
+     limits on fees, as applicable.
 
 
 ## Methods
@@ -625,7 +640,6 @@ then:
 - `tx.op` MUST be namespaced using the ICRC number of the **method’s standard**, not the
   block-type standard.
 - The value of `op` MUST uniquely identify the method that created the block.
-- The pair `(btype, tx.op)` MUST uniquely determine the method invocation that produced the block.
 
 Formally:
 
