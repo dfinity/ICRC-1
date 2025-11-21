@@ -395,8 +395,10 @@ service : {
 
 - Archives MUST be returned in strictly increasing order of their start index.
 - If `from` is `null`, the producer MUST return the first archive(s).
-- If `from` is set, the producer MUST return archives whose `canister_id`
-  appears after the given principal in the producer’s archive ordering.
+If `from` is set, the producer MUST return only the archives whose
+`canister_id` appears *after* the specified principal in the producer’s
+internal archive ordering.
+
 - For every archive returned:
   - `start` and `end` MUST describe a contiguous, inclusive block range;
   - that archive MUST be able to serve exactly that range via its callbacks (as returned indirectly in `icrc3_get_blocks`).
@@ -471,10 +473,12 @@ service : {
 - Each entry in `archived_blocks`:
   - MUST have `args` describing one or more contiguous ranges of archived
     indices, and
-  - MUST provide a `callback` which, when called with a subset of those ranges,
-    returns blocks whose `id` values lie within the requested ranges, again
-    subject to the same kinds of constraints (message size, security limits,
-    reaching that archive’s tip, etc.).
+- MUST provide a `callback` which, when called with any subset of the
+  ranges listed in `args`, returns the blocks whose `id` values lie within
+  the requested ranges, except where constraints such as message size,
+  security limits, or the archive’s own tip boundaries prevent returning
+  the full set.
+
 
 - Implementations MAY therefore return only a **partial view** of the blocks in
   the requested ranges. Clients MUST be prepared to receive fewer blocks than
@@ -1205,7 +1209,7 @@ variant {
 };
 ```
 
-#### Example 6: Typed block (`btype = "107fee"`)
+#### Example 6: Typed block (`btype = "107feecol"`)
 
 
 ```
@@ -1217,12 +1221,12 @@ variant { Map = vec {
   record { "tx"; variant { Map = vec {
     record { "op"; variant { Text = "107set_fee_collector" }};
     record { "fee_collector"; variant { Array = vec { }}}; // [] means "burn from now on"
-    record { "created_at_time"; variant { Nat = 1_750_951_728_000_000_000 : nat }};
+    record { "created_at_time"; variant { nat = 1_750_951_728_000_000_000 : nat }};
     record { "caller"; variant { Blob = blob "\00\00\00\00\00\00\00\00\01\01" }};
   }}};
 
   // Standard block metadata
-  record { "ts";    variant { Nat = 1_741_312_737_184_874_392 : nat }};
+  record { "ts";    variant { nat = 1_741_312_737_184_874_392 : nat }};
   record { "phash"; variant { Blob = blob "\2d\86\7f\34\c7\2d\1e\2d\00\84\10\a4\00\b0\b6\4c\3e\02\96\c9\e8\55\6f\dd\72\68\e8\df\8d\8e\8a\ee" }};
 }}
 ```
