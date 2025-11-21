@@ -251,16 +251,43 @@ The following principles guide the evolution and interpretation of ICRC-3 and an
   - Define the **canonical mapping** from method call parameters to the `tx` field of the resulting block.
   - Ensure that `tx` contains only parameters explicitly provided by the caller (except where the block type definition requires otherwise).
 
-### 3. Avoiding Collisions in `tx`
-- No two standardized methods may produce `tx` values that are indistinguishable when interpreted under ICRC-3 rules.
-- To avoid collisions across standards, `tx` MUST include an operation field (`op`) whose value is namespaced with the introducing standard’s number as a prefix (e.g., `122freeze_account`). This namespacing requirement applies to typed blocks; legacy ICRC-1/2 blocks keep their historical `op` values (e.g., `"xfer"`, `"mint"`, `"burn"`).
+### 3. Avoiding Collisions Among User-Initiated Blocks
+
+Not all blocks contain a `tx` field, and not all blocks with a `tx` field correspond to a user-initiated method call.  
+**Collision-avoidance requirements apply only to blocks that represent standardized user calls.**
+
+For any ICRC standard that defines a **user-callable method which produces blocks**:
+
+- Blocks produced by that method SHOULD include a `tx` field.
+- The `tx` field for such blocks SHOULD include an operation discriminator `op`.
+- The `op` value SHOULD be namespaced with the standard’s ICRC number  
+  (e.g., `122freeze_account`, `107set_fee_collector`) to avoid collisions with operations defined by other standards.
+- The pair `(btype,tx.op)`  MUST uniquely identify the method that produced the block.
+
+Typed blocks that **do not** represent method calls (e.g., upgrade markers, maintenance events, migration records, or system actions) MAY omit the `tx` field entirely and therefore MAY omit `tx.op`.
+
+Legacy ICRC-1/2 blocks continue to use their historical operation names (`"xfer"`, `"mint"`, `"burn"`, `"approve"`), and are exempt from namespacing requirements.
 
 
-### 4. Capturing the User Call
+### 4. Capturing the User Call (Where Applicable)
 
-- The `tx` field **SHOULD** capture the structure of the user call or event that triggered the block.  
-- All call parameters that are part of the canonical mapping **MUST** be included exactly as provided.  
-- Optional parameters that were not present in the call **MUST NOT** appear in `tx`.
+If a block represents the result of a **standardized user-initiated method call**, then:
+
+- The block **SHOULD** include a `tx` field.
+- For user-initiated blocks, a namespaced `tx.op` **SHOULD** be included (see above).
+- The structure of `tx` **MUST** follow the canonical mapping defined by the relevant standard.
+- All parameters explicitly provided by the caller **MUST** appear in `tx` exactly as provided.
+- Optional parameters that were not passed in the call **MUST NOT** appear in `tx`.
+
+However:
+
+- Blocks that are **not** created by user calls — such as system-generated blocks, upgrade or migration markers, or internal bookkeeping events — MAY omit the `tx` field entirely.
+- Typed blocks created by system logic MAY include a `tx` field without an `op`, or MAY use a `tx` whose structure is defined solely by the block type (`btype`) specification.
+
+This distinction allows ICRC-3 to support both:
+- canonical, audit-ready records of user calls, and
+- domain-specific or system-generated events,
+without over-constraining block structure or requiring the presence of `tx` or `tx.op` in every block.
 
 
 ### 5. Future-Proofing and Extensibility
@@ -344,7 +371,8 @@ service : {
 
 - Archives MUST be returned in strictly increasing order of their start index.
 - If `from` is `null`, the producer MUST return the first archive(s).
-- If `from` is set, the producer MUST return archives whose IDs appear after the principal `from` with that principal in the producer’s archive ordering.
+- If `from` is set, the producer MUST return archives whose `canister_id`
+  appears after the given principal in the producer’s archive ordering.
 - For every archive returned:
   - `start` and `end` MUST describe a contiguous, inclusive block range;
   - that archive MUST be able to serve exactly that range via its callbacks (as returned indirectly in `icrc3_get_blocks`).
@@ -399,12 +427,14 @@ service : {
 - Each element `r` in `GetBlocksArgs` describes a **half-open** range  
   `[r.start, r.start + r.length)` of requested indices.
 
-- If **all** requested indices across all ranges are greater than the last block index at the time of the call, the producer MUST return:
+- If **all** requested indices across all ranges are greater than the last block
+  index at the time of the call, the producer MUST return:
   - `blocks = []`, and  
   - `archived_blocks = []`.
 
 - The `blocks` vector:
-  - MUST contain locally stored blocks whose indices lie in at least a subset of the requested ranges,
+  - MUST contain locally stored blocks whose indices lie in at least a subset of
+    the requested ranges,
   - MUST be sorted by `id` in strictly increasing order,
   - MUST NOT contain duplicates.
 
@@ -414,15 +444,18 @@ service : {
   - because it has reached the current tip of the log,
   - because some of the requested indices are archived.
 
-
 - Each entry in `archived_blocks`:
-  - MUST have `args` describing one or more contiguous ranges of archived indices,
-  - MUST provide a `callback` which, when called with a subset of those ranges, returns exactly the corresponding blocks (via its own `blocks` and/or `archived_blocks`).
+  - MUST have `args` describing one or more contiguous ranges of archived
+    indices, and
+  - MUST provide a `callback` which, when called with a subset of those ranges,
+    returns blocks whose `id` values lie within the requested ranges, again
+    subject to the same kinds of constraints (message size, security limits,
+    reaching that archive’s tip, etc.).
 
-- For any requested index that is not returned in `blocks` but is available in the log, the producer MUST either:
-  - include that index in some `archived_blocks[i].args` range, or
-  - intentionally omit it due to resource or security constraints (e.g., message-size limits), or
-  - omit it because it lies beyond the current tip.
+- Implementations MAY therefore return only a **partial view** of the blocks in
+  the requested ranges. Clients MUST be prepared to receive fewer blocks than
+  actually exist in those ranges and MAY issue additional `icrc3_get_blocks`
+  calls with narrower or adjusted ranges if they require full coverage.
 
 - Implementations MUST NOT misrepresent the structure of the log:
   - no returned block may have an incorrect `id`,
@@ -509,7 +542,9 @@ A standard that defines a method which produces blocks MUST:
 - Define the canonical mapping from method inputs to the `tx` field of the resulting block.  
 - Ensure all required fields from the block type’s minimal schema are populated.  
 - Include only caller-provided optional fields; omit optionals that were not supplied.  
-- Include an `op` field in `tx` to identify the operation and avoid collisions.
+- For methods that represent user-initiated calls, include an `op` field in
+  `tx` (namespaced as described above) to identify the operation and avoid
+  collisions.
 
 This division of responsibility ensures that:
 - Block types define **what blocks mean** (semantics).
