@@ -1,7 +1,7 @@
 # ICRC-2 Advisory
 
 This document provides clarifications and implementation guidance for the
-ICRC-2 standard based on findings from a security review.
+ICRC-2 standard.
 
 The intent of this advisory is to make explicit certain behaviors that are
 underspecified in the ICRC-2 specification, in order to reduce ambiguity for
@@ -9,7 +9,6 @@ ledger implementers and client developers. This document does not change the
 normative requirements of ICRC-2, but clarifies expectations and highlights
 recommended practices.
 
----
 
 ## 1. Transaction Deduplication
 
