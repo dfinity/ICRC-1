@@ -55,3 +55,30 @@ Ledger implementations SHOULD implement transaction deduplication for
   transaction:
   - The ledger SHOULD reject the call and return a `Duplicate` error.
   - The ledger MUST NOT apply the transaction effects again.
+
+
+
+#### State Changes and Ordering
+
+- Deduplication checks SHOULD be performed before any externally observable
+  ledger effects are applied.
+- `Duplicate` or `TooOld` responses SHOULD imply that no balances, allowances,
+  or transaction log entries have been modified.
+
+#### Interaction with `expected_allowance`
+
+- For `approve`, the `expected_allowance` field provides an additional
+  conditional update mechanism.
+- `expected_allowance` does not replace transaction deduplication and SHOULD
+  be evaluated only after deduplication checks have passed.
+
+### Client Considerations
+
+- When transaction deduplication is implemented as described above,
+  **retrying an ICRC-2 call with identical parameters is safe** and will not
+  result in duplicated ledger effects.
+- Clients MAY rely on this behavior to safely retry requests in the presence
+  of timeouts, transient failures, or uncertain outcomes.
+- Clients SHOULD still be prepared to handle `Duplicate` and `TooOld` errors
+  and SHOULD avoid modifying parameters when retrying unless a new
+  transaction is intended.
