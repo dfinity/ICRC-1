@@ -82,3 +82,47 @@ Ledger implementations SHOULD implement transaction deduplication for
 - Clients SHOULD still be prepared to handle `Duplicate` and `TooOld` errors
   and SHOULD avoid modifying parameters when retrying unless a new
   transaction is intended.
+
+
+
+## 2. Error Semantics and Atomicity
+
+### Clarification
+
+The ICRC-2 specification does not explicitly state that `approve` and
+`transfer_from` are atomic operations, nor does it clearly define which ledger
+effects are guaranteed not to occur when an error is returned.
+
+With the exception of `AllowanceChanged`, which explicitly states that no
+allowance update has occurred, the semantics of other error variants are not
+specified.
+
+### Advisory Guidance
+
+To align with common ledger expectations and reduce ambiguity:
+
+- Ledger implementations SHOULD ensure that `approve` and `transfer_from`
+  operations are atomic with respect to **externally observable ledger
+  effects**, such as:
+  - account balances,
+  - allowances,
+  - and the transaction log.
+
+- If an ICRC-2 method successfully applies such effects, the ledger SHOULD
+  return a success response (`Ok(nat)`).
+
+- If an error response is returned, the ledger SHOULD ensure that:
+  - no balances or allowances have been modified, and
+  - no transaction log entry corresponding to the call has been recorded.
+
+This guidance does not restrict ledgers from mutating internal or auxiliary
+state (e.g., caches, metrics, rate limits, or bookkeeping data) when handling
+a call that results in an error.
+
+Additionally:
+
+- Ledger implementations SHOULD document the meaning of each error variant.
+- Client implementations SHOULD NOT assume stronger guarantees than those
+  described above unless explicitly documented by the ledger.
+
+
