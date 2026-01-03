@@ -125,4 +125,22 @@ Additionally:
 - Client implementations SHOULD NOT assume stronger guarantees than those
   described above unless explicitly documented by the ledger.
 
+## 3. Fees for `approve` and `transfer_from`
+
+### Clarification
+
+The ICRC-2 specification does not explicitly state the fees charged for
+`approve` or `transfer_from`.
+
+This advisory clarifies that these operations are expected to be charged
+the same fee returned by the `icrc1_fee` method.
+
+### Advisory Guidance
+
+- Ledger implementations SHOULD charge the fee returned by `icrc1_fee` for
+  both `approve` and `transfer_from`.
+- Clients MAY assume that the applicable fee for ICRC-2 operations is the
+  value returned by `icrc1_fee`.
+- Fees SHOULD only be charged when the operation succeeds.
+- The fee SHOULD be applied in a manner consistent with ICRC-1 transfers.
 
