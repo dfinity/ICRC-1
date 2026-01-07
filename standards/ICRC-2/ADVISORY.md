@@ -45,7 +45,7 @@ Ledger implementations SHOULD implement transaction deduplication for
   - The ledger SHOULD define and document the accepted time window.
 
 - If `created_at_time` is not provided:
-  - The ledger MAY treat each call as unique, or
+  - The ledger MAY process duplicates, or
   - MAY apply ledger-specific policies; such behavior SHOULD be documented.
 
 #### Duplicate Handling
