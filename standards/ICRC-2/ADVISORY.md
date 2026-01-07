@@ -14,7 +14,7 @@ recommended practices.
 
 ### Clarification
 
-ICRC-2 methods (`approve` and `transfer_from`) include arguments and error
+ICRC-2 methods (`icrc2_approve` and `icrc2_transfer_from`) include arguments and error
 variants (`created_at_time`, `memo`, `Duplicate`, `TooOld`) that imply support
 for transaction deduplication and replay protection.
 
@@ -24,13 +24,13 @@ operations.
 ### Advisory Guidance
 
 Ledger implementations SHOULD implement transaction deduplication for
-`approve` and `transfer_from` according to the following rules:
+`icrc2_approve` and `icrc2_transfer_from` according to the following rules:
 
 #### Transaction Identity
 
 - A transaction is identified by the combination of:
   - the caller,
-  - the method name (`approve` or `transfer_from`),
+  - the method name (`icrc2_approve` or `icrc2_transfer_from`),
   - the full set of method arguments, including `created_at_time` and `memo`
     if provided.
 
@@ -66,7 +66,7 @@ Ledger implementations SHOULD implement transaction deduplication for
 
 #### Interaction with `expected_allowance`
 
-- For `approve`, the `expected_allowance` field provides an additional
+- For `icrc2_approve`, the `expected_allowance` field provides an additional
   conditional update mechanism.
 - `expected_allowance` does not replace transaction deduplication and SHOULD
   be evaluated only after deduplication checks have passed.
@@ -88,8 +88,8 @@ Ledger implementations SHOULD implement transaction deduplication for
 
 ### Clarification
 
-The ICRC-2 specification does not explicitly state that `approve` and
-`transfer_from` are atomic operations, nor does it clearly define which ledger
+The ICRC-2 specification does not explicitly state that `icrc2_approve` and
+`icrc2_transfer_from` are atomic operations, nor does it clearly define which ledger
 effects are guaranteed not to occur when an error is returned.
 
 With the exception of `AllowanceChanged`, which explicitly states that no
@@ -100,7 +100,7 @@ specified.
 
 To align with common ledger expectations and reduce ambiguity:
 
-- Ledger implementations SHOULD ensure that `approve` and `transfer_from`
+- Ledger implementations SHOULD ensure that `icrc2_approve` and `icrc2_transfer_from`
   operations are atomic with respect to **externally observable ledger
   effects**, such as:
   - account balances,
@@ -124,12 +124,12 @@ Additionally:
 - Client implementations SHOULD NOT assume stronger guarantees than those
   described above unless explicitly documented by the ledger.
 
-## 3. Fees for `approve` and `transfer_from`
+## 3. Fees for `icrc2_approve` and `icrc2_transfer_from`
 
 ### Clarification
 
 The ICRC-2 specification does not explicitly state the fees charged for
-`approve` or `transfer_from`.
+`icrc2_approve` or `icrc2_transfer_from`.
 
 This advisory clarifies that these operations are expected to be charged
 the same fee returned by the `icrc1_fee` method.
@@ -137,7 +137,7 @@ the same fee returned by the `icrc1_fee` method.
 ### Advisory Guidance
 
 - Ledger implementations SHOULD charge the fee returned by `icrc1_fee` for
-  both `approve` and `transfer_from`.
+  both `icrc2_approve` and `icrc2_transfer_from`.
 - Clients MAY assume that the applicable fee for ICRC-2 operations is the
   value returned by `icrc1_fee`.
 - Fees SHOULD only be charged when the operation succeeds.
