@@ -41,8 +41,9 @@ Ledger implementations SHOULD implement transaction deduplication for
 - If `created_at_time` is provided:
   - The ledger SHOULD reject calls whose `created_at_time` is too far in the
     past or too far in the future relative to the ledger’s current time,
-    returning a `TooOld` error.
+    returning a `TooOld`/`CreatedInFuture` error.
   - The ledger SHOULD define and document the accepted time window.
+  - The ledger SHOULD NOT process duplicates.
 
 - If `created_at_time` is not provided:
   - The ledger MAY process duplicates, or
@@ -50,8 +51,7 @@ Ledger implementations SHOULD implement transaction deduplication for
 
 #### Duplicate Handling
 
-- If a call is determined to be a duplicate of a previously processed
-  transaction:
+- If duplicate transactions are not processed:
   - The ledger SHOULD reject the call and return a `Duplicate` error.
   - The ledger MUST NOT apply the transaction effects again.
 
@@ -61,7 +61,7 @@ Ledger implementations SHOULD implement transaction deduplication for
 
 - Deduplication checks SHOULD be performed before any externally observable
   ledger effects are applied.
-- `Duplicate` or `TooOld` responses SHOULD imply that no balances, allowances,
+- `Duplicate`, `TooOld` or `CreatedInFuture` responses SHOULD imply that no balances, allowances,
   or transaction log entries have been modified.
 
 #### Interaction with `expected_allowance`
@@ -73,12 +73,12 @@ Ledger implementations SHOULD implement transaction deduplication for
 
 ### Client Considerations
 
-- When transaction deduplication is implemented as described above,
+- When the ledger does not process duplicate transactions,
   **retrying an ICRC-2 call with identical parameters is safe** and will not
   result in duplicated ledger effects.
 - Clients MAY rely on this behavior to safely retry requests in the presence
   of timeouts, transient failures, or uncertain outcomes.
-- Clients SHOULD still be prepared to handle `Duplicate` and `TooOld` errors
+- Clients SHOULD still be prepared to handle `Duplicate`/`TooOld`/`CreatedInFuture` errors
   and SHOULD avoid modifying parameters when retrying unless a new
   transaction is intended.
 
