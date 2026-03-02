@@ -1,14 +1,13 @@
 # ICRC-2 Advisory
 
-This document provides clarifications and implementation guidance for the
-ICRC-2 standard.
+The intent of this advisory is to provide additional clarification and
+explanation of certain behaviors described in the ICRC-2 specification, to
+help avoid potential misinterpretation in implementations.
 
-The intent of this advisory is to make explicit certain behaviors that are
-underspecified in the ICRC-2 specification, in order to reduce ambiguity for
-ledger implementers and client developers. This document does not change the
-normative requirements of ICRC-2, but clarifies expectations and highlights
-recommended practices.
-
+It clarifies expectations and the intended meaning, and highlights recommended
+practices for transaction deduplication, error semantics and atomicity, and fee
+handling for `icrc2_approve` and `icrc2_transfer_from`. This advisory is
+non-normative and does not change the ICRC-2 specification.
 
 ## 1. Transaction Deduplication
 
@@ -28,9 +27,9 @@ Ledger implementations SHOULD implement transaction deduplication for
 
 #### Transaction Identity
 
-- A transaction is identified by the combination of:
-  - the caller,
-  - the method name (`icrc2_approve` or `icrc2_transfer_from`),
+- A transaction is identified by its transaction identity, which is the combination of:
+  - the caller;
+  - the method name (`icrc2_approve` or `icrc2_transfer_from`); and
   - the full set of method arguments, including `created_at_time` and `memo`
     if provided.
 
@@ -54,8 +53,6 @@ Ledger implementations SHOULD implement transaction deduplication for
 - If duplicate transactions are not processed:
   - The ledger SHOULD reject the call and return a `Duplicate` error.
   - The ledger MUST NOT apply the transaction effects again.
-
-
 
 #### State Changes and Ordering
 
@@ -82,8 +79,6 @@ Ledger implementations SHOULD implement transaction deduplication for
   and SHOULD avoid modifying parameters when retrying unless a new
   transaction is intended.
 
-
-
 ## 2. Error Semantics and Atomicity
 
 ### Clarification
@@ -102,17 +97,16 @@ To align with common ledger expectations and reduce ambiguity:
 
 - Ledger implementations SHOULD ensure that `icrc2_approve` and `icrc2_transfer_from`
   operations are atomic with respect to **externally observable ledger
-  effects**, such as:
-  - account balances,
-  - allowances,
-  - and the transaction log.
+  effects**, including:
+  - account balances;
+  - allowances; and
+  - the transaction log.
 
 - If an ICRC-2 method successfully applies such effects, the ledger SHOULD
   return a success response (`Ok(nat)`).
 
-- If an error response is returned, the ledger SHOULD ensure that:
-  - no balances or allowances have been modified, and
-  - no transaction log entry corresponding to the call has been recorded.
+- If an error response is returned, the ledger SHOULD ensure that no externally
+  observable ledger effects have occurred.
 
 This guidance does not restrict ledgers from mutating internal or auxiliary
 state (e.g., caches, metrics, rate limits, or bookkeeping data) when handling
@@ -142,4 +136,19 @@ the same fee returned by the `icrc1_fee` method.
   value returned by `icrc1_fee`.
 - Fees SHOULD only be charged when the operation succeeds.
 - The fee SHOULD be applied in a manner consistent with ICRC-1 transfers.
+
+## Summary
+
+ICRC-2 ledgers are expected to support transaction deduplication for
+`icrc2_approve` and `icrc2_transfer_from` when `created_at_time` is provided,
+to ensure that retries with identical parameters do not result in duplicated
+externally observable ledger effects.
+
+`icrc2_approve` and `icrc2_transfer_from` are expected to be atomic with
+respect to externally observable ledger effects (balances, allowances, and the
+transaction log). Error responses should imply that no externally observable
+ledger effects have occurred.
+
+ICRC-2 operations are expected to be charged the same fee returned by
+`icrc1_fee`, and fees should only be charged when the operation succeeds.
 
