@@ -259,11 +259,11 @@ Not all blocks contain a `tx` field, and not all blocks with a `tx` field corres
 For any ICRC standard that defines a **user-callable method which produces blocks**:
 
 - Blocks produced by that method SHOULD include a `tx` field.
-- The `tx` field for such blocks SHOULD include an operation discriminator `op`.
-- The `op` value SHOULD be namespaced with the standard’s ICRC number  
+- The `tx` field for such blocks SHOULD include a **method discriminator** — a field whose namespaced value uniquely identifies the standardized method that created the block. The recommended field name is `op`, but standards MAY use an alternative (e.g., `mthd`) provided the choice is documented in the method’s canonical `tx` mapping.
+- The discriminator value SHOULD be namespaced with the standard’s ICRC number
   (e.g., `122freeze_account`, `107set_fee_collector`) to avoid collisions with operations defined by other standards.
 
-Typed blocks that **do not** represent method calls (e.g., upgrade markers, maintenance events, migration records, or system actions) MAY omit the `tx` field entirely and therefore MAY omit `tx.op`.
+Typed blocks that **do not** represent method calls (e.g., upgrade markers, maintenance events, migration records, or system actions) MAY omit the `tx` field entirely and therefore MAY omit the method discriminator.
 
 Legacy ICRC-1/2 blocks continue to use their historical operation names (`"xfer"`, `"mint"`, `"burn"`, `"approve"`), and are exempt from namespacing requirements.
 
@@ -273,7 +273,7 @@ Legacy ICRC-1/2 blocks continue to use their historical operation names (`"xfer"
 If a block represents the result of a **standardized user-initiated method call**, then:
 
 - The block **SHOULD** include a `tx` field.
-- For user-initiated blocks, a namespaced `tx.op` **SHOULD** be included (see above).
+- For user-initiated blocks, a namespaced method discriminator **SHOULD** be included (see above).
 - The `tx` field MUST follow the canonical mapping defined by the method standard.
   Semantic fields required by the block type may appear **outside** `tx` when defined
   as top-level fields by the block-type specification (e.g., `fee`, `caller`).
@@ -283,12 +283,12 @@ If a block represents the result of a **standardized user-initiated method call*
 However:
 
 - Blocks that are **not** created by user calls — such as system-generated blocks, upgrade or migration markers, or internal bookkeeping events — MAY omit the `tx` field entirely.
-- Typed blocks created by system logic MAY include a `tx` field without an `op`, or MAY use a `tx` whose structure is defined solely by the block type (`btype`) specification.
+- Typed blocks created by system logic MAY include a `tx` field without a method discriminator, or MAY use a `tx` whose structure is defined solely by the block type (`btype`) specification.
 
 This distinction allows ICRC-3 to support both:
 - canonical, audit-ready records of user calls, and
 - domain-specific or system-generated events,
-without over-constraining block structure or requiring the presence of `tx` or `tx.op` in every block.
+without over-constraining block structure or requiring the presence of `tx` or a method discriminator in every block.
 
 
 ### 5. Future-Proofing and Extensibility
@@ -567,13 +567,13 @@ A standard that defines a new block type MUST:
 - **Assign a unique `btype` string** for that block type.  
   This identifier determines how the block is interpreted.
 
-- **Not define or constrain `tx.op`**, because:
-  - `tx.op` belongs to the standard that defines the *method* which creates the
+- **Not define or constrain the method discriminator** (e.g., `tx.op`, `tx.mthd`), because:
+  - The method discriminator belongs to the standard that defines the *method* which creates the
     block, not to the block-type standard.
   - A single block type may be produced by multiple methods, potentially from
     different standards.
   - Some blocks (e.g., system-generated events or migration markers) do not
-    include `tx.op` at all.
+    include a method discriminator at all.
 
 - **Specify the minimal structure** required to interpret the block and recover its
   semantic meaning.  
@@ -622,10 +622,11 @@ A standard that defines a method which produces blocks MUST:
   populated, whether they live inside `tx` or at the top level.  
 - Include only caller-provided optional fields in `tx`; omit optionals that were
   not supplied.  
-- For methods that represent user-initiated calls, include an `op` field in
+- For methods that represent user-initiated calls, include a **method discriminator** field in
   `tx` (namespaced as described below) to identify the operation and avoid
-  collisions.  
-- Ensure that a namespaced `tx.op` **uniquely identifies the standardized
+  collisions. The recommended field name is `op`, but standards MAY use an
+  alternative (e.g., `mthd`) provided the choice is documented in the canonical `tx` mapping.
+- Ensure that the namespaced discriminator value **uniquely identifies the standardized
   method** that created the block within the ICRC namespace.
 
 This division of responsibility ensures that:
@@ -634,37 +635,37 @@ This division of responsibility ensures that:
 - Methods define **how blocks are created** (intent capture).  
 - Tooling and clients can rely on predictable, non-colliding `tx` values.
 
-#### Namespacing for Operations
+#### Namespacing for Method Discriminators
 
 The namespacing rules apply to **standards that define user-callable methods**, not to the
 standards that define block types.
 
-If a standard defines a method that produces blocks, and those blocks include a `tx.op`,
-then:
+If a standard defines a method that produces blocks, and those blocks include a method
+discriminator in `tx` (whether named `op`, `mthd`, or otherwise), then:
 
-- `tx.op` MUST be namespaced using the ICRC number of the **method’s standard**, not the
+- The discriminator value MUST be namespaced using the ICRC number of the **method’s standard**, not the
   block-type standard.
-- The value of `op` MUST uniquely identify the standardized method that created the
+- The discriminator value MUST uniquely identify the standardized method that created the
   block within the global ICRC namespace.
 
-Formally:
+Formally, the discriminator value follows this grammar:
 
-- `op = <method_standard_number><operation_name>`  
-- `method_standard_number`: a non-zero digit followed by zero or more digits  
+- `value = <method_standard_number><operation_name>`
+- `method_standard_number`: a non-zero digit followed by zero or more digits
 - `operation_name`: starts with a lowercase letter, then lowercase letters, digits,
   `_`, or `-`
 
-**Examples**  
+**Examples**
 If ICRC-107 defines a user-callable method `set_fee_collector`, and that method produces
 blocks of type `107feecol`, then:
 
-- `btype = "107feecol"` is defined by the **block-type standard** (ICRC-107)  
-- `tx.op = "107set_fee_collector"` is defined by the **method standard** (also ICRC-107)
+- `btype = "107feecol"` is defined by the **block-type standard** (ICRC-107)
+- `tx.mthd = "107set_fee_collector"` is defined by the **method standard** (also ICRC-107, using `mthd` as its discriminator field)
 
 If a method in ICRC-122 produces blocks of type `122freeze`, then:
 
-- `btype = "122freeze"`  
-- `tx.op = "122freeze_account"`
+- `btype = "122freeze"`
+- `tx.op = "122freeze_account"` (using the default `op` discriminator field)
 
 Legacy ICRC-1 and ICRC-2 blocks continue to use their historical operation names
 (`"xfer"`, `"mint"`, `"burn"`, `"approve"`) and are exempt from namespacing.
