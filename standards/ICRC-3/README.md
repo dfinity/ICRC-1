@@ -665,7 +665,7 @@ blocks of type `107feecol`, then:
 If a method in ICRC-122 produces blocks of type `122freeze`, then:
 
 - `btype = "122freeze"`
-- `tx.op = "122freeze_account"` (using the default `op` discriminator field)
+- `tx.mthd = "122freeze_account"` (using `mthd` as its discriminator field)
 
 Legacy ICRC-1 and ICRC-2 blocks continue to use their historical operation names
 (`"xfer"`, `"mint"`, `"burn"`, `"approve"`) and are exempt from namespacing.
