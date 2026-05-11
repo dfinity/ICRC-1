@@ -4,21 +4,67 @@
 |:------:|
 | [Accepted](https://dashboard.internetcomputer.org/proposal/128824)  |
 
-`ICRC-3` is a standard for accessing the block log of a Ledger on the [Internet Computer](https://internetcomputer.org).
 
-`ICRC-3` specifies:
-1. A way to fetch the archive nodes of a Ledger
-2. A generic format for sharing the block log without information loss. This includes the fields that a block must have
-3. A mechanism to verify the block log on the client side to allow downloading the block log via query calls
-4. A way for new standards to define new transactions types compatible with ICRC-3
+`ICRC-3` is a standard for exposing a **verifiable, append-only block log** on the [Internet Computer](https://internetcomputer.org).
+While widely used by token ledgers, ICRC-3 is **domain-agnostic**: any canister that emits a
+sequence of verifiable events (e.g., governance actions, system upgrades, oracle attestations)
+can use ICRC-3 to publish, verify, and archive those events.  
 
-## Archive Nodes
+**Producer canister.** The canister that exposes an ICRC-3 log.  It may be a token ledger or any other application (e.g., governance, oracle, system services). Throughout this document, “producer canister” replaces terms like “ledger” or "producer” to emphasize that ICRC-3 is domain-agnostic.
 
-The Ledger must expose an endpoint `icrc3_get_archives` listing all the canisters containing its blocks.
+
+
+## Scope & Non-Goals
+
+**Scope.** ICRC-3 standardizes:
+- A canonical, representation-independent `Value` type to encode blocks losslessly.
+- A linked block structure (`phash` → parent hash) enabling client-side verification.
+- Endpoints for retrieving recent and archived blocks, and for verifying the tip of the chain.
+- A mechanism (`btype`) that allows higher-level standards to define event semantics.
+
+**Non-Goals.**
+- ICRC-3 does **not** prescribe economic semantics (fees, rewards, slashing, etc.).
+- ICRC-3 does **not** define what an event “means.” Semantics are defined by the block’s `btype`
+  and the standard or application that introduces it.
+
+
+## What ICRC-3 Specifies
+
+ICRC-3 defines the **structure, linkage, and access model** for verifiable event logs on the
+Internet Computer. It standardizes:
+
+1. A generic, lossless format for representing blocks and their contents using the canonical `Value` type.  
+2. A linked block structure (`phash` → parent hash) enabling client-side verification.  
+3. A mechanism for verifying block log integrity on the client side, enabling query-based block retrieval.  
+4. A way for clients to fetch information about archive canisters associated with the log.  
+5. A way for new standards and applications to define **domain-specific block types** (`btype`) that remain interoperable under the same verifiable log framework.
+
+
+ICRC-3 does **not** prescribe the semantics of these blocks—it only defines how they are encoded,
+linked, and verified. Higher-level standards such as ICRC-1, ICRC-2, or ICRC-107 use ICRC-3
+to record domain-specific state transitions (e.g., transfers, approvals, or fees), while
+other systems may use it to log governance actions, oracle attestations, or protocol events.
+
+
+
+## Terminology and Block Structure
+
+ICRC-3 defines blocks as **verifiable records** that together form an append-only chain.
+Each block encapsulates a transaction or event in a canonical `Value` representation and
+links to its predecessor through the `phash` (parent hash).  
+
+Blocks are **domain-neutral**: the `btype` field identifies which higher-level standard or
+application defines the semantics of the `tx` content.  This enables interoperable verification across domains—ledgers, governance systems, or any canister that emits a sequence of verifiable actions.
+
+Although many deployments are token ledgers, the same verifiable log applies to governance decisions, protocol upgrades, oracle attestations, or any application that benefits from an auditable sequence of certified events.
+
 
 ## Block Log
 
-The block log is a list of blocks where each block contains the hash of its parent (`phash`). The parent of a block `i` is block `i-1` for `i>0` and `null` for `i=0`.
+- The parent of block `i` is block `i-1` for `i > 0`.
+- The genesis block (`i = 0`) has no parent and therefore MUST NOT include a `"phash"` field.
+
+
 
 ```
    ┌─────────────────────────┐          ┌─────────────────────────┐
@@ -30,12 +76,28 @@ The block log is a list of blocks where each block contains the hash of its pare
 
 ```
 
+## Block Retrieval and Archival
+
+Large canisters may offload older blocks to archive canisters.  
+ICRC-3 defines standard endpoints for:
+
+- Querying the list of archive canisters (`icrc3_get_archives`),
+- Retrieving blocks from both the primary and archive canisters (`icrc3_get_blocks`),
+- Verifying continuity between archived and unarchived segments.
+
+This enables clients to reconstruct the entire verified log even when its storage
+is distributed across multiple archive canisters.
+
+The following sections specify the generic block format, the meaning of its top-level fields,
+and the rules for defining new block types under ICRC-3.
+
+
 ## Value
 
 The [candid](https://github.com/dfinity/candid) format supports sharing information even when the client and the server involved do not have the same schema (see the [Upgrading and subtyping](https://github.com/dfinity/candid/blob/master/spec/Candid.md#upgrading-and-subtyping) section of the candid spec). While this mechanism allows to evolve services and clients
 independently without breaking them, it also means that a client may not receive all the information that the server is sending, e.g. in case the client schema lacks some fields that the server schema has.
 
-This loss of information is not an option for `ICRC-3`. The client must receive the same exact data the server sent in order to verify it. Verification is done by hashing the data and checking that the result is consistent with what has been certified by the server.
+Lossy decoding is unacceptable for verification. The client must receive the same exact data the server sent in order to verify it. Verification is done by hashing the data and checking that the result is consistent with what has been certified by the server.
 
 For this reason, `ICRC-3` introduces the `Value` type which never changes:
 
@@ -50,13 +112,53 @@ type Value = variant {
 };
 ```
 
-Servers must serve the block log as a list of `Value` where each `Value` represent a single block in the block log.
+Servers MUST serve the block log as a list of `Value` where each `Value` represents a single block in the block log.
+
+## Common Encodings (Non-Normative)
+
+The `Value` type is intentionally minimal and does not include specialized variants for principals, booleans, or optional values.  
+This section provides **non-normative guidance** for representing such values in a consistent and interoperable way.
+
+### Principals
+Encode principals as raw bytes using `Blob`:
+
+```
+variant { Blob = blob "<principal-bytes>" }
+```
+
+### Booleans
+Encode booleans as natural numbers:  
+- `false` → `variant { Nat = 0 : nat }`  
+- `true`  → `variant { Nat = 1 : nat }`
+
+### Optionals
+Two recommended patterns:
+
+1. **Preferred (map-style)** — when fields can be optional, use maps and omit absent fields:
+
+```
+variant { Map = vec {
+  record { "field_a"; <Value> };
+  // "field_b" omitted if absent
+} }
+```
+
+2. **Tuple/array form** — if array/tuple positional semantics must be preserved, use a **tagged option per slot**:  
+   - `None` → `Array [ Nat 0 ]`  
+   - `Some(x)` → `Array [ Nat 1, x ]`
+
+### Rationale
+These conventions avoid expanding the `Value` type while enabling consistent encoding of common structures across domains.  
+They are **non-binding** but strongly recommended for interoperability.
+
+
 
 ## Value Hash
 
 `ICRC-3` specifies a standard hash function over `Value`.
 
-This hash function should be used by Ledgers to calculate the hash of the parent of a block and by clients to verify the downloaded block log.
+This hash function MUST be used by the producer canister to compute parent hashes and by clients to verify downloaded blocks.
+
 
 The hash function is the [representation-independent hashing of structured data](https://internetcomputer.org/docs/current/references/ic-interface-spec#hash-of-map) used by the IC:
 - the hash of a `Blob` is the hash of the bytes themselves
@@ -64,279 +166,212 @@ The hash function is the [representation-independent hashing of structured data]
 - the hash of a `Nat` is the hash of the [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128) encoding of the number
 - the hash of an `Int` is the hash of the [`sleb128`](https://en.wikipedia.org/wiki/LEB128#Signed_LEB128) encoding of the number
 - the hash of an `Array` is the hash of the concatenation of the hashes of all the elements of the array
-- the hash of a `Map` is the hash of the concatenation of all the hashed items of the map sorted lexicographically. A hashed item is the tuple composed by the hash of the key and the hash of the value.
+- the hash of a `Map` is the hash of the concatenation of all the hashed items of the map sorted lexicographically by the keys.  Map keys are compared by the lexicographic order of their UTF-8 bytes. A hashed item is the tuple composed of the hash of the key and the hash of the value.
 
-Pseudocode for representation independent hashing of Value, together with test vectors to check compliance with the specification can be found [`here`](HASHINGVALUES.md). 
+Pseudocode for representation-independent hashing of `Value`, together with test vectors to check compliance with the specification can be found [`here`](HASHINGVALUES.md). 
 
 ## Blocks Verification
 
-The Ledger MUST certify the last block (tip) recorded. The Ledger MUST allow to download the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate is comprised of a tree containing the certified data and the signature. The tree MUST contain two labelled values (leafs):
-1. `last_block_index`: the index of the last block in the chain. The values must be expressed as [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128)
+The producer canister MUST certify the last block (tip) recorded. The producer canister MUST expose the certificate via the `icrc3_get_tip_certificate` endpoint. The certificate follows the [IC Specification for Certificates](https://internetcomputer.org/docs/current/references/ic-interface-spec#certification). The certificate is comprised of a tree containing the certified data and the signature. The tree MUST contain two labeled values (leaves):
+1. `last_block_index`: the index of the last block in the chain. The value MUST be expressed as [`leb128`](https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128)
 2. `last_block_hash`: the hash of the last block in the chain
 
-Clients SHOULD download the tip certificate first and then download the block backward starting from `last_block_index` and validate the blocks in the process.
+The certified data root MUST commit to at least the labeled values
+`last_block_index` and `last_block_hash` under those root labels. ICRC-3 does
+not require any additional certified keys, but implementations MAY include
+other labeled values in the certified data tree.
+
+
+These labels are direct children at the tree root (no extra path segments).
+
+Clients SHOULD download the tip certificate first and then download the blocks backward starting from `last_block_index` and validate the blocks in the process.
 
 Validation of block `i` is done by checking the block hash against
 1. if `i + 1 < len(chain)` then the parent hash `phash` of the block `i+1`
 2. otherwise the `last_block_hash` in the tip certificate.
 
+
+
 ## Generic Block Schema
 
-An ICRC-3 compliant Block
+An ICRC-3 compliant block:
 
-1. MUST be a `Value` of variant `Map`
-2. MUST contain a field `phash: Blob` which is the hash of its parent if it has a parent block
-3. SHOULD contain a field `btype: String` which uniquely describes the type of the Block. If this field is not set then the block type falls back to ICRC-1 and ICRC-2 for backward compatibility purposes
+1. MUST be a `Value` of variant `Map`.
+2. MUST contain `"phash" : Blob` — the hash of its parent block (absent only for the genesis block).
+3. MUST contain `"ts" : Nat` — the producer-assigned timestamp in nanoseconds since Unix epoch.
+4. SHOULD contain `"btype" : Text` — a unique identifier for the block type. If absent, the block is interpreted using the legacy ICRC-1/2 rules (see below).
 
-## Interaction with other standards
+### Timestamp (`ts`) Semantics
 
-Each standard that adheres to `ICRC-3` MUST define the list of block schemas that it introduces. Each block schema MUST:
+- `ts` is in nanoseconds since Unix epoch and set by the producer canister at block creation.
+- `ts` MUST be non-decreasing across blocks (`ts[i] >= ts[i-1]`). If the system clock moves backward, clamp: `ts[i] = max(ts[i-1], now)`.
+- When `ts[i] == ts[i-1]`, the block index is the tie-breaker for ordering.
 
-1. extend the [Generic Block Schema](#generic-block-schema)
-2. specify the expected value of `btype`. This MUST be unique accross all the standards. An ICRC-x standard MUST use namespacing for its op identifiers using the following scheme of using the ICRC standard's number as prefix to the name followed by an operation name that must begin with a letter:
 
-```
-op = icrc_number op_name
-icrc_number = nonzero_digit *digit
-nonzero_digit = "1" / "2" / "3" / "4" / "5" / "6" / "7" / "8" / "9"
-digit = "0" / nonzero_digit
-op_name = a-z *(a-z / digit / "_" / "-")
-```
+### Kinds of Blocks
 
-For instance, `1xfer` is the identifier of the ICRC-1 transfer operation.
+An ICRC-3 block can record different kinds of information. Some blocks record the result of a transaction submitted by a user. These typically contain a `tx` field describing the user’s intent and any parameters they provided.
 
-## Supported Standards
+Other blocks may be created by the producer canister itself, for example during an upgrade, migration, or system operation, to record changes in the canister's state that did not come from a user call.
 
-An ICRC-3 compatible Ledger MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`. The Ledger MUST return only blocks with `btype` set to one of the values returned by this endpoint.
+The `tx` field, when present, encodes the **intent** or **state change payload** associated with the block:
+- In user-initiated blocks, `tx` reflects the call parameters, subject to the canonical mapping defined for that block type.
+- In system-generated blocks, `tx` may capture the minimal structure required to interpret the block’s meaning and effect, as defined in the specification for that block type.
 
-## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
+The exact meaning of a block and its `tx` structure is determined by its block type.  
+Block types and their schemas are defined either by legacy standards (e.g., ICRC-1, ICRC-2) or by newer standards introducing `btype`-tagged blocks.
 
-ICRC-1 and ICRC-2 use the `tx` field to store input from the user and use the external block to store data set by the Ledger. For instance, the amount of a transaction is stored in the field `tx.amt` because it has been specified by the user, while the time when the block was added to the Ledger is stored in the field `ts` because it is set by the Ledger.
 
-A generic ICRC-1 or ICRC-2 Block:
 
-1. it MUST contain a field `ts: Nat` which is the timestamp of when the block was added to the Ledger
-2. if the operation requires a fee and if the `tx` field doesn't specify the fee then it MUST contain a field `fee: Nat` which specifies the fee payed to add this block to the Ledger
-3. its field `tx`
-    1. CAN contain a field `op: String` that uniquely defines the type of operation
-    2. MUST contain a field `amt: Nat` that represents the amount
-    3. MUST contain the `fee: Nat` field for operations that require a fee if the user specifies the fee in the request. If the user does not specify the fee in the request, then this field is not set and the top-level `fee` is set.
-    4. CAN contain the `memo: Blob` field if specified by the user
-    5. CAN contain the `ts: Nat` field if the user sets the `created_at_time` field in the request.
+## Principles for ICRC-3 Blocks
 
-Operations that require paying a fee: Transfer, and Approve.
+The following principles guide the evolution and interpretation of ICRC-3 and any standards that build on it.
 
-The type of a generic ICRC-1 or ICRC-2 Block is defined by either the field `btype` or the field `tx.op`. The first approach is preferred, the second one exists for backward compatibility. If both are specified then `btype` defines the type of the block regardless of `tx.op`.
+### 1. Deterministic Meaning
 
-`icrc3_supported_block_types` should always return all the `btype`s supported by the Ledger even if the Ledger doesn't support the `btype` field yet. For example, if the Ledger supports mint blocks using the backward compatibility schema, i.e. without `btype`, then the endpoint `icrc3_supported_block_types` will have to return `"1mint"` among the supported block types.
+- Every block type SHOULD define the deterministic change or effect it represents in the system’s state.
 
-### Account Type
+- This description captures the intended meaning of a block — what observable change or event it records — without prescribing how that change is implemented.
 
-ICRC-1 Account is represented as an `Array` containing the `owner` bytes and optionally the subaccount bytes.
+- For example, in ledgers this may refer to a balance update; in other domains, it could mean a configuration change, governance vote, or emitted signal.
 
-### Burn Block Schema
+- Fee handling or application-specific policies are layered on top of this meaning and may be standardized separately.
 
-1. the `btype` field MUST be `"1burn"` or `tx.op` field MUST be `"burn"`
-2. it MUST contain a field `tx.from: Account`
 
-Example with `btype`:
-```
-variant { Map = vec {
-    record { "btype"; "variant" { Text = "1burn" }};
-    record { "phash"; variant {
-        Blob = blob "\a1\a9p\f5\17\e5\e2\92\87\96(\c8\f1\88iM\0d(tN\f4-~u\19\88\83\d8_\b2\01\ec"
-    }};
-    record { "ts"; variant { Nat = 1_701_108_969_851_098_255 : nat }};
-    record { "tx"; variant { Map = vec {
-        record { "amt"; variant { Nat = 1_228_990 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\00\00\00\00\020\00\07\01\01" };
-                variant { Blob = blob "&\99\c0H\7f\a4\a5Q\af\c7\f4;\d9\e9\ca\e5 \e3\94\84\b5c\b6\97/\00\e6\a0\e9\d3p\1a" };
-        }}};
-        record { "memo"; variant { Blob = blob "\82\00\83x\223K7Bg3LUkiXZ5hatPT1b9h3XxJ89DYSU2e\19\07\d0\00"
-        }};
-    }}};
-}};
-```
+### 2. Separation of `btype` and `tx`
+- The btype field identifies the semantic family of a block — which higher-level standard or application defines its interpretation.
 
-Example without `btype`:
-```
-variant { Map = vec {
-    record { "phash"; variant {
-        Blob = blob "\a1\a9p\f5\17\e5\e2\92\87\96(\c8\f1\88iM\0d(tN\f4-~u\19\88\83\d8_\b2\01\ec"
-    }};
-    record { "ts"; variant { Nat = 1_701_108_969_851_098_255 : nat }};
-    record { "tx"; variant { Map = vec {
-        record { "op"; variant { Text = "burn" } };
-        record { "amt"; variant { Nat = 1_228_990 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\00\00\00\00\020\00\07\01\01" };
-                variant { Blob = blob "&\99\c0H\7f\a4\a5Q\af\c7\f4;\d9\e9\ca\e5 \e3\94\84\b5c\b6\97/\00\e6\a0\e9\d3p\1a" };
-        }}};
-        record { "memo"; variant { Blob = blob "\82\00\83x\223K7Bg3LUkiXZ5hatPT1b9h3XxJ89DYSU2e\19\07\d0\00"
-        }};
-    }}};
-}};
-```
+- Standards that introduce a new `btype` MUST:
+  - Assign a unique identifier for the `btype`.
+  - Specify the minimal structure required for interpreting that block type (including any specific fields required in `tx`).
+  - Define the intended meaning or effect in terms of this minimal structure.
 
-#### Mint Block Schema
+- Standards that define methods producing blocks MUST:
+  - Specify which `btype` the method produces.
+  - Define the **canonical mapping** from method call parameters to the `tx` field of the resulting block.
+  - Ensure that `tx` contains only parameters explicitly provided by the caller (except where the block type definition requires otherwise).
 
-1. the `btype` field MUST be `"1mint"` or the `tx.op` field MUST be `"mint"`
-2. it MUST contain a field `tx.to: Account`
+### 3. Avoiding Collisions Among User-Initiated Blocks
 
-Example with `btype`:
-```
-variant { Map = vec {
-    record { "btype"; "variant" { Text = "1mint" }};
-    record { "ts"; variant { Nat = 1_675_241_149_669_614_928 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "amt"; variant { Nat = 100_000 : nat } };
-        record { "to"; variant { Array = vec {
-                variant { Blob = blob "Z\d0\ea\e8;\04*\c2CY\8b\delN\ea>]\ff\12^. WGj0\10\e4\02" };
-        }}};
-    }}};
-}};
-```
+Not all blocks contain a `tx` field, and not all blocks with a `tx` field correspond to a user-initiated method call.  
+**Collision-avoidance requirements apply only to blocks that represent standardized user calls.**
 
-Example without `btype`:
-```
-variant { Map = vec {
-    record { "ts"; variant { Nat = 1_675_241_149_669_614_928 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "op"; variant { Text = "mint" } };
-        record { "amt"; variant { Nat = 100_000 : nat } };
-        record { "to"; variant { Array = vec {
-                variant { Blob = blob "Z\d0\ea\e8;\04*\c2CY\8b\delN\ea>]\ff\12^. WGj0\10\e4\02" };
-        }}};
-    }}};
-}};
-```
+For any ICRC standard that defines a **user-callable method which produces blocks**:
 
-#### Transfer and Transfer From Block Schema
+- Blocks produced by that method SHOULD include a `tx` field.
+- The `tx` field for such blocks SHOULD include a **method discriminator** — a field whose namespaced value uniquely identifies the standardized method that created the block. The recommended field name is `op`, but standards MAY use an alternative (e.g., `mthd`) provided the choice is documented in the method’s canonical `tx` mapping.
+- The discriminator value SHOULD be namespaced with the standard’s ICRC number
+  (e.g., `122freeze_account`, `107set_fee_collector`) to avoid collisions with operations defined by other standards.
 
-1. the `btype` field MUST be
-    1. `"2xfer"` for `icrc2_transfer_from` blocks
-    2. `"1xfer"` for `icrc1_transfer` blocks
-1. if `btype` is not set then `tx.op` field MUST be `"xfer"`
-2. it MUST contain a field `tx.from: Account`
-3. it MUST contain a field `tx.to: Account`
-4. it CAN contain a field `tx.spender: Account`
+Typed blocks that **do not** represent method calls (e.g., upgrade markers, maintenance events, migration records, or system actions) MAY omit the `tx` field entirely and therefore MAY omit the method discriminator.
 
-Example with `btype`:
-```
-variant { Map = vec {
-    record { "btype"; "variant" { Text = "1xfer" }};
-    record { "fee"; variant { Nat = 10 : nat } };
-    record { "phash"; variant { Blob =
-        blob "h,,\97\82\ff.\9cx&l\a2e\e7KFVv\d1\89\beJ\c5\c5\ad,h\5c<\ca\ce\be"
-    }};
-    record { "ts"; variant { Nat = 1_701_109_006_692_276_133 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "amt"; variant { Nat = 609_618 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
-                variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
-        }}};
-        record { "to"; variant { Array = vec {
-            variant { Blob = blob " \ef\1f\83Zs\0a?\dc\d5y\e7\ccS\9f\0b\14a\ac\9f\fb\f0bf\f3\a9\c7D\02" };
-            variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
-        }}};
-    }}};
-}};
-```
+Legacy ICRC-1/2 blocks continue to use their historical operation names (`"xfer"`, `"mint"`, `"burn"`, `"approve"`), and are exempt from namespacing requirements.
 
-Example without `btype`:
-```
-variant { Map = vec {
-    record { "fee"; variant { Nat = 10 : nat } };
-    record { "phash"; variant { Blob =
-        blob "h,,\97\82\ff.\9cx&l\a2e\e7KFVv\d1\89\beJ\c5\c5\ad,h\5c<\ca\ce\be"
-    }};
-    record { "ts"; variant { Nat = 1_701_109_006_692_276_133 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "op"; variant { Text = "xfer" } };
-        record { "amt"; variant { Nat = 609_618 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
-                variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
-        }}};
-        record { "to"; variant { Array = vec {
-            variant { Blob = blob " \ef\1f\83Zs\0a?\dc\d5y\e7\ccS\9f\0b\14a\ac\9f\fb\f0bf\f3\a9\c7D\02" };
-            variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
-        }}};
-    }}};
-}};
-```
 
-#### Approve Block Schema
+### 4. Capturing the User Call (Where Applicable)
 
-1. the `btype` field MUST be `"2approve"` or `tx.op` field MUST be `"approve"`
-2. it MUST contain a field `tx.from: Account`
-3. it MUST contain a field `tx.spender: Account`
-4. it CAN contain a field `tx.expected_allowance: Nat` if set by the user
-5. it CAN contain a field `tx.expires_at: Nat` if set by the user
+If a block represents the result of a **standardized user-initiated method call**, then:
 
-Example with `btype`:
-```
-variant { Map = vec {
-    record { "btype"; "variant" { Text = "2approve" }};
-    record { "fee"; variant { Nat = 10 : nat } };
-    record { "phash"; variant {
-        Blob = blob ";\f7\bet\b6\90\b7\ea2\f4\98\a5\b0\60\a5li3\dcXN\1f##2\b5\db\de\b1\b3\02\f5"
-    }};
-    record { "ts"; variant { Nat = 1_701_167_840_950_358_788 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "amt"; variant { Nat = 18_446_744_073_709_551_615 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\16c\e1\91v\eb\e5)\84:\b2\80\13\cc\09\02\01\a8\03[X\a5\a0\d3\1f\e4\c3{\02" };
-        }}};
-        record { "spender"; variant { Array = vec {
-            variant { Blob = blob "\00\00\00\00\00\e0\1dI\01\01" };
-        }}};
-    }}};
-}}};
-```
+- The block **SHOULD** include a `tx` field.
+- For user-initiated blocks, a namespaced method discriminator **SHOULD** be included (see above).
+- The `tx` field MUST follow the canonical mapping defined by the method standard.
+  Semantic fields required by the block type may appear **outside** `tx` when defined
+  as top-level fields by the block-type specification (e.g., `fee`, `caller`).
+- All parameters explicitly provided by the caller **MUST** appear in `tx` exactly as provided.
+- Optional parameters that were not passed in the call **MUST NOT** appear in `tx`.
 
-Example without `btype`:
-```
-variant { Map = vec {
-    record { "fee"; variant { Nat = 10 : nat } };
-    record { "phash"; variant {
-        Blob = blob ";\f7\bet\b6\90\b7\ea2\f4\98\a5\b0\60\a5li3\dcXN\1f##2\b5\db\de\b1\b3\02\f5"
-    }};
-    record { "ts"; variant { Nat = 1_701_167_840_950_358_788 : nat } };
-    record { "tx"; variant { Map = vec {
-        record { "op"; variant { Text = "approve" } };
-        record { "amt"; variant { Nat = 18_446_744_073_709_551_615 : nat } };
-        record { "from"; variant { Array = vec {
-                variant { Blob = blob "\16c\e1\91v\eb\e5)\84:\b2\80\13\cc\09\02\01\a8\03[X\a5\a0\d3\1f\e4\c3{\02" };
-        }}};
-        record { "spender"; variant { Array = vec {
-            variant { Blob = blob "\00\00\00\00\00\e0\1dI\01\01" };
-        }}};
-    }}};
-}}};
-```
+However:
 
-## Specification
+- Blocks that are **not** created by user calls — such as system-generated blocks, upgrade or migration markers, or internal bookkeeping events — MAY omit the `tx` field entirely.
+- Typed blocks created by system logic MAY include a `tx` field without a method discriminator, or MAY use a `tx` whose structure is defined solely by the block type (`btype`) specification.
 
-### `icrc3_get_blocks`
+This distinction allows ICRC-3 to support both:
+- canonical, audit-ready records of user calls, and
+- domain-specific or system-generated events,
+without over-constraining block structure or requiring the presence of `tx` or a method discriminator in every block.
+
+
+### 5. Future-Proofing and Extensibility
+- Additional non-semantic fields (e.g., metadata, hashes, references) MAY be added to `tx` without introducing a new `btype`, provided:
+  - They do not affect the block’s interpreted effects.
+  - They are ignored by block verification and interpretation logic that only relies on the minimal `tx` structure defined by the `btype`.
+  - Any change to the minimal semantic structure of a block REQUIRES introducing a new `btype`. If additions change how a block’s effect is determined from `tx`, a new btype SHOULD be introduced.
+
+
+### Note on Ledger-Specific Fields
+- Blocks may include additional fields specific to a given standard or ledger (e.g., `fee`, metadata, references).  
+- ICRC-3 defines how such fields are recorded and verified, but **does not define their economic or behavioral semantics**. Those semantics must be specified by the standard that introduces the block type (e.g., fee rules in ICRC-107).
+
+## Semantics of Blocks: Evaluation Model
+
+To ensure consistency across standards and implementations, the semantics of any
+block must be interpretable through the following evaluation model. Each standard
+that defines a block type specifies how to “plug into” this model (by defining
+its minimal schema, pre-fee transition, fee payer, etc.). For block types
+that do not use a `tx` field, the standard MUST specify how to interpret the
+block directly from its top-level fields.
+
+1. Identify block type  
+   • If `btype` is present, use it.  
+   • If no `btype`, fall back to legacy ICRC-1/2 inference from `tx.op`.
+
+2. Validate block fields  
+   • Check that all semantic fields required by the block-type specification are
+     present.  
+   • Semantic fields may appear **inside `tx`** or **at the top level**, depending on the
+     block-type specification.  
+   • Additional non-semantic fields MAY appear anywhere in the block and MUST be
+     ignored by generic interpreters.  
+   • ICRC-3 itself does not distinguish between “semantic” and “non-semantic”
+     fields; it is the responsibility of the block type specification to state
+     which fields affect the meaning of the block and how extra fields are to be
+     treated (e.g., ignored by generic interpreters).
+
+3. Derive pre-fee state transition  
+   • Using the semantic fields identified by the block-type specification
+     (typically the contents of `tx`, plus any semantic top-level fields such as
+     `caller`, `fee`, etc.), apply the deterministic state change implied by the
+     block, **ignoring any fees**.  
+   • For block types that do not use `tx`, the standard MUST describe how to
+     derive this transition directly from the top-level fields.  
+   • Examples: debit/credit balances, mint, burn, update allowance, configuration
+     change, etc.
+
+4. Apply fee (if applicable)  
+   • If the block type involves fees, determine the **effective fee** according
+     to the rules defined for that block type (or a referenced fee standard).  
+   • Deduct the fee from the account designated as the **fee payer** for this
+     block type.  
+   • Adjust balances accordingly (e.g., for mints: `to` receives `amt - fee`).  
+   • The destination or handling of the fee (burn, treasury, etc.) may be
+     specified by the block type or by a separate fee standard (e.g., ICRC-107).
+     When unspecified, the destination/handling of the fee is implementation- or ledger-defined; ledgers may, for example, burn fees or route them to a treasury.
+
+5. Enforce validity conditions  
+   • Validate that all preconditions and invariants defined by the block type’s
+     standard are satisfied.  
+   • This includes checks such as sufficient balances, allowance coverage, or
+     limits on fees, as applicable.
+
+
+## Methods
+
+This section defines the methods that an ICRC-3 compliant producer canister MUST expose.
+These methods provide read-only access to the certified, append-only block log described above.
+
+All methods in this section MUST be implemented as query methods.
+
+
+### `icrc3_get_archives`
+Returns metadata about the archive canisters that store older portions of the block log.
+Clients use `from` to request only archives that appear after a previously seen archive.
 
 ```
-type Value = variant {
-    Blob : blob;
-    Text : text;
-    Nat : nat; // do we need this or can we just use Int?
-    Int : int;
-    Array : vec Value;
-    Map : vec record { text; Value };
-};
-
 type GetArchivesArgs = record {
-    // The last archive seen by the client.
-    // The Ledger will return archives coming
-    // after this one if set, otherwise it
-    // will return the first archives.
+// The producer will return archives that appear after
+// this one in its internal archive ordering if set,
+// otherwise it will return the first archives.
+
     from : opt principal;
 };
 
@@ -351,17 +386,51 @@ type GetArchivesResult = vec record {
     end : nat;
 };
 
+service : {
+    icrc3_get_archives : (GetArchivesArgs) -> (GetArchivesResult) query;
+};
+
+```
+#### Rules
+
+- Archives MUST be returned in strictly increasing order of their start index.
+- If `from` is `null`, the producer MUST return the first archive(s).
+- If `from` is set, the producer MUST return only the archives whose
+`canister_id` appears *after* the specified principal in the producer’s
+internal archive ordering.
+
+- For every archive returned:
+  - `start` and `end` MUST describe a contiguous, inclusive block range;
+  - that archive MUST be able to serve exactly that range via its callbacks (as returned indirectly in `icrc3_get_blocks`).
+- The producer MAY change its archival layout over time (e.g., due to upgrades, reallocation, compaction, or   reinstallation). The values of `canister_id`, `start`, and `end` MUST correctly reflect the archival layout at the time of the call.
+- A producer MUST NOT return overlapping or out-of-order ranges across the union of all archives.
+
+### `icrc3_get_blocks`
+Returns blocks for one or more requested ranges from the canonical block log.
+Blocks that are no longer stored locally by the producer are returned indirectly via archive callbacks.
+
+```
+type Value = variant {
+    Blob : blob;
+    Text : text;
+    Nat : nat; 
+    Int : int;
+    Array : vec Value;
+    Map : vec record { text; Value };
+};
+
+
 type GetBlocksArgs = vec record { start : nat; length : nat };
 
 type GetBlocksResult = record {
     // Total number of blocks in the block log
     log_length : nat;
 
-    // Blocks found locally to the Ledger
+    // Blocks found locally to the producing canister
     blocks : vec record { id : nat; block: Value };
 
     // List of callbacks to fetch the blocks that are not local
-    // to the Ledger, i.e. archived blocks
+    // to the producing canister, i.e. archived blocks
     archived_blocks : vec record {
         args : GetBlocksArgs;
         callback : func (GetBlocksArgs) -> (GetBlocksResult) query;
@@ -369,12 +438,61 @@ type GetBlocksResult = record {
 };
 
 service : {
-    icrc3_get_archives : (GetArchivesArgs) -> (GetArchivesResult) query;
     icrc3_get_blocks : (GetBlocksArgs) -> (GetBlocksResult) query;
 };
 ```
 
+
+#### Rules
+
+- Block indices are zero-based. The genesis block, if present, has index `0`.
+
+- The `id` field of each returned local block MUST equal its block height  
+  (i.e., its index in the canonical block log).
+
+- Each element `r` in `GetBlocksArgs` describes a **half-open** range  
+  `[r.start, r.start + r.length)` of requested indices.
+
+- If **all** requested indices across all ranges are greater than the last block
+  index at the time of the call, the producer MUST return:
+  - `blocks = []`, and  
+  - `archived_blocks = []`.
+
+- The `blocks` vector:
+  - MUST contain locally stored blocks whose indices lie in at least a subset of
+    the requested ranges,
+  - MUST be sorted by `id` in strictly increasing order,
+  - MUST NOT contain duplicates.
+
+- The producer MAY return fewer local blocks than requested:
+  - due to security concerns,
+  - due to platform restrictions (e.g., message size limits),
+  - because it has reached the current tip of the log,
+  - because some of the requested indices are archived.
+
+- Each entry in `archived_blocks`:
+  - MUST have `args` describing one or more contiguous ranges of archived
+    indices, and
+  - MUST provide a `callback` which, when called with any subset of the
+    ranges listed in `args`, returns the blocks whose `id` values lie within
+    the requested ranges, except where constraints such as message size,
+    security limits, or the archive’s own tip boundaries prevent returning
+    the full set.
+
+
+- Implementations MAY therefore return only a **partial view** of the blocks in
+  the requested ranges. Clients MUST be prepared to receive fewer blocks than
+  actually exist in those ranges and MAY issue additional `icrc3_get_blocks`
+  calls with narrower or adjusted ranges if they require full coverage.
+
+- Implementations MUST NOT misrepresent the structure of the log:
+  - no returned block may have an incorrect `id`,
+  - blocks MUST appear in strictly increasing `id` order,
+  - and blocks MUST NOT be reordered or duplicated.
+
+
 ### `icrc3_get_tip_certificate`
+Returns the certified tip of the block log. The certificate authenticates a labeled subtree of the canister’s certified data that includes the last block index and the hash of the last block.
 
 ```
 // See https://internetcomputer.org/docs/current/references/ic-interface-spec#certification
@@ -392,10 +510,824 @@ service : {
 };
 ```
 
+#### Rules
+
+- If the producer canister has not yet emitted any blocks, it MAY return `null`.
+
+- Otherwise, the method MUST return an IC data certificate whose `hash_tree` authenticates a labeled subtree containing at least:
+  - `last_block_index` — the leb128-encoded index of the last block, and
+  - `last_block_hash` — the hash of that block.
+
+- Additional labeled values MAY be present in the certified data tree.
+
+- The certificate MUST be a valid IC data certificate as defined in the IC interface specification. In particular, its signature and delegation MUST verify against the IC root key, and the `hash_tree` MUST be consistent with the certified data used to derive `last_block_index` and `last_block_hash` at the time the certificate was created.
+
+
 ### `icrc3_supported_block_types`
+Returns the set of block types (`btype` identifiers) that the producer canister may emit in its block log.
+
+Producers that emit legacy ICRC-1/ICRC-2 semantics using the legacy untyped format MUST still include the corresponding legacy btype strings in the return value of `icrc3_supported_block_types`, even though the blocks themselves do not carry a `btype` field.
+
 
 ```
 service : {
     icrc3_supported_block_types : () -> (vec record { block_type : text; url : text }) query;
 };
 ```
+
+#### Rules
+
+- The returned vector MUST contain exactly one entry for each `btype` the producer canister is capable of emitting over its lifetime.
+
+- The vector MUST be sorted lexicographically by the UTF-8 bytes of `block_type`.
+
+- Producers that only emit legacy ICRC-1/ICRC-2 blocks MUST still return the legacy block types they support.
+
+- Producers that support new, typed block kinds defined by other ICRC standards (e.g., ICRC-107, ICRC-122/123/124) MUST include those `btype` identifiers as well.
+
+- The `url` field MUST point to a stable, canonical description of the standard defining that block type (e.g., the ICRC repository URL).
+
+
+
+## Interaction with Other Standards
+
+ICRC-3 defines how blocks are structured and verified. Other standards extend this by either:  
+(1) introducing new block types (`btype`), or  
+(2) defining canonical mappings from standardized method calls to existing block types.
+
+### Standards That Introduce Block Types
+
+A standard may define one or more **block types** (`btype`) that represent
+domain-specific events. Block-type standards define **what a block means**, not how
+blocks are created. The creation of blocks (i.e., the mapping from method calls to `tx`
+fields) is handled separately by the standard that defines the method.
+
+A standard that defines a new block type MUST:
+
+- **Assign a unique `btype` string** for that block type.  
+  This identifier determines how the block is interpreted.
+
+- **Not define or constrain the method discriminator** (e.g., `tx.op`, `tx.mthd`), because:
+  - The method discriminator belongs to the standard that defines the *method* which creates the
+    block, not to the block-type standard.
+  - A single block type may be produced by multiple methods, potentially from
+    different standards.
+  - Some blocks (e.g., system-generated events or migration markers) do not
+    include a method discriminator at all.
+
+- **Specify the minimal structure** required to interpret the block and recover its
+  semantic meaning.  
+  This structure MUST contain all fields needed to reconstruct the event’s
+  effect. These semantic fields may live inside `tx`, at the top level, or be
+  split between the two, as explicitly defined by the block-type specification.
+
+- **Define precise semantics** for the block using the  
+  *Semantics of Blocks: Evaluation Model*:  
+  - pre-fee state transition,  
+  - fee payer (if applicable),  
+  - validity conditions,  
+  - any invariants or constraints.
+
+- **Describe how fees are handled**, if the block type involves fees:  
+  - The standard **SHOULD** specify the **effective fee** (the fee that is
+    actually charged), where this is well-defined.  
+  - The standard **SHOULD** specify the **fee payer**, as an expression
+    resolvable from fields in the block, where this is possible.  
+  - If applicable, the standard **MAY** reference ICRC-107 to specify **where
+    the fee goes** (e.g., burned, sent to a collector, etc.).  
+  - If some fee-related aspects are intentionally left implementation- or
+    ledger-defined, the standard SHOULD say so explicitly.
+
+- **Allow additional non-semantic fields** in blocks of this type (e.g., metadata,
+  hashes, memo fields), provided they do not change the semantic interpretation.  
+  The block-type specification MUST clearly identify which fields—whether in `tx`
+  or at the top level—are semantic (i.e., affect the block’s meaning). Generic
+  interpreters MAY ignore any other fields.
+
+This separation ensures:
+- Block types define *what* a block means.  
+- Methods define *how* blocks are formed.  
+- The same block type can be produced by multiple standards without semantic
+  ambiguity.  
+
+### Standards That Define Methods
+
+A standard that defines a method which produces blocks MUST:
+
+- Specify which `btype` (if any) the method produces.  
+- Define the canonical mapping from method inputs to the `tx` field of the
+  resulting block (and any method-specific top-level fields, if the block-type
+  specification requires them).  
+- Ensure all required semantic fields from the block type’s minimal schema are
+  populated, whether they live inside `tx` or at the top level.  
+- Include only caller-provided optional fields in `tx`; omit optionals that were
+  not supplied.  
+- For methods that represent user-initiated calls, include a **method discriminator** field in
+  `tx` (namespaced as described below) to identify the operation and avoid
+  collisions. The recommended field name is `op`, but standards MAY use an
+  alternative (e.g., `mthd`) provided the choice is documented in the canonical `tx` mapping.
+- Ensure that the namespaced discriminator value **uniquely identifies the standardized
+  method** that created the block within the ICRC namespace.
+
+This division of responsibility ensures that:
+
+- Block types define **what blocks mean** (semantics).  
+- Methods define **how blocks are created** (intent capture).  
+- Tooling and clients can rely on predictable, non-colliding `tx` values.
+
+#### Namespacing for Method Discriminators
+
+The namespacing rules apply to **standards that define user-callable methods**, not to the
+standards that define block types.
+
+If a standard defines a method that produces blocks, and those blocks include a method
+discriminator in `tx` (whether named `op`, `mthd`, or otherwise), then:
+
+- The discriminator value MUST be namespaced using the ICRC number of the **method’s standard**, not the
+  block-type standard.
+- The discriminator value MUST uniquely identify the standardized method that created the
+  block within the global ICRC namespace.
+
+Formally, the discriminator value follows this grammar:
+
+- `value = <method_standard_number><operation_name>`
+- `method_standard_number`: a non-zero digit followed by zero or more digits
+- `operation_name`: starts with a lowercase letter, then lowercase letters, digits,
+  `_`, or `-`
+
+**Examples**
+If ICRC-107 defines a user-callable method `set_fee_collector`, and that method produces
+blocks of type `107feecol`, then:
+
+- `btype = "107feecol"` is defined by the **block-type standard** (ICRC-107)
+- `tx.mthd = "107set_fee_collector"` is defined by the **method standard** (also ICRC-107, using `mthd` as its discriminator field)
+
+If a method in ICRC-122 produces blocks of type `122freeze`, then:
+
+- `btype = "122freeze"`
+- `tx.mthd = "122freeze_account"` (using `mthd` as its discriminator field)
+
+Legacy ICRC-1 and ICRC-2 blocks continue to use their historical operation names
+(`"xfer"`, `"mint"`, `"burn"`, `"approve"`) and are exempt from namespacing.
+
+### Note on Fees
+
+ICRC-3 standardizes how fees are recorded in blocks, but it does not prescribe how fees are
+calculated or collected.
+
+- Every standard that introduces a block type involving fees **SHOULD** specify who the
+  fee payer is and, where possible, how the effective fee is determined, so that
+  responsibility is unambiguous.  
+- Where this cannot be expressed generically (for example, because the policy is
+  intentionally ledger-defined), the standard SHOULD state that the fee payer and/or
+  fee amount are implementation- or ledger-specific.  
+- The rules for interpreting the amount and destination of fees MAY be delegated to
+  ICRC-107 (Fee Handling in Blocks). Ledgers that do not yet implement ICRC-107 MAY
+  still produce valid ICRC-3 blocks, but their fee behavior will remain
+  implementation-specific until aligned with ICRC-107.
+
+
+
+
+## Supported Standards
+
+An ICRC-3 compatible producer canister MUST expose an endpoint listing all the supported block types via the endpoint `icrc3_supported_block_types`.
+
+- For **typed** blocks, the producer canister MUST only produce blocks whose `"btype"` value is included in this list.
+- For **legacy** ICRC-1/2 blocks (no `"btype"`), the producer canister MUST include the conventional identifiers (e.g., `"1xfer"`, `"2approve"`) in this list to advertise support, even though the blocks themselves do not carry a `"btype"` field.
+
+
+
+## Candid Specification
+
+```
+// ICRC-3: Block Log Candid Interface
+
+// Generic representation-independent value type used for blocks.
+type Value = variant {
+  Blob : blob;
+  Text : text;
+  Nat  : nat;
+  Int  : int;
+  Array : vec Value;
+  Map   : vec record { text; Value };
+};
+
+// Archives
+
+type GetArchivesArgs = record {
+  // The last archive seen by the client.
+  // The producer will return archives that appear after
+  // this one in its internal archive ordering if set,
+  // otherwise it will return the first archives.
+  from : opt principal;
+};
+
+type GetArchivesResult = vec record {
+  // The id of the archive canister
+  canister_id : principal;
+
+  // The first block in the archive (inclusive)
+  start : nat;
+
+  // The last block in the archive (inclusive)
+  end : nat;
+};
+
+// Blocks
+
+// Each element describes a half-open range [start, start + length)
+type GetBlocksArgs = vec record {
+  start  : nat;
+  length : nat;
+};
+
+type GetBlocksResult = record {
+  // Total number of blocks in the block log
+  log_length : nat;
+
+  // Blocks found locally on the producer canister
+  blocks : vec record {
+    id    : nat;   // block index
+    block : Value; // encoded block
+  };
+
+  // Callbacks to fetch archived blocks
+  archived_blocks : vec record {
+    // Archived ranges available via this callback
+    args : GetBlocksArgs;
+
+    // Callback to fetch a subset of the above ranges
+    callback : func (GetBlocksArgs) -> (GetBlocksResult) query;
+  };
+};
+
+// Tip certificate
+
+// See https://internetcomputer.org/docs/current/references/ic-interface-spec#certification
+type DataCertificate = record {
+  // Signature of the root of the hash_tree
+  certificate : blob;
+
+  // CBOR-encoded hash_tree
+  hash_tree : blob;
+};
+
+// Supported block types
+
+type SupportedBlockType = record {
+  block_type : text; // e.g. "1xfer", "107feecol"
+  url        : text; // canonical URL of the defining spec
+};
+
+// ICRC-3 service
+
+service : {
+  // Returns archive metadata
+  icrc3_get_archives : (GetArchivesArgs) -> (GetArchivesResult) query;
+
+  // Returns blocks and archive callbacks for one or more ranges
+  icrc3_get_blocks : (GetBlocksArgs) -> (GetBlocksResult) query;
+
+  // Returns a certificate for the tip of the block log
+  icrc3_get_tip_certificate : () -> (opt DataCertificate) query;
+
+  // Returns the set of block types this producer may emit
+  icrc3_supported_block_types : () -> (vec SupportedBlockType) query;
+}
+```
+
+
+
+
+
+## [ICRC-1](../ICRC-1/README.md) and [ICRC-2](../ICRC-2/README.md) Block Schema
+
+
+This section describes how ICRC-1 and ICRC-2 operations are represented in ICRC-3-compliant blocks.  These blocks follow the **legacy format**, meaning they do not have a `btype` field.  
+Instead, their type is inferred directly from the content of the `tx` field, specifically from the value of `tx.op`, which records the canonical mapping of the original method call.
+
+
+### Legacy ICRC-1 and ICRC-2 Block Structure
+
+ICRC-1 and ICRC-2 blocks **MUST NOT** include a `btype` field. These standards use the legacy block format where the block type is determined exclusively from the content of the `tx` field.  
+
+Legacy blocks therefore follow a fixed generic structure, with semantics inferred from `tx.op`.
+
+---
+
+#### Generic Legacy Block
+
+A legacy block:
+
+- **MUST** be a `Value::Map` containing at least:
+  - `"phash"`: `Blob` — the parent hash.
+  - `"ts"`: `Nat` — the timestamp (in nanoseconds since Unix epoch) set by the producer canister when the block was created.
+  - `"tx"`: `Value::Map` — representing the user’s transaction intent.
+- **MAY** include:
+  - `"fee": Nat` — the fee actually charged by the producer canister, if any.
+
+
+
+
+### Effective Fee
+
+The **effective fee** is the fee charged by the ledger. For a block, this is computed as:
+
+1. If a top-level `"fee"` is present, then `effective_fee = fee`.  
+2. Otherwise, if `tx.fee` is present, then `effective_fee = tx.fee`.  
+3. Otherwise, `effective_fee = 0`.  
+
+- `tx.fee` records what the caller supplied; when the top-level `"fee"` is absent, it also implies the ledger charged that same amount.  
+- If both top-level `"fee"` and `tx.fee` are present and differ, the top-level `"fee"` is authoritative.  
+- Implementations **MAY** omit the top-level `"fee"` when it equals `tx.fee` to save space.  
+- What happens with the effective fee (e.g., burning it, sending it to a collector account, redistributing) is up to the implementation. A common policy is to burn fees.  
+- **ICRC-107** specifies how fee collection and handling are formalized. Ledgers that wish to expose their fee policy in a standardized way should follow that specification.
+
+
+---
+
+#### Transfer Block (`op = "xfer"`)
+
+**Structure**
+- **MUST** contain `tx.op = "xfer"`.
+- **MUST** contain `tx.from : Account`.
+- **MUST** contain `tx.to : Account`.
+- **MUST** contain `tx.amt : Nat`.
+- **MAY** contain `tx.fee : Nat` if provided by the caller.
+- **MAY** contain `tx.memo : Blob` if provided by the caller.
+- **MAY** contain `tx.ts : Nat` if provided by the caller (`created_at_time`).
+- **MAY** contain `tx.spender : Account` if created via `icrc2_transfer_from`.
+
+**Semantics**  
+Transfers debit `tx.amt` (and any fee) from `tx.from` and credit `tx.amt` to `tx.to`.  
+If `tx.spender` is present, the operation is executed under an approval, which must cover at least `tx.amt + effective_fee`. The allowance is reduced accordingly.  
+
+**Minting-account prohibition.** A block with `tx.op = "xfer"` MUST NOT have either endpoint equal to the minting account. If `tx.from` equals the minting account, the operation MUST be represented as `op = "mint"`. If `tx.to` equals the minting account, the operation MUST be represented as `op = "burn"`. It is strictly prohibited for both `tx.from` and `tx.to` to be the minting account simultaneously.
+
+
+**Fee payer:** `tx.from`.
+
+---
+
+#### Mint Block (`op = "mint"`)
+
+**Structure**
+- **MUST** contain `tx.op = "mint"`.
+- **MUST** contain `tx.to : Account`.
+- **MUST** contain `tx.amt : Nat`.
+- **MUST NOT** contain `tx.from`.
+- **MUST NOT** contain `tx.fee`.
+- **MAY** contain `tx.spender : Account`.
+- **MAY** contain `tx.memo : Blob` if provided by the caller.
+- **MAY** contain `tx.ts : Nat` if provided by the caller.
+
+Mints create `tx.amt` new tokens. If an effective fee is charged, it is deducted from `tx.to` immediately, so `tx.to` receives `tx.amt - effective_fee` (require `effective_fee ≤ tx.amt`).  
+If `tx.spender` is present, the mint is executed under an approval on the minting account; that approval **MUST** be at least `tx.amt` and **MUST** be reduced by `tx.amt`.
+
+
+**Fee payer:** `tx.to`.
+
+---
+
+#### Burn Block (`op = "burn"`)
+
+**Structure**
+- **MUST** contain `tx.op = "burn"`.
+- **MUST** contain `tx.from : Account`.
+- **MUST** contain `tx.amt : Nat`.
+- **MUST NOT** contain `tx.to`.
+- **MUST NOT** contain `tx.fee`. 
+- **MAY** contain `tx.memo : Blob` if provided by the caller.
+- **MAY** contain `tx.ts : Nat` if provided by the caller.
+
+**Semantics**  
+Burns remove `tx.amt` tokens from `tx.from`. Any fee is also debited from `tx.from`.  
+
+**Fee payer:** `tx.from`.
+
+---
+
+#### Approve Block (`op = "approve"`)
+
+**Structure**
+- **MUST** contain `tx.op = "approve"`.
+- **MUST** contain `tx.from : Account`.
+- **MUST** contain `tx.spender : Account`.
+- **MUST** contain the allowance field as defined by ICRC-2 (e.g., `tx.amt : Nat`).
+- **MAY** contain `tx.fee : Nat` if provided by the caller.
+- **MAY** contain `tx.memo : Blob` if provided by the caller.
+- **MAY** contain `tx.ts : Nat` if provided by the caller.
+
+**Semantics**  
+Approvals set or update the allowance of `tx.spender` on `tx.from`.  
+Any subsequent `xfer` block with `tx.spender` consumes the allowance.  
+Fees (if any) are debited from `tx.from`.  
+If the approval is set on the minting account, it can be consumed by `icrc2_transfer_from` mints; such mints reduce the allowance by `tx.amt`.
+
+
+**Fee payer:** `tx.from`.
+
+---
+
+
+
+
+### Compliance Reporting
+
+Although legacy ICRC-1 and ICRC-2 blocks do not include the `btype` field, ledgers **MUST** still report their supported block types via the `icrc3_supported_block_types` endpoint. By convention, the following identifiers are used to describe the types of these legacy blocks:
+
+- "1burn" for burn blocks
+- "1mint" for mint blocks
+- "1xfer" for `icrc1_transfer` blocks
+- "2xfer" for `icrc2_transfer_from` transfer blocks
+- "2burn" for `icrc2_transfer_from` burn blocks
+- "2mint" for `icrc2_transfer_from` delegated mint blocks
+- "2approve" for `icrc2_approve` blocks
+
+
+### Account Type
+
+ICRC-1 Account is represented as an `Array` containing the `owner` bytes and optionally the subaccount bytes.  
+
+* `owner` is the raw principal bytes.
+* `subaccount` is a 32-byte blob when present.
+* The account value is Array of 1 or 2 Blob items in order: `[owner, subaccount?]`.
+
+Example of account representation as an array with two blobs, one for the owner principal and the second for the subaccount:
+```
+variant {
+  Array = vec {
+    variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
+    variant { Blob = blob "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" };
+  };
+};
+```
+
+
+Example of account representation as an array with one blob encoding the owner principal.
+```
+variant {
+  Array = vec {
+    variant { Blob = blob "\00\00\00\00\00\f0\13x\01\01" };
+  };
+};
+
+```
+
+
+### Canonical `tx` Mapping
+
+Each ICRC-1 or ICRC-2 method call maps deterministically to the `tx` field of the resulting block. Only parameters provided by the user are included — optional fields that are omitted in the call MUST NOT appear in `tx`.
+
+All fields are encoded using the ICRC-3 `Value` type.
+
+---
+
+#### `icrc1_transfer`
+
+**Call parameters:**
+
+```
+icrc1_transfer: record {
+  to: Account;
+  amount: Nat;
+  fee: opt Nat;
+  memo: opt Blob;
+  from_subaccount: opt blob;
+  created_at_time: opt Nat;
+}
+```
+
+**Regular Transfer** — when neither the sender nor recipient is the minting account:
+
+- `op = "xfer"`
+- `from = [caller]` if `from_subaccount` is not provided  
+- `from = [caller, from_subaccount]` if provided
+- `to = to`
+- `amt = amount`
+- `fee = fee` if provided
+- `memo = memo` if provided
+- `ts = created_at_time` if provided
+
+
+
+
+**Transfer from the Minting Account (→ Mint)** — when `[caller]` or `[caller, from_subaccount]` equals the minting account:
+
+- `op = "mint"`
+- `to = to`
+- `amt = amount`
+- `memo = memo` if provided
+- `ts = created_at_time` if provided  
+- `from` and `fee` MUST NOT be present
+
+**Transfer to the Minting Account (→ Burn)** — when `to` equals the minting account:
+
+- `op = "burn"`
+- `from = [caller]` if `from_subaccount` is not provided  
+- `from = [caller, from_subaccount]` if provided
+- `amt = amount`
+- `memo = memo` if provided
+- `ts = created_at_time` if provided  
+- `to` and `fee` MUST NOT be present
+
+
+**Invalid combination (rejected).** If both the sender and the recipient resolve to the minting account in the same call, the ledger MUST reject the call; no legacy `xfer` block is produced for this case.
+
+
+
+### Canonical Examples of `icrc1_transfer` Blocks
+
+Each of the following examples represents a canonical block resulting from an `icrc1_transfer` call. These examples illustrate different scenarios depending on which optional fields were included in the call. Only parameters explicitly provided by the caller appear in the resulting `tx`.
+
+
+
+#### Example 1: Transfer with required parameters only
+This example shows an `icrc1_transfer` call where the caller only specifies the mandatory fields: `to` and `amount`. No `memo`, `created_at_time`, or explicit `fee` are provided. The block still contains a top-level `fee` field since the ledger applies the default transfer fee.
+
+```
+variant {
+  Map = vec {
+    record { "fee"; variant { Nat = 10_000 : nat } };
+    record {
+      "phash";
+      variant {
+        Blob = blob "\b8\0d\29\e5\91\60\4c\d4\60\3a\2a\7c\c5\33\14\21\27\b8\23\e9\a5\24\b7\14\43\24\4b\2d\d5\b0\86\13"
+      };
+    };
+    record { "ts"; variant { Nat = 1_753_344_727_778_561_060 : nat } };
+    record {
+      "tx";
+      variant {
+        Map = vec {
+          record { "amt"; variant { Nat = 85_224_322_205 : nat } };
+          record { "from"; variant { Array = vec { variant { Blob = blob "\00\00\00\00\02\30\02\17\01\01" } } } };
+          record { "op"; variant { Text = "xfer" } };
+          record {
+            "to";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\09\14\61\93\79\7a\6c\ab\86\17\ee\f9\5f\16\40\94\d3\f8\7c\e9\0d\9e\b2\7e\01\40\0c\79\02" };
+              }
+            };
+          };
+        }
+      };
+    };
+  }
+};
+```
+
+---
+
+#### Example 2: Mint to user account
+This example represents an `icrc1_transfer` call where the `from` account is the minting account. This results in a mint block. The caller specifies `to` and `amount`. No `fee`, `memo`, or `created_at_time` are provided.
+
+```
+variant {
+  Map = vec {
+    record {
+      "phash";
+      variant {
+        Blob = blob "\c2\b1\32\6a\5e\09\0e\10\ad\be\f3\4c\ba\fd\bc\90\18\3f\38\a7\3e\73\61\cc\0a\fa\99\89\3d\6b\9e\47"
+      };
+    };
+    record { "ts"; variant { Nat = 1_753_344_737_123_456_789 : nat } };
+    record {
+      "tx";
+      variant {
+        Map = vec {
+          record { "amt"; variant { Nat = 500_000_000 : nat } };
+          record {
+            "to";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\15\28\84\12\af\11\b2\99\31\3a\5b\5a\7c\12\83\11\de\10\23\33\c4\ad\be\66\9f\2e\a1\a3\08" };
+              }
+            };
+          };
+          record { "op"; variant { Text = "mint" } };
+        }
+      };
+    };
+  }
+};
+```
+
+---
+
+#### Example 3: Burn from user account
+This example represents an `icrc1_transfer` call where the destination `to` is the minting account. This results in a burn block. The caller specifies `from` and `amount`. No `fee`, `memo`, or `created_at_time` are provided.
+
+```
+variant {
+  Map = vec {
+    record {
+      "phash";
+      variant {
+        Blob = blob "\7f\89\42\a5\be\4d\af\50\3b\6e\2a\8e\9c\c7\dd\f1\c9\e8\24\f0\98\bb\d7\af\ae\d2\90\10\67\df\1e\c1\0a"
+      };
+    };
+    record { "ts"; variant { Nat = 1_753_344_740_000_000_000 : nat } };
+    record {
+      "tx";
+      variant {
+        Map = vec {
+          record { "amt"; variant { Nat = 42_000_000 : nat } };
+          record {
+            "from";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\00\00\00\00\02\30\02\17\01\01" };
+              }
+            };
+          };
+          record { "op"; variant { Text = "burn" } };
+        }
+      };
+    };
+  }
+};
+```
+
+##### `icrc2_transfer_from`
+
+**Call parameters:**
+
+```
+ icrc2_transfer_from: record {
+  spender_subaccount: opt blob;
+  from: Account;
+  to: Account;
+  amount: Nat;
+  fee: opt Nat;
+  memo: opt Blob;
+  created_at_time: opt Nat;
+}
+```
+
+**Regular Transfer** — when the `to` account is not the minting account:
+
+- `op = "xfer"`
+- `from = from` (as passed in the call)
+- `spender = [caller]` if `spender_subaccount` is not provided
+- `spender = [caller, spender_subaccount]` if provided
+- `to = to`
+- `amt = amount`
+- `fee = fee` if provided
+- `memo = memo` if provided
+- `ts = created_at_time` if provided
+
+
+**Burn Transfer** — when the `to` account is the minting account:
+
+- `op = "burn"`
+- `from = from` (as passed in the call)
+- `spender = [caller]` if `spender_subaccount` is not provided
+- `spender = [caller, spender_subaccount]` if provided
+- `amt = amount`
+- `memo = memo` if provided
+- `ts = created_at_time` if provided
+
+
+**Mint Transfer** — when the `from` account is the minting account:
+
+- `op = "mint"`
+- `spender = [caller]` if `spender_subaccount` is not provided
+- `spender = [caller, spender_subaccount]` if provided
+- `to = to`
+- `amt = amount`
+- `memo = memo` if provided
+- `ts = created_at_time` if provided
+- `from` and `fee` **MUST NOT** be present
+
+**Invalid combination (rejected).** If both `from` and `to` are the minting account in the same `icrc2_transfer_from` call, the ledger MUST reject the call; no `xfer`/`burn`/`mint` block is produced for this case.
+
+
+
+### Canonical Examples of `icrc2_transfer_from` Blocks
+
+Each of the following examples represents a canonical block resulting from an `icrc2_transfer_from` call. These examples illustrate different scenarios depending on which optional fields were included in the call. Only parameters explicitly provided by the caller appear in the resulting `tx`.
+
+
+#### Example 4: Transfer from approval
+This example shows an `icrc2_transfer_from` call where the recipient is a regular user account. Only the required fields are provided: `from`, `to`, and `amount`, and the spender subaccount is omitted (defaults to `null`, i.e., the default subaccount).
+
+```
+variant {
+  Map = vec {
+    record { "fee"; variant { Nat = 10_000 : nat } };
+    record {
+      "phash";
+      variant {
+        Blob = blob "\a0\5f\d2\f3\4c\26\73\58\00\7f\ea\02\18\43\47\70\85\50\2e\d2\1f\23\e0\dc\e6\af\3c\cf\9e\6f\4a\d8"
+      };
+    };
+    record { "ts"; variant { Nat = 1_753_344_728_820_625_931 : nat } };
+    record {
+      "tx";
+      variant {
+        Map = vec {
+          record { "amt"; variant { Nat = 50_419_165_435 : nat } };
+          record {
+            "from";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc" }
+              }
+            };
+          };
+          record {
+            "spender";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\00\00\00\00\02\30\02\17\01\01" }
+              }
+            };
+          };
+          record { "op"; variant { Text = "xfer" } };
+          record {
+            "to";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\3a\b2\17\29\53\18\70\89\73\bf\db\61\ed\28\c7\22\dc\63\2e\60\3d\50\cd\6c\9e\36\b2\ef\02" }
+              }
+            };
+          };
+        }
+      };
+    };
+  }
+};
+```
+
+---
+
+#### Example 5: Burn from approval (to minting account with memo)
+This example shows an `icrc2_transfer_from` call where the destination `to` is the minting account, resulting in a burn block. The call includes a `memo`, and no `spender_subaccount` is provided. Therefore, the `spender` field consists only of the caller's principal (default subaccount). This example demonstrates a minimal burn operation initiated via approval, with memo included.
+
+```
+variant {
+  Map = vec {
+    record {
+      "phash";
+      variant {
+        Blob = blob "\9a\cd\20\3f\b0\11\fb\7f\e2\2a\1d\f2\c1\dd\22\6a\2f\1e\f6\88\d3\b0\9f\be\8d\2e\c5\70\f2\b4\a1\77"
+      };
+    };
+    record { "ts"; variant { Nat = 1_753_344_750_000_000_000 : nat } };
+    record {
+      "tx";
+      variant {
+        Map = vec {
+          record { "amt"; variant { Nat = 200_000 : nat } };
+          record {
+            "from";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\ab\cd\01\23\45\67\89\ab\cd\ef\01\23\45\67\89\ab\cd\ef\01\23\45\67\89\ab\cd\ef\01\23\45\67\89\ab" }
+              }
+            };
+          };
+          record {
+            "spender";
+            variant {
+              Array = vec {
+                variant { Blob = blob "\00\00\00\00\02\30\02\17\01\01" }
+              }
+            };
+          };
+          record { "op"; variant { Text = "burn" } };
+          record { "memo"; variant { Blob = blob "burn by spender" } };
+        }
+      };
+    };
+  }
+};
+```
+
+#### Example 6: Typed block (`btype = "107feecol"`)
+
+
+```
+variant { Map = vec {
+  // Block type
+  record { "btype"; variant { Text = "107feecol" }};
+
+  // Top-level tx (constructed per Canonical `tx` Mapping)
+  record { "tx"; variant { Map = vec {
+    record { "op"; variant { Text = "107set_fee_collector" }};
+    record { "fee_collector"; variant { Array = vec { }}}; // [] means "burn from now on"
+    record { "created_at_time"; variant { Nat = 1_750_951_728_000_000_000 : nat }};
+    record { "caller"; variant { Blob = blob "\00\00\00\00\00\00\00\00\01\01" }};
+  }}};
+
+  // Standard block metadata
+  record { "ts";    variant { Nat = 1_741_312_737_184_874_392 : nat }};
+  record { "phash"; variant { Blob = blob "\2d\86\7f\34\c7\2d\1e\2d\00\84\10\a4\00\b0\b6\4c\3e\02\96\c9\e8\55\6f\dd\72\68\e8\df\8d\8e\8a\ee" }};
+}}
+```
+
+
+
